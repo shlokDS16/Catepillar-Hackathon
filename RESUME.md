@@ -14,37 +14,34 @@ Do not re-research or re-decide anything recorded in decisions.md.
 ```
 
 ## B. Build sessions (after G2 approval): model Fable 5.1, two sessions in parallel
-Set up once (the orchestrator does this at H0):
-```bash
-git worktree add ../spotter-track-b -b track-b
-git worktree add ../spotter-track-f -b track-f
-```
-Copy `.env` into both worktrees (it is git-ignored). **Contracts freeze first:** Track B's contract
-task merges to `main` before Track F integrates. Merge order and the rules for shared files are in
-docs/architecture/backend-tasks.md.
+The integrator (session A, Opus, stays open in the main folder) runs the H0 setup in
+**docs/sessions/build-protocol.md**: worktrees, `.env` copies, `pnpm install`, deploy. Roles, merge order,
+track logs and handoff rules are all in that file. The tracks never edit CHECKLIST.md or STATE.md.
 
 **Session B** (open Claude Code in `../spotter-track-b`, select Fable 5.1), paste:
 ```
 You are Track B (backend) of Spotter. Act as the backend-lead agent (.claude/agents/backend-lead.md).
 Read CLAUDE.md, STATE.md, docs/specs/idea.md, docs/architecture/ADR-001-backend-architecture.md,
-then docs/architecture/backend-tasks.md. Execute tasks strictly in order, one at a time, touching
-only supabase/, scripts/, packages/shared and deploy config. After each task: run its tests, get a
+docs/sessions/build-protocol.md, then docs/architecture/backend-tasks.md. Execute tasks in DEPENDENCY
+order (the graph in backend-tasks.md), one at a time (the approved subagent lane excepted),
+touching only supabase/, scripts/, packages/shared and deploy config. After each task: run its tests, get a
 review from backend-reviewer (.claude/agents/backend-reviewer.md, model opus) and code-reviewer,
-fix the findings, commit, and tick the task in CHECKLIST.md (Track B section only). Run defenso
+fix the findings, commit and push branch track-b, and append the result to docs/sessions/track-b.md
+(never CHECKLIST.md or STATE.md). Messages for Track F go in docs/sessions/handoff.md. Run defenso
 guard_code on auth/DB/env/request-body code. Twilio live calls ONLY with DRY_RUN off and after
-asking me ($5.90 budget). Update STATE.md at every task boundary. Start with task B0.
+asking me ($5.90 budget). Start with task B0.
 ```
 
 **Session F** (open Claude Code in `../spotter-track-f`, select Fable 5.1), paste:
 ```
 You are Track F (frontend) of Spotter. Act as the ui-ux-lead agent (.claude/agents/ui-ux-lead.md).
 Read CLAUDE.md, STATE.md, docs/specs/idea.md, docs/design/visual-language.md,
-docs/design/interaction-map.md, docs/design/screens.md, then docs/design/frontend-tasks.md. Execute
-tasks strictly in order, touching only apps/web. Build against the fixture adapter until Track B's
+docs/design/interaction-map.md, docs/design/screens.md, docs/sessions/build-protocol.md, then
+docs/design/frontend-tasks.md. Execute tasks in DEPENDENCY order, touching only apps/web. Build against the fixture adapter until Track B's
 contracts land on main, then integrate. After each task: screenshot it at 375/768/1440 in the
 browser pane, get a review from code-reviewer (.claude/agents/code-reviewer.md), fix the findings,
-commit, and tick the task in CHECKLIST.md (Track F section only). Update STATE.md at every task
-boundary. Start with task F01.
+commit and push branch track-f, and append the result to docs/sessions/track-f.md (never CHECKLIST.md
+or STATE.md). Messages for Track B go in docs/sessions/handoff.md. Start with task F01.
 ```
 
 ## Before leaving any session (checklist for Claude)

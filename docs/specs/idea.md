@@ -211,13 +211,17 @@ ends in a **coached debrief**. The simulations are the learning; video is option
    acknowledged → ledger entry.
 3. **1:30-2:40** **Guardian**: the detector flags EXC-014's hydraulic drift → the map lights up →
    protocol card → Ravi is on foot, so **his phone rings** in Hindi, and the fleet manager gets Telegram.
-4. **2:40-3:40** **Replay**: Home shows "because of today…". Play Ravi's own near-miss as a scored
-   simulation, then the 60 s lesson clip.
-5. **3:40-4:30** Supervisor: evidence card (precision/recall, ETA MAE vs the organiser's estimate,
-   repeat-event trend) → **Verify ledger** → tamper a row live → the chain breaks, and the Telegram
-   witness hash proves it.
+4. **2:40-3:40** **Replay** of Ravi's own seatbelt-on-slope breach from step 2 (the event the design
+   uses): Brief → Investigate (he picks the relevant evidence cards) → Decide (timed) → Debrief with
+   scores, his process vs the ideal, the rule, and the animated re-enactment of his real event. Then a
+   20 s interactive lesson card with Hindi audio. (Flow video clips are P1 and optional.)
+5. **3:40-4:30** Fleet manager console: evidence card (precision/recall, ETA MAE vs the planner's
+   estimate, the repeat-event trend labelled "how we would measure impact") → **Verify ledger** →
+   tamper a row live → the chain breaks. Anita compares the recomputed root with the root in her own
+   Telegram message: **tamper-evident, human-verifiable**.
 6. **4:30-5:00** Close: how it plugs into VisionLink, Cat Detect and Cat AI Assistant; the KPIs; the roadmap.
-Q&A backups: offline chip, Ask Spotter (if built), what-if ETA, the Tamil switch.
+Q&A backups: **Ask Spotter** with a photo (P0), the offline chip, the Tamil script switch, and the
+anomaly explanation with ₹ cost.
 
 ## 7b. Security story (a slide, plus it is built in)
 STRIDE threat model: SOS abuse control (audit, hold-to-arm, never dropped or throttled), database access (RLS per role, secret

@@ -49,8 +49,17 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 - [ ] P3.4 Task breakdown (task-master or writing-plans) with subtasks
 - [ ] **Gate P3**: validator PASS · Shlok approves
 
-## P4 — Build (session model switched to Fable 5.1)
-- [ ] P4.x Tasks from P3.4, one at a time; coder-reviewer after each
+## P4 — Build (Fable 5.1; two tracks + integrator, docs/sessions/build-protocol.md)
+Only the integrator ticks this section, from docs/sessions/track-b.md and track-f.md at each merge.
+- [ ] H0 setup: vercel login OK, worktrees, .env copies, pnpm install, deploy smoke test on the Android phone
+### Track B (docs/architecture/backend-tasks.md)
+- [ ] B0 → … (tick each task ID as merged; full list in backend-tasks.md)
+### Track F (docs/design/frontend-tasks.md)
+- [ ] F01 → … (tick each task ID as merged; full list in frontend-tasks.md)
+### Integration checkpoints
+- [ ] Contracts frozen and merged to main
+- [ ] Track F switched from the fixture adapter to live data
+- [ ] G3 checkpoint (runbook): preview deploy + judge-simulator + phase-validator
 - [ ] graphify update after each milestone
 - [ ] **Gate P4**: feature-complete against spec, demo path works end to end
 
