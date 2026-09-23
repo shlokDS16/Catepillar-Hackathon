@@ -29,3 +29,8 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 - Why: founder-validator + 24 h budget; consistent with D2 "website first". Expo scaffold kept (already green) so mobile starts instantly.
 
 ## 2026-09-23 — D5: Supabase region Mumbai (ap-south-1); GitHub push via git credential manager, gh CLI not required (Shlok).
+
+## 2026-09-23 — D6: G1 approved with changes (spec v3)
+- UI: A "Site Signage". Chatbot: advanced multimodal role-based RAG on Pinecone, P0. LLM: Groq (multiple keys + fallback), replacing Anthropic + Sarvam. Twilio: existing trial (~$5). Team: two people, one laptop.
+- Adopted teammate improvements: scenario engine + events table as the spine, hidden-effect generator, motion lock, PPE override, alert budget, canonical ledger + external Merkle root, STRIDE slide, privacy by design.
+- Rejected: none. Open: TTS provider for Hindi (research 15), Pinecone vs Voyage embeddings (research 16), sample dataset file pending.
