@@ -70,3 +70,4 @@ in `claude/`. End-of-session routine runs before any session finishes.
 - Shlok approved live SOS for the review only (AskUserQuestion): /api/sos-demo merged (090acbf), 6 Twilio/Telegram vars added as sensitive + SOS_LIVE=1, production redeployed. Risk noted: unauthenticated route, anyone with the URL can trigger calls while live; revert SOS_LIVE right after the review.
 - sos-demo cooldown (1 live dispatch / 60 s, max 20 per instance) merged and deployed (9343372) while SOS_LIVE=1.
 - B2 merged (56d7139), migrations 001/001b-d live on Supabase. Docs debt: data-model §2.1 stale in three places (see B2 log) for the next docs pass. Supabase MCP cannot see the Spotter project (Vercel-managed org), so advisor checks go through Track B's Management API scripts.
+- Review 1 over (Shlok). SOS_LIVE and KIT_PUBLIC removed from Vercel production; main pushed (896ff53, includes B2); /api/sos-demo POST returns mode dry_run, /dev/kit 404.
