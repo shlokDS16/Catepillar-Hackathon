@@ -523,3 +523,81 @@
     bottom: var(--s-6);
   }
 }
+
+/* ---------- Alerts: Caution banner and the Warning/Critical takeover (interaction-map §5) ---------- */
+.alert-banner {
+  position: sticky;
+  top: var(--strip-h);
+  z-index: var(--z-chrome);
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--hit);
+  padding: var(--s-2) var(--gutter);
+  background: var(--state-caution);
+  color: var(--on-signal);
+  border: var(--bw) solid var(--ink);
+  text-decoration: none;
+}
+.takeover {
+  position: fixed;
+  inset: var(--strip-h) 0 0 0;
+  z-index: var(--z-takeover);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-4) var(--gutter) calc(var(--hit-sos) + var(--s-6));
+  overflow-y: auto;
+  border-top: var(--bw-heavy) solid var(--ink);
+}
+.takeover[data-tier="warning"] {
+  background: var(--state-warning);
+  color: var(--on-signal);
+}
+.takeover[data-tier="critical"] {
+  inset: 0;
+  background: var(--state-critical);
+  color: var(--on-ink);
+}
+.takeover .plate {
+  color: var(--ink);
+}
+/* The countdown bar drains linearly between 1 s ticks; reduced motion zeroes --dur-tick, so it steps. */
+.countdown {
+  height: var(--bar-thin);
+  background: currentColor;
+  transform-origin: left;
+  transition: transform var(--dur-tick) linear;
+}
+@media (min-width: 1024px) {
+  .takeover {
+    inset: var(--strip-h) 0 0 var(--rail-w);
+  }
+  .takeover[data-tier="critical"] {
+    inset: 0 0 0 var(--rail-w);
+  }
+}
+
+/* ---------- SOS hold-to-arm (A10): the fill is the one allowed continuous motion ---------- */
+.btn.sos {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+}
+.btn.sos > * {
+  position: relative;
+}
+.sos-fill {
+  position: absolute !important;
+  inset: 0;
+  background: var(--ink);
+  opacity: 0.35;
+  transform-origin: bottom;
+  transform: scaleY(0);
+  pointer-events: none;
+}
+.btn.sos[data-active="true"] {
+  background: var(--ink);
+  border-color: var(--state-critical);
+  color: var(--on-ink);
+}

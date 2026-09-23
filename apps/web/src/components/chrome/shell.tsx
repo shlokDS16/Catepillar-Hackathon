@@ -4,7 +4,7 @@ import { AskChip } from "@/components/chrome/ask-chip";
 import { LanguageChip } from "@/components/chrome/language-sheet";
 import { ActiveTitle, Nav } from "@/components/chrome/nav";
 import type { ShellRole } from "@/components/chrome/nav-items";
-import { SosSlot } from "@/components/chrome/sos-slot";
+import { SosControl } from "@/components/chrome/sos-control";
 import { StatusStrip } from "@/components/chrome/status-strip";
 
 type ShellProps = { role: ShellRole; children: ReactNode };
@@ -36,7 +36,7 @@ export async function Shell({ role, children }: ShellProps) {
           {children}
         </main>
       </div>
-      {operator ? <SosSlot /> : null}
+      {operator ? <SosControl /> : null}
     </div>
   );
 }

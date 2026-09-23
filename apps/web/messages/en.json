@@ -22,7 +22,9 @@
     "simStatus": "Sim {time} ×{speed}",
     "noSignalStatus": "No signal · synced {time}",
     "safetyLabel": "{count, plural, =1 {Open safety: {state}} other {Open safety: {state}, {count} alerts}}",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "sosHold": "SOS: hold for 1.5 seconds to send",
+    "sosOpen": "Tap to open"
   },
   "start": {
     "chooseLanguage": "Choose your language"
@@ -56,5 +58,50 @@
     "ledger": "Ledger",
     "primary": "Main",
     "new": "{n} new"
+  },
+  "alerts": {
+    "kind": {
+      "seatbelt_off_moving": "Seatbelt off while moving",
+      "guardian_hazard": "Faulty machine nearby",
+      "proximity_zone": "Person or machine close",
+      "ppe_missing": "PPE missing",
+      "anomaly_machine": "Machine anomaly",
+      "idle_excess": "Idling too long",
+      "sos": "SOS",
+      "ledger_tamper": "Ledger changed",
+      "alert_flood": "Too many alerts"
+    },
+    "acknowledge": "Acknowledge",
+    "listen": "Listen",
+    "showOnMap": "Show on map",
+    "escalatesIn": "Supervisor alerted in {s} s",
+    "escalated": "Supervisor alerted",
+    "soundBlocked": "Sound blocked, tap Listen",
+    "more": "+{n} more",
+    "occurrences": "×{n}",
+    "notSent": "Not sent. Your supervisor will be alerted anyway.",
+    "fixIt": "Fix it: fasten seatbelt, or stop to respond",
+    "upgraded": "Raised from {tier}",
+    "takeover": "{tier} alert"
+  },
+  "sos": {
+    "title": "SOS",
+    "sending": "Sending SOS…",
+    "sent": "SOS sent",
+    "location": {
+      "device": "Location: from your phone",
+      "machine": "Location: from machine",
+      "site": "Location: site centre"
+    },
+    "escalatesIn": "Calling your supervisor in {s} s if no answer",
+    "escalated": "Supervisor called",
+    "cancel": "Cancel SOS",
+    "cancelWindow": "{s} s left to cancel",
+    "cancelled": "SOS cancelled",
+    "notSent": "Not sent. No signal.",
+    "retrying": "Retrying with the same request (attempt {n})",
+    "callSupervisor": "Call supervisor",
+    "listen": "Listen",
+    "soundBlocked": "Sound blocked, tap Listen"
   }
 }
