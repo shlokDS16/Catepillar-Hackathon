@@ -8,7 +8,7 @@
   merges via `git -C <main folder>`, D12), B = Track B (Fable 5.1, ../spotter-track-b),
   F = Track F (Fable 5.1, ../spotter-track-f). Prompts in RESUME.md; rules in docs/sessions/build-protocol.md.
 - **In flight:** Track B on B0 in ../spotter-track-b (uncommitted supabase/ + scripts/ work, nothing
-  merged yet). Track F: F01 merged to main (4393f2c + favicon fix 73c6e58); next F tasks toward
+  merged yet). Track F: F01-F02 merged to main (latest a4324ba); F03 (shells, nav, SOS/Ask slots) in progress toward
   **Showable 1** (fixtures, ≈ H3-4). Track F commits on `claude/spotter-track-f-a12198` and
   fast-forwards `track-f` (the app's worktree guard blocks edits in ../spotter-track-f); accepted.
 - **Next action (integrator):** watch the track logs → merge contracts → merge Track F → deploy
