@@ -77,3 +77,4 @@ in `claude/`. End-of-session routine runs before any session finishes.
 - Team did not proceed past review 1. Build paused; Spotter to continue later as a side project.
 - Merged to main at pause: F01-F05, F05b (+cooldown), B0, B0b, B1 (contracts-v1.0.0), B2. Live: https://spotter-five-brown.vercel.app (SOS dry-run, /dev/kit 404).
 - Unmerged at pause: Track B B4 (migration 002/002b applied to Supabase; reviews pending), Track F F06/F07 in progress. Both tracks asked to leave a WIP commit + stop note and push.
+- Track F stopped at 8c1a019 (F06-F08 + partial F12, green, code review pending). Not merged.
