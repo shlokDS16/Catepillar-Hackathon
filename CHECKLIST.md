@@ -59,6 +59,7 @@ Only the integrator ticks this section, from docs/sessions/track-b.md and track-
 - [x] B0 project link, function config, secrets, Vault, COMMIT probe PASS, Pinecone spotter-kb, smoke 11/11: merged 455b317
 - [x] B0b Vercel: project shlok-goenkas-projects/spotter (Next.js, root apps/web), 3 prod env vars, git-connected; production https://spotter-five-brown.vercel.app (200)
 - [x] B1 contracts v1.0.0 frozen (tag contracts-v1.0.0), SQL seed generator, 93 fixtures as @cat/shared/fixtures: merged f9f4a3f; shared vitest 113 + scripts green, tsc shared/scripts/web exit 0, web build green
+- [x] B2 migration 001 (+001b-d) core schema, RLS per role, privileges, generated db types: merged 56d7139; already applied to Supabase (db push); sqltest 4/4 (Track B), shared 113 + scripts 21 vitest, tsc x3, web build green. Advisor not re-checked by integrator (project is in a Vercel-managed org the Supabase MCP cannot see).
 ### Track F (docs/design/frontend-tasks.md)
 - [ ] F01 → … (tick each task ID as merged; full list in frontend-tasks.md)
 - [x] F01 tokens, fonts, Plate/Button/Chip, pictograms, /dev/kit, haptics-test page: merged 4393f2c (favicon fix 73c6e58), web build green

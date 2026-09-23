@@ -9,7 +9,7 @@
   F = Track F (Fable 5.1, ../spotter-track-f). Prompts in RESUME.md; rules in docs/sessions/build-protocol.md.
 - **Live URL:** https://spotter-five-brown.vercel.app (Vercel project shlok-goenkas-projects/spotter, root apps/web,
   git-connected: EVERY push to main is a production deploy, so push main only when the build is green).
-- **In flight:** Track B: B0 merged (455b317); B1 merged (contracts-v1.0.0 frozen, IP0 done); B2 (migration 001) in progress. Track F: F01-F05 merged to main; next F06 hero, F07 fixtures/DataPort (switch to @cat/shared/fixtures), F08 Home, F12 map toward
+- **In flight:** Track B: B0 merged (455b317); B1, B2 merged (contracts frozen; migration 001 applied); B4 (migration 002: events, emit_event, fan-out, alerts, dispatches, my_snapshot) in progress. Track F: F01-F05 merged to main; next F06 hero, F07 fixtures/DataPort (switch to @cat/shared/fixtures), F08 Home, F12 map toward
   **Showable 1** (fixtures, ≈ H3-4). Track F commits on `claude/spotter-track-f-a12198` and
   fast-forwards `track-f` (the app's worktree guard blocks edits in ../spotter-track-f); accepted.
 - **Next action (integrator):** watch the track logs → merge contracts → merge Track F → deploy
