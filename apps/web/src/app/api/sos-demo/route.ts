@@ -6,14 +6,19 @@ import { NextResponse } from "next/server";
  * SOS hold shows a real phone ringing. Track B's Edge Functions own the real pipeline (event
  * pipeline §3); this route is the stand-in until F13 switches the SosPort to the RPC.
  *
- * Guards: SOS_LIVE must be "1" (Shlok's OK; Twilio is a $5.90 trial), and each request_id is
- * dispatched once per server instance.
+ * Guards: SOS_LIVE must be "1" (Shlok's OK; Twilio is a $5.90 trial); each request_id is
+ * dispatched once; at most one live dispatch per 60 s and 20 per server instance, because the
+ * route has no auth and anyone with the URL could otherwise run the trial down.
  */
 export const runtime = "nodejs";
 
 type Body = { request_id?: string; lat?: number | null; lon?: number | null; lang?: "en" | "hi" | "ta" };
 
 const seen = new Map<string, unknown>();
+const COOLDOWN_MS = 60_000;
+const MAX_LIVE_PER_INSTANCE = 20;
+let lastLiveAt = 0;
+let liveCount = 0;
 
 function env(name: string): string | null {
   const v = process.env[name];
@@ -82,7 +87,11 @@ export async function POST(req: Request) {
   let dispatch: Record<string, unknown>;
   if (!live) {
     dispatch = { mode: "dry_run", telegram: { status: "dry_run" }, twilio: { status: "dry_run" } };
+  } else if (Date.now() - lastLiveAt < COOLDOWN_MS || liveCount >= MAX_LIVE_PER_INSTANCE) {
+    dispatch = { mode: "throttled", telegram: { status: "cooldown" }, twilio: { status: "cooldown" } };
   } else {
+    lastLiveAt = Date.now();
+    liveCount += 1;
     const where = lat !== null && lon !== null ? `${lat.toFixed(5)}, ${lon.toFixed(5)}` : "machine location";
     const text = `SOS from Ravi (operator) · EXC-007 · Nagpur quarry · ${time} IST\nLocation: ${where}\nSpotter demo dispatch.`;
     const [tg, call] = await Promise.all([

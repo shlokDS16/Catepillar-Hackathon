@@ -59,7 +59,11 @@ export const demoSosPort: SosPort = {
     const data = (await res.json()) as SosRaiseOut & { dispatch: DemoDispatch };
     const d = data.dispatch;
     const line =
-      d.mode === "dry_run" ? "Dry run: no message or call sent" : `Telegram: ${d.telegram.status} · Call: ${d.twilio.status}`;
+      d.mode === "dry_run"
+        ? "Dry run: no message or call sent"
+        : d.mode === "throttled"
+          ? "Cooldown: a live dispatch went out under a minute ago"
+          : `Telegram: ${d.telegram.status} · Call: ${d.twilio.status}`;
     return { ...data, dispatch_line: line };
   },
   async cancel() {
