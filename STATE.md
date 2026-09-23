@@ -7,9 +7,10 @@
 - **Sessions:** A = integrator (Opus, worktree `.claude/worktrees/caterpillar-spotter-resume-c02a8b`,
   merges via `git -C <main folder>`, D12), B = Track B (Fable 5.1, ../spotter-track-b),
   F = Track F (Fable 5.1, ../spotter-track-f). Prompts in RESUME.md; rules in docs/sessions/build-protocol.md.
-- **In flight:** Track B session started (redirected from an app-made worktree to ../spotter-track-b);
-  no commits yet. Track F session NOT started yet (Shlok to open it with prompt F from RESUME.md).
-  Targets unchanged: Track B from B0; Track F from F01 toward **Showable 1** (fixtures, ≈ H3-4).
+- **In flight:** Track B on B0 in ../spotter-track-b (uncommitted supabase/ + scripts/ work, nothing
+  merged yet). Track F: F01 merged to main (4393f2c + favicon fix 73c6e58); next F tasks toward
+  **Showable 1** (fixtures, ≈ H3-4). Track F commits on `claude/spotter-track-f-a12198` and
+  fast-forwards `track-f` (the app's worktree guard blocks edits in ../spotter-track-f); accepted.
 - **Next action (integrator):** watch the track logs → merge contracts → merge Track F → deploy
   Showable 1 preview and send Shlok the URL. Reason: Shlok needs a showable demo early (other teams
   show hard-coded dashboards).

@@ -59,3 +59,4 @@ in `claude/`. End-of-session routine runs before any session finishes.
   - Time box: about 24 h to the first review; website complete by then (D2). Resolved.
   - First review format: the presentation round is done; review 1 = deck + demo script (CHECKLIST P2). Partly resolved: the exact judging rubric was never supplied.
   - Still open: event portal / exact dates, the judging rubric per round, and the Expo account + Apple ID (needed only after review 1, D4).
+- F01 merged (4393f2c). Track F's LF-normalisation commit corrupted favicon.ico (one CR byte stripped) and broke next build; restored on main (73c6e58), build green, Track F told.
