@@ -68,3 +68,4 @@ in `claude/`. End-of-session routine runs before any session finishes.
 - Review (Shlok, ~10 min notice): F05 merged and deployed at Track F's relayed request; KIT_PUBLIC=1 added to Vercel production so /dev/kit shows the alert takeovers (revert after the review). /, /op, /dev/kit, /haptics-test.html all 200.
 - B1 merged locally (f9f4a3f): contracts-v1.0.0 frozen = integration point IP0. Not pushed during the review to avoid a mid-demo production redeploy.
 - Shlok approved live SOS for the review only (AskUserQuestion): /api/sos-demo merged (090acbf), 6 Twilio/Telegram vars added as sensitive + SOS_LIVE=1, production redeployed. Risk noted: unauthenticated route, anyone with the URL can trigger calls while live; revert SOS_LIVE right after the review.
+- sos-demo cooldown (1 live dispatch / 60 s, max 20 per instance) merged and deployed (9343372) while SOS_LIVE=1.
