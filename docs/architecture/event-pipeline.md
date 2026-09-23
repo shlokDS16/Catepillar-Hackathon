@@ -187,16 +187,21 @@ Claim on stage: **"tamper-evident, human-verifiable" (the checkpoint is external
    `SPOTTER-LEDGER v1 seq=1..214 n=214 root=<64 hex> head=<64 hex> at=14:02 IST`.
 2. **Verify** → internal chain check ✓ ("the database agrees with itself").
 3. **Witness compare:** Anita reads the range and root **from her own Telegram chat** and types the range
-   (`1..214`) into the console; the console recomputes the root and head **from the ledger rows only** and
-   shows them beside the line she pastes. Match ✓.
+   (`1..214`) into the console; the console fetches the rows with `ledger_export(1, 214)` and **the browser**
+   recomputes hashes, chain, root and head with the TS verifier (`@cat/shared/ledger`, golden vectors), then
+   shows them beside the line she pastes. Match ✓. No server-side recompute is trusted (R2-2);
+   `ledger_recompute` is only a "server says" convenience line.
 4. Naive tamper (SQL editor as owner, or `demo_tamper(seq,'edit')`) → Verify ✗ "chain breaks at #187
    (hash_mismatch)" → `ledger.tamper_detected` + Telegram alert.
 5. Consistent tamper (`demo_tamper(seq,'rehash')` rewrites later hashes, `root_hex` and `head_hash`, under
-   lock 4210001) → internal Verify ✓, **but the recomputed root for 1..214 no longer equals the root in
+   lock 4210001) → internal Verify ✓, **but the browser-recomputed root for 1..214 no longer equals the root in
    Anita's Telegram message**. The console shows the two side by side with the first differing
    character highlighted.
-Nothing in this check takes a message id, root or range from the database; the human supplies the
-external value (N1). A database owner who also holds the bot token could post a forged line, which is
+Nothing in this check takes a message id, root or range from the database, and no database function is
+trusted to compute it: the human supplies the external value (N1) and the browser does the arithmetic
+(R2-2). Stated coverage: row edits and database-function edits; not a compromised web deploy (the same
+verifier runs offline as `scripts/verify-ledger.ts`). Verify's internal check waits up to 10 s for the
+ledger lock and otherwise answers "Ledger is busy recording, try again" after one automatic retry (R2-5). A database owner who also holds the bot token could post a forged line, which is
 why the witness is the chat history as Anita saw it at 14:02, and why an owner-independent anchor
 (OpenTimestamps / RFC 3161) is on the roadmap (data-model §4.5).
 
@@ -237,7 +242,10 @@ sequenceDiagram
 2. Vision output is **untrusted and never citable**: reduced to one enum `category` plus a confidence.
    No free text from the image (including text printed in the photo) reaches any LLM call.
 3. Citable sources are only `kb_chunks` ids retrieved in this request and `live:*` ids for live facts.
-   `rule` may cite only a doc chunk and must appear **verbatim** (whitespace-normalised) in it; every step
+   `rule` may cite only a doc chunk with **`review_status = 'reviewed'`** (OSHA/NIOSH, or SOPs approved in
+   B24c; R2-3) and must appear **verbatim** (whitespace-normalised) in it. 'draft' chunks may be retrieved
+   and cited in a step, and the UI labels them "draft guidance, confirm with supervisor"; they are never
+   quoted as the rule. If a safety-critical question has no reviewed chunk to quote → refusal; every step
    carries a valid citation; safety-critical ⇒ rule + doc citation + `handover_to_supervisor = true`.
    Failing any check → refusal.
 4. **Safeguard (new):** for answers the rewrite flagged safety-critical, `openai/gpt-oss-safeguard-20b`

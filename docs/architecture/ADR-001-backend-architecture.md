@@ -33,11 +33,12 @@ Forces:
 Adopt **Option C, "the database owns time and truth"**:
 
 1. **Postgres (Supabase, Mumbai)** holds all state and every rule that must be ordered or
-   exactly-once: the scenario clock and frame release (pg_cron `scenario-tick` every 1 s, its own transaction), the
+   exactly-once: the scenario clock and frame release (the `worker` job's tick step, every 1 s, committed per step), the
    detectors (rules + EWMA in plpgsql, Guardian via PostGIS `ST_DWithin`), the alert state machine
    (dedupe with tier upgrades, grouped suppression, rate cap, motion lock, escalation compare-and-set),
-   the incident ledger (byte-exact canonical serialisation, a queue drained by one writer job under
-   `pg_advisory_xact_lock`, verify with a head anchor, Merkle checkpoints witnessed in Telegram), and
+   the incident ledger (byte-exact canonical serialisation, a queue drained by the `worker` job's ledger
+   step under `pg_advisory_xact_lock`, internal verify, Merkle checkpoints witnessed in Telegram and
+   recomputed **in the browser** by the TS verifier: tamper-evident, human-verifiable), and
    the fan-out to clients (`realtime.send`, one private topic per audience).
    **Two 1-second pg_cron jobs** (revision 3, N5): `sos-escalator` (own connection and transaction,
    no advisory lock) and `worker` (a procedure that commits between its steps: ledger drain, Loop
@@ -120,7 +121,9 @@ AI fallbacks and budgets (principle: every AI feature has a deterministic fallba
 | Alert audio | pre-generated Hindi clips | Twilio `<Say>` Hindi voice | text + vibration | 0 live TTS on the demo path |
 
 Follow-ups
-- ADR-002 (TTS provider for pre-generated Hindi clips) is open: Sarvam was dropped by Shlok (G1 #7);
+- TTS for the pre-generated Hindi clips is **Sarvam** (decision D7; task B23); Gemini TTS is the fallback
+  only if Sarvam fails (Hindi quality unverified). The earlier note that Sarvam was dropped (G1 #7) is
+  superseded;
   research 15 names Azure Speech F0 as the verified alternative [R].
 - Revisit if the plan moves to Supabase Pro (per-minute Vercel cron, more DB space) or if P1 ML work
   starts (Option B's Python service becomes attractive then).
@@ -133,12 +136,12 @@ BO = backend-options.md.
 
 | Finding # | Action | Where fixed |
 |---|---|---|
-| G2-1 SOS timer shares the tick's transaction | **Fixed.** Four independent pg_cron jobs, each its own transaction. `sos-escalator` touches only alerts, dispatches and events. Each frame runs in its own exception block, with a 5 s statement timeout and at most 200 frames per tick. All ledger writes go through `ledger_queue` + `ledger-writer`, so `sos_raise` never waits on the ledger lock. B12's acceptance re-runs the reviewer's repro | DM §2.3, §4.2, §6 · EP §0, §3 · BT B9, B12 |
+| G2-1 SOS timer shares the tick's transaction | **Fixed** (*superseded in revision 3 by two jobs, see N5*). Four independent pg_cron jobs, each its own transaction. `sos-escalator` touches only alerts, dispatches and events. Each frame runs in its own exception block, with a 5 s statement timeout and at most 200 frames per tick. All ledger writes go through `ledger_queue` + `ledger-writer`, so `sos_raise` never waits on the ledger lock. B12's acceptance re-runs the reviewer's repro | DM §2.3, §4.2, §6 · EP §0, §3 · BT B9, B12 |
 | G2-2 evaluation writes into the live pipeline | **Fixed.** Detectors are split into pure functions and a live-only effects layer. Evaluation runs in a throw-away `eval` schema created by `scripts/eval.ts`, and B17 asserts zero new rows in events, incidents, alerts, dispatches and realtime | DM §2.5, §2.5.2 · BT B17 |
 | G2-3 SOS deduplicated by the index | **Fixed.** The dedupe index excludes `kind = 'sos'`, so every SOS is its own alert and message | DM §3.2 · EP §3 · BT B4 test |
-| G2-4 Merkle witness never compared externally | **Fixed.** The Telegram line carries the full 64-hex root and head hash in a parseable form. `ledger_roots` stores the chat id, message id and sent text. `ledger-witness` re-fetches Telegram's copy with `forwardMessage` [V] and compares it with the recomputed root, and the head anchor in `ledger_verify` catches truncation. **Partly accepted as a limit:** whoever holds the bot token can edit the witness, and entries after the last checkpoint are covered only by the chain (checkpoints every 30 min in demo mode). RFC 3161 stays on the roadmap | DM §4.4-4.6 · EP §5 · AC §6 · BT B5, B13b |
+| G2-4 Merkle witness never compared externally | **Fixed** (*superseded in revision 3 by N1 and Re-check 2 R2-2: `ledger-witness`/`forwardMessage` dropped; browser recompute*). The Telegram line carries the full 64-hex root and head hash in a parseable form. `ledger_roots` stores the chat id, message id and sent text. `ledger-witness` re-fetches Telegram's copy with `forwardMessage` [V] and compares it with the recomputed root, and the head anchor in `ledger_verify` catches truncation. **Partly accepted as a limit:** whoever holds the bot token can edit the witness, and entries after the last checkpoint are covered only by the chain (checkpoints every 30 min in demo mode). RFC 3161 stays on the roadmap | DM §4.4-4.6 · EP §5 · AC §6 · BT B5, B13b |
 | G2-5 catch-up suppresses normal alerts at 60× | **Fixed.** Catch-up applies only to frames covered by `catchup_until_seq` (a jump) or older than `speed × 5 s` of sim time (a real stall) | DM §2.3 · EP §0 · BT B9 |
-| G2-6 `verify_jwt` + publishable key reaches `ask`/`director` | **Fixed.** Every function sets `verify_jwt = false` and authenticates in code: a user JWT is required (anon or key-only → 401), `director` and `ledger-witness` need the FM role, and there are per-user and org-wide rate limits. Note: the docs we read in revision 1 said the check rejects API keys. Either way a legacy `anon` JWT passes it, so the finding stands | AC §6 · EP §6, §10 · BT B0, B15, B19 |
+| G2-6 `verify_jwt` + publishable key reaches `ask`/`director` | **Fixed.** Every function sets `verify_jwt = false` and authenticates in code: a user JWT is required (anon or key-only → 401), `director` (and the since-dropped `ledger-witness`, *superseded*) need the FM role, and there are per-user and org-wide rate limits. Note: the docs we read in revision 1 said the check rejects API keys. Either way a legacy `anon` JWT passes it, so the finding stands | AC §6 · EP §6, §10 · BT B0, B15, B19 |
 | G2-7 Twilio signature vs `req.url` | **Fixed.** Signed URL = `PUBLIC_FUNCTIONS_URL + '/twilio-voice' + exact query sent`; algorithm per the Twilio docs [V] | AC §6 · EP §9 · BT B14 |
 | G2-8 alert-budget holes | **Fixed.** Dedupe is by hazard key, with an in-place tier upgrade that dispatches again. Suppression happens only within the same hazard and only by an open alert. All windows are wall-clock. The rate cap applies only to info and caution. The flood summary has its own hazard key and subject id | DM §3.2-3.3 · EP §7 · BT B12 |
 | G2-9 contracts and SQL drift | **Fixed.** `EVENT_REGISTRY`, `ALERT_POLICIES` and the enums in the contracts generate the SQL seed. All missing event types are added, plus `ledger_tamper` and `alert_flood` policies. ETA factors have one array shape everywhere and are passed by `task_start` | AC §0, §3, §4 · DM §2.1, §2.2 · BT B1, B4 |
@@ -187,4 +190,15 @@ Source: the "Re-check" section of `docs/gates/G2-backend-review.md` (N1-N5 and r
 | D9 (updated) provider chain | **Adopted.** `LLM_CHAIN` default Groq A → Gemini → Groq B on 429/5xx only; `provider_served` logged; AUP risk of account B accepted by Shlok and noted in decision 6; Gemini TTS flagged unverified for Hindi | ADR decision 6 · EP §6, §9 · AC §6 · BT B0, B19, §4 |
 | D10 training redesign | **Adopted.** Four-phase `ReplayScenario` with seven evidence card types, sequenced decide steps, debrief scores (safety/procedure/efficiency), process trace, quoted protocol rule, re-enactment track; `LessonContent` for card lessons; B10b grows to 1 h, `demo-login` moves to the subagent lane to hold the 13.5 h main lane | AC §5 · DM §2.8 · BT B8, B10b, B22 |
 | Prompt guard + safeguard (coordinator item 6) | **Adopted.** Prompt guard on questions and at ingestion (quarantine); safeguard on safety-critical answers; both fail closed for safety answers | EP §6, §9, §10 · BT B18, B19 |
+
+### Re-check 2 additions (backend-reviewer, PASS-WITH-FIXES)
+
+| Finding # | Action | Where fixed |
+|---|---|---|
+| R2-1 test harness cannot run COMMITting procedures | **Fixed.** Step logic lives in plain functions tested inside `begin … rollback`; the procedures are tested by an integration suite on a local stack after `supabase db reset` (fallback: a rehearsal run in the shared project at an integration point, then `purge_run`). B0 runs the reviewer's COMMIT probe; procedure rules (SECURITY INVOKER, no `SET`, COMMIT after each exception block, command exactly `call …;`) are written down; fallback if the probe fails = one pg_cron job per step | BT §0, B0, B9, B10b, B12 · DM §6 |
+| R2-2 witness recompute trusts the adversary's DB | **Fixed.** Verify exports the rows (`ledger_export`, one snapshot-consistent SELECT, no lock) and recomputes canonical bytes, hashes, chain and Merkle root **in the browser** with `@cat/shared/ledger` (golden vectors), then compares with the line Anita pastes from Telegram. `ledger_recompute` stays as a convenience only. The claim covers row edits **and** function edits; it does not cover a compromised web deploy (the same verifier runs offline as `scripts/verify-ledger.ts`) or a database that keeps serving the original rows (evidence not destroyed) | DM §4.5-4.6 · EP §5 · AC §4 · BT B5 · handoff [B→F] |
+| R2-3 unreviewed SOPs citable as rules | **Fixed.** `review_status` ('reviewed' / 'draft') on documents and chunks; OSHA/NIOSH auto-reviewed; only reviewed chunks can back `rule`; draft chunks may be cited in steps and are shown "draft guidance, confirm with supervisor"; new task B24c: Shlok/Aryan approve the SOP list (~20 min) | DM §2.9 · EP §6 · AC §6 · BT B24c · handoff [B→F] |
+| R2-4 stale mentions | **Fixed:** ADR decision 1, superseded disposition rows, the Sarvam follow-up, BT title and TTS rows, corpus path, `format()` → named-slot `replace()` | ADR · BT · AC §12 · DM §2.5 |
+| R2-5 Verify can time out behind the drain | **Fixed.** `ledger_verify` sets `lock_timeout = '10s'` for its own lock wait (drains are ≤ 50 rows) and raises `ledger_busy`; the UI retries once after 2 s and then shows "Ledger is busy recording, try again". The browser verify path needs no lock | DM §4.2 · AC §4 · handoff [B→F] |
+| N4 note (cancel not caught by `WHEN OTHERS`; role timeout covers the whole `CALL`) | **Accepted and stated:** a backstop cancel ends that run; the next run 1 s later resumes (each step's work already committed) | DM §6 |
 

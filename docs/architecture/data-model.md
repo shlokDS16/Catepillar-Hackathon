@@ -24,6 +24,11 @@ Migrations land in `supabase/migrations/` in the order of `backend-tasks.md`. Ma
   purged (§4.7).
 - Writes from clients go only through `security definer` RPCs with `set search_path = ''`, an explicit
   role check, and `set lock_timeout = '2s'`. Tables grant clients `select` only, where a policy allows.
+  **Exception (R2-1):** the two pg_cron procedures `private.worker_step` and `private.escalate_step` are
+  `SECURITY INVOKER` with **no `SET` clause** (PostgreSQL forbids transaction control in SECURITY DEFINER
+  procedures and in procedures with a `SET` clause [V per reviewer: sql-createprocedure]); they use
+  schema-qualified names and call security-definer **functions** for privileged work. B21 records a
+  waiver for the advisor's mutable-search-path warning on these two procedures.
 - RLS helpers (in `private`, `stable`, `security definer`), always wrapped as `(select …)` inside
   policies [A: Supabase RLS performance guidance, confirmed in task B2 against the
   `supabase-postgres-best-practices` skill]: `private.app_role() → app_role`,
@@ -257,7 +262,8 @@ pitch/roll > zone `max_slope_deg`), `overspeed` (zone `max_speed_kmh`), `slope_e
 
 **anomalies**: `id`, `run_id null`, `machine_id`, `operator_id null`, `anomaly_type`, `method`,
 `ts_start`, `ts_end`, `severity_score`, `severity_tier`, **`explanation jsonb {en, hi}`** (rendered in SQL
-with `format()` from `EXPLANATION_TEMPLATES`, never by an LLM; spec M5), **`fuel_l`**, **`cost_inr`**
+by named-slot substitution (`replace()` per `{slot}`; `format()` only takes `%s`, R2-4) from
+`EXPLANATION_TEMPLATES`, never by an LLM; spec M5), **`fuel_l`**, **`cost_inr`**
 (formula and `FUEL_PRICE` in api-contracts §12), `features jsonb` (numbers), **`location geography(Point)`**
 (G2-14), `event_id`. RLS: OP where own or `operator_id is null`; FM, TR all.
 
@@ -343,8 +349,12 @@ aggregates via `evidence_metrics` only (training records are non-punitive).
 
 ### 2.9 Ask Spotter (RAG)
 
-**kb_documents**, **kb_chunks** (mirror of Pinecone records; used to display citations and to run the
-**verbatim-rule check**, G2-13), **ask_logs** (`provider_served` (groq_a, gemini, groq_b; D9), `model`, `fallback_used`, `prompt_tokens`, `latency_ms`,
+**kb_documents** (+ `source_kind` (osha, niosh, dgms_summary, team_sop), **`review_status`**
+('reviewed' | 'draft'), `reviewed_by`, `reviewed_at`; OSHA and NIOSH documents are auto-'reviewed' because
+the source is authoritative; DGMS summaries and team SOPs start as 'draft' until B24c; R2-3),
+**kb_chunks** (mirror of Pinecone records with the same `review_status`, also stored in Pinecone metadata;
+used to display citations and to run the **verbatim-rule check**, G2-13; **only 'reviewed' chunks can
+back `rule`**), **ask_logs** (`provider_served` (groq_a, gemini, groq_b; D9), `model`, `fallback_used`, `prompt_tokens`, `latency_ms`,
 `refusal_reason`). RLS: kb_* where role ∈ `audience`; ask_logs own; writes SVC.
 
 **private.ask_rate** (G2-6): `user_id`, `window_start`, `count`; global row `user_id = null` for the
@@ -458,7 +468,10 @@ on rows that `purge_run` may delete (re-check #15 residual).
   (not microseconds, N3): at most one drain of 50 rows.
 - **Every other ledger mutator or snapshot takes the same lock first:** `ledger_checkpoint()`,
   `demo_tamper()`, and `ledger_verify` (which holds it only for its own short transaction to read a
-  consistent head). So a checkpoint can never compute the root over `1..N` and the head as `N+1`, and a
+  consistent head). `ledger_verify` waits with `lock_timeout = '10s'` (set locally before taking the
+  lock; drains are ≤ 50 rows) and raises `ledger_busy` on timeout; the UI retries once after 2 s, then
+  shows "Ledger is busy recording, try again" (R2-5). `ledger_export` takes no lock: one SELECT is
+  snapshot-consistent. So a checkpoint can never compute the root over `1..N` and the head as `N+1`, and a
   tamper cannot race the writer (N3).
 - **Ordering, stated:** `seq` is assigned in drain order, which is commit-visibility order, not
   `occurred_at` order and not enqueue order. Integrity is unaffected; the console sorts by `seq` and
@@ -531,12 +544,20 @@ agrees with itself.** A database owner who rewrites every later hash *and* `ledg
   head_hash)` and queues one Telegram message to the fleet manager:
   `SPOTTER-LEDGER v1 seq=1..214 n=214 root=<64 hex> head=<64 hex> at=14:02 IST`.
   `ledger_roots` stores what was sent (for display only).
-- **Witness check = a human comparison, and we claim only that.** Verify recomputes, **from the ledger
-  rows alone**, the root and head for `seq 1..N`, where **N is typed or picked by the fleet manager
-  from the message in her own Telegram chat** (not read from `ledger_roots`). The console shows the
-  recomputed root/head beside an empty box where she pastes (or reads out) the line from her chat, and
-  highlights the first differing character. The demo claim is **"externally witnessed,
-  human-verifiable"**. No automated external check is claimed.
+- **Witness check = a human comparison, with the recomputation in the browser (R2-2).** Verify calls
+  `public.ledger_export(first_seq, last_seq)`, which returns the rows' canonical input fields as text
+  (the view `v_ledger_canonical_input`, one snapshot-consistent SELECT). **The browser** runs the TS
+  verifier `@cat/shared/ledger` (canonical v1, byte-identical to SQL, golden vectors 1-3; SHA-256 via
+  WebCrypto): it recomputes every `entry_hash`, the chain links and the Merkle root and head for
+  `seq first..last`, where **the range is typed or pasted by the fleet manager from the message in her own
+  Telegram chat** (not read from `ledger_roots`). The console shows the browser-computed root/head beside
+  the line she pastes and highlights the first differing character. **No server-side recompute is
+  trusted:** `ledger_recompute` remains as a convenience line ("server says …") only.
+- **What the claim covers:** "tamper-evident, human-verifiable" holds against edits to rows **and** to
+  database functions (a redefined `ledger_recompute` or Merkle helper changes nothing in the browser).
+  It does not cover a compromised web deploy (the same verifier runs offline as
+  `scripts/verify-ledger.ts` on an exported CSV), and a database that keeps serving the original rows has
+  not destroyed the evidence.
 - The automated `ledger-witness` function (`forwardMessage` using a database-supplied message id) is
   **dropped**: the database owner can make `dispatch` post a forged line and repoint the id (N1). It also
   added a duplicate message per Verify.
@@ -596,6 +617,21 @@ of one job at once (a late run is queued) [V]. Revision 3 therefore uses **two**
      rule 1 carries the guarantee.
   3. B9 proves the behaviour with a probe step that sleeps 10 s: it must be cancelled (backstop in
      place) or the gap is recorded in the track log.
+- **Procedure rules and the B0 probe (R2-1).** The two procedures are SECURITY INVOKER with no `SET`
+  clause; each step is `begin perform private.step_x(); exception when others then … end;` followed by
+  **`commit;` outside the block** (a COMMIT inside an exception block is a subtransaction error that the
+  handler would swallow); the job command is exactly `call private.worker_step();` (a multi-statement
+  command is one implicit transaction, and `COMMIT` then fails). The step logic lives in plain functions
+  (`private.step_ledger_drain()`, `step_loop()`, `step_tick()`, `step_requeue()`, `escalate_once()`),
+  which is what the rollback-wrapped unit tests call. **B0 probe:** schedule `'1 seconds'` →
+  `call private.probe()` (insert row A, `commit`, insert row B, raise); expect A persisted, B absent,
+  `cron.job_run_details.status = 'failed'`; unschedule. **Fallback if the probe fails:** one pg_cron job
+  per step, each a single function call in its own transaction (`ledger-drain`, `loop-build`,
+  `scenario-tick` at 1 s; `requeue` at 5 s), plus `sos-escalator` unchanged; that is ≈ 4 connections/s,
+  measured in B11.
+- **Cancellation (N4 note, accepted):** a backstop statement timeout covers the whole `CALL`, and a
+  `query_canceled` is not caught by `WHEN OTHERS`, so the remaining steps of that run are skipped; the
+  steps already committed stay, and the next run 1 s later resumes.
 - **Connections (N5):** 2 new connections per second (≈ 173k/day) instead of 3-4. B11 measures
   connection count and job duration from `cron.job_run_details` over a 10-minute play at 60×
   (acceptance: no job run > 1 s p95, no queued runs). [U] whether Supabase enables

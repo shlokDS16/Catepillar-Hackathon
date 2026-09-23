@@ -213,7 +213,7 @@ All `security definer`, `set search_path = ''`, `lock_timeout 2s`, role-checked,
 
 ```ts
 export const RpcErrorCode = z.enum(["forbidden", "not_found", "invalid_state", "ppe_missing",
-  "override_expired", "rate_limited", "validation", "not_paired"]);
+  "override_expired", "rate_limited", "validation", "not_paired", "ledger_busy"]);   // ledger_busy: Verify waited 10 s (R2-5); UI retries once
 
 // Operator
 export const PairMachineIn = z.object({ p_machine_code: z.string(), p_request_id: RequestId });           // G2-14
@@ -248,7 +248,12 @@ export const PpeOverrideOut = z.object({ override_id: Id, valid_until: Ts });
 export const LedgerVerifyIn = z.object({ p_from: z.number().int().min(1).default(1), p_to: z.number().int().nullable().default(null) });
 export const LedgerVerifyOut = LedgerCheckResult.extend({ expected: Hash64.nullable(), stored: Hash64.nullable(),
   head_seq: z.number().int(), head_hash: Hash64 });        // internal consistency only
-// Witness compare (N1): the range comes from the fleet manager's Telegram message, typed by her
+// Witness compare (N1, R2-2): the range comes from the fleet manager's Telegram message, typed by her;
+// the BROWSER recomputes from exported rows; ledger_recompute below is a convenience check only.
+export const LedgerExportIn = z.object({ p_first_seq: z.number().int().min(1), p_last_seq: z.number().int().min(1) });
+export const LedgerExportRow = z.object({ seq: z.string(), prev_hash: Hash64, entry_hash: Hash64, v: z.string(),
+  canonical_fields: z.record(z.string(), z.unknown()) });   // text-formatted fields per canonical v1 (DM §4.3); max 5,000 rows
+// @cat/shared/ledger: verifyLedger(rows) → { ok, first_bad_seq, reason, root_hex, head_hash }  (WebCrypto SHA-256)
 export const LedgerRecomputeIn = z.object({ p_first_seq: z.number().int().min(1), p_last_seq: z.number().int().min(1) });
 export const LedgerRecomputeOut = z.object({ first_seq: z.number().int(), last_seq: z.number().int(),
   leaf_count: z.number().int(), root_hex: Hash64, head_hash: Hash64 });   // computed from ledger rows only
@@ -402,10 +407,11 @@ export const AskRequest = z.object({ request_id: RequestId, question: z.string()
   history: z.array(z.object({ role: z.enum(["user", "assistant"]), text: z.string().max(1000) })).max(6) });
 export const VisionResult = z.object({ category: PhotoCategory, confidence: z.number().min(0).max(1) });   // G2-13: nothing else kept
 export const Citation = z.object({ id: z.string(), kind: z.enum(["doc", "live"]), title: z.string(),
-  page: z.number().int().nullable(), snippet: z.string().max(300) });
+  page: z.number().int().nullable(), snippet: z.string().max(300),
+  review_status: z.enum(["reviewed", "draft"]).nullable() });   // draft → "draft guidance, confirm with supervisor" (R2-3); null for live
 export const AskAnswer = z.object({                     // model output, strict JSON schema via z.toJSONSchema
   steps: z.array(z.object({ text: z.string().max(200), cited_ids: z.array(z.string()).min(1) })).min(1).max(6),
-  rule: z.object({ text: z.string().max(300), cited_id: z.string() }).nullable(),   // must quote a doc chunk verbatim
+  rule: z.object({ text: z.string().max(300), cited_id: z.string() }).nullable(),   // must quote a REVIEWED doc chunk verbatim (R2-3)
   grounded: z.boolean(), handover_to_supervisor: z.boolean(),
   proposed_action: z.object({ type: z.literal("log_incident"), incident_type: IncidentType,
     description: z.string().max(500) }).nullable() });
@@ -552,8 +558,8 @@ export const FIELD_PROVENANCE = {
 
 ## 12. Anomaly explanation and cost (`contracts/explain.ts`; spec M5, G2 orphan)
 
-- The explanation is **rendered in SQL from fixed templates** (`format()` over the template text with
-  numeric slots), stored on `anomalies.explanation jsonb {en, hi}` and copied into the
+- The explanation is **rendered in SQL from fixed templates** by named-slot substitution (one
+  `replace(text, '{slot}', value)` per slot; `format()` only takes `%s`, R2-4), stored on `anomalies.explanation jsonb {en, hi}` and copied into the
   `anomaly.detected` payload. **No LLM** is involved. Templates are generated into the migration seed
   from `EXPLANATION_TEMPLATES`; the Hindi text is written by the team and reviewed by a native reader
   (part of B23's content work).
