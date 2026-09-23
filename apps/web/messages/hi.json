@@ -1,0 +1,59 @@
+{
+  "chrome": {
+    "appName": "स्पॉटर",
+    "tagline": "कैट मशीनों के ऑपरेटर का साथी।",
+    "language": "भाषा",
+    "ask": "पूछें",
+    "sos": "SOS",
+    "help": "मदद",
+    "switchUser": "यूज़र बदलें",
+    "needsSignal": "सिग्नल चाहिए",
+    "tryAgain": "फिर कोशिश करें",
+    "back": "वापस",
+    "listen": "सुनें",
+    "close": "बंद करें",
+    "sosActive": "SOS चालू",
+    "live": "लाइव",
+    "sim": "सिम",
+    "reconnecting": "जोड़ रहे हैं…",
+    "synced": "सिंक {time}",
+    "fixture": "फ़िक्स्चर",
+    "openSafety": "सुरक्षा खोलें",
+    "openSync": "कनेक्शन",
+    "comingSoon": "आगे के काम में आएगा।",
+    "languageNamed": "भाषा: {name}"
+  },
+  "start": {
+    "chooseLanguage": "अपनी भाषा चुनें"
+  },
+  "enums": {
+    "safety": {
+      "clear": "सुरक्षित",
+      "caution": "सावधान",
+      "warning": "चेतावनी",
+      "critical": "ख़तरा",
+      "nosignal": "ऑफ़लाइन"
+    },
+    "work": {
+      "ready": "तैयार",
+      "working": "चालू",
+      "paused": "रुका",
+      "blocked": "अटका",
+      "done": "पूरा",
+      "fault": "ख़राबी"
+    }
+  },
+  "nav": {
+    "home": "होम",
+    "task": "काम",
+    "safety": "सुरक्षा",
+    "map": "नक्शा",
+    "training": "ट्रेनिंग",
+    "inbox": "इनबॉक्स",
+    "fleetMap": "फ़्लीट नक्शा",
+    "analytics": "विश्लेषण",
+    "ledger": "लेजर",
+    "primary": "मुख्य",
+    "new": "{n} नया"
+  }
+}

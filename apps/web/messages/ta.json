@@ -1,0 +1,11 @@
+{
+  "chrome": {
+    "language": "மொழி",
+    "help": "உதவி",
+    "back": "பின்"
+  },
+  "start": {
+    "chooseLanguage": "உங்கள் மொழியைத் தேர்வு செய்யுங்கள்",
+    "partialCatalogue": "தமிழ் விரைவில் வரும். இப்போது ஆங்கிலம் காட்டப்படுகிறது. · Tamil is coming; English is shown for now."
+  }
+}

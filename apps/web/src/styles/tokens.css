@@ -81,6 +81,7 @@
   --hit-sos: 108px;
   --hit-dense: 48px;
   --hit-gap: 24px;
+  --hit-lang: 96px; /* the three language plates on first launch */
 
   --focus-w: 3px;
   --focus-offset: 3px;

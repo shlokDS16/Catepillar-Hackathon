@@ -1,0 +1,59 @@
+{
+  "chrome": {
+    "appName": "Spotter",
+    "tagline": "An operator companion for Cat machines.",
+    "language": "Language",
+    "ask": "Ask",
+    "sos": "SOS",
+    "help": "Help",
+    "switchUser": "Switch user",
+    "needsSignal": "Needs signal",
+    "tryAgain": "Try again",
+    "back": "Back",
+    "listen": "Listen",
+    "close": "Close",
+    "sosActive": "SOS active",
+    "live": "Live",
+    "sim": "Sim",
+    "reconnecting": "Reconnecting…",
+    "synced": "synced {time}",
+    "fixture": "Fixture",
+    "openSafety": "Open safety",
+    "openSync": "Connection",
+    "comingSoon": "Coming in a later task.",
+    "languageNamed": "Language: {name}"
+  },
+  "start": {
+    "chooseLanguage": "Choose your language"
+  },
+  "enums": {
+    "safety": {
+      "clear": "Clear",
+      "caution": "Caution",
+      "warning": "Warning",
+      "critical": "Critical",
+      "nosignal": "No signal"
+    },
+    "work": {
+      "ready": "Ready",
+      "working": "Working",
+      "paused": "Paused",
+      "blocked": "Blocked",
+      "done": "Done",
+      "fault": "Fault"
+    }
+  },
+  "nav": {
+    "home": "Home",
+    "task": "Task",
+    "safety": "Safety",
+    "map": "Map",
+    "training": "Training",
+    "inbox": "Inbox",
+    "fleetMap": "Fleet map",
+    "analytics": "Analytics",
+    "ledger": "Ledger",
+    "primary": "Main",
+    "new": "{n} new"
+  }
+}
