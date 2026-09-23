@@ -27,3 +27,5 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 ## 2026-09-23 — D4 (PROPOSED, awaiting Shlok): Web only until review 1
 - First 24 h: one Next.js web app, demo-critical path first. Mobile (Expo, TestFlight, APK) starts after review 1, reusing @cat/shared.
 - Why: founder-validator + 24 h budget; consistent with D2 "website first". Expo scaffold kept (already green) so mobile starts instantly.
+
+## 2026-09-23 — D5: Supabase region Mumbai (ap-south-1); GitHub push via git credential manager, gh CLI not required (Shlok).

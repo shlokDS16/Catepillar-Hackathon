@@ -41,3 +41,5 @@ in `claude/`. End-of-session routine runs before any session finishes.
 ## 2026-09-23 — T0: problem statement received
 - "Smart Operator Assistant for CAT Machinery". Saved statement (01), requirements matrix R1-R31 (02), teammate prompt (03), Shlok directives (04), UI framework.
 - Added program-architect agent. GitHub remote origin set. Research 10-14 dispatched.
+- Research 10-14 done (12 final compile pending). Spec v1 "Spotter" written (docs/specs/idea.md). Three G1 reviews running.
+- Shlok: gh login not needed (git push via credential manager); Supabase region = Mumbai.
