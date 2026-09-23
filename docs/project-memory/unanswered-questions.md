@@ -14,3 +14,5 @@ Format: **[date]** - the question, why it matters, what would answer it.
 **[2026-09-23]** - Does Shlok have an Expo account, and which Apple ID/team is used for TestFlight? Needed before the first EAS build.
 
 **[2026-09-23, session 2 triage]** - Resolved and logged in the timeline: team, department gating, time box, first-review format (partly). Still open: event portal and exact dates; the judging rubric per round (review 1 = deck + demo, rubric unknown); Expo account + Apple ID for TestFlight (after review 1 per D4).
+
+**[2026-09-23]** - Date and time of the final demo / next review. Matters now: Supabase realtime partitions were created only through 26 Sep (Track B B4), and Twilio trial credit must last until then. Answer: Shlok / organiser schedule.
