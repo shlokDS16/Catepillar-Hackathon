@@ -1,6 +1,6 @@
 # Visual language: Direction A "Site Signage"
 
-- Status: design plan v1 (ui-ux-lead, 2026-09-23). Direction A was chosen by Shlok (spec v3 §9). C "Console" is the P1 night theme.
+- Status: design plan v2 (ui-ux-lead, 2026-09-23; v2 aligns the simulation carve-out with D10). Direction A was chosen by Shlok (spec v3 §9). C "Console" is the P1 night theme.
 - Sources: docs/design/ui-framework.md (guidance), docs/research/14-field-ux.md §2-6, spec v3.
 - Verified today: every font below returned HTTP 200 from the Google Fonts CSS2 API at the listed weights. Barlow and Barlow Condensed include the `tnum` (tabular figures) OpenType feature in the Latin subset (checked with fontTools).
 
@@ -147,15 +147,19 @@ Allowed continuous motion: the SOS hold fill (while held), escalation countdown 
 
 **`prefers-reduced-motion: reduce`:** every duration becomes 0. The SOS hold fill and the countdown bars become stepped (updated once per 250 ms or 1 s), because they are feedback, not decoration. Vibration and audio are unaffected.
 
-### 5.1 Simulation carve-out (Replay and lessons only)
-Inside `/training/replay/*`, a larger motion budget is allowed:
-- trail playback (the operator's GPS trail drawn over 5-8 s, machine markers moving);
-- a decision timer bar;
-- a choice reveal (right/wrong plate slides in, 240 ms);
-- step transitions (240 ms slide);
-- a score count-up of at most 1.2 s.
+### 5.1 Simulation carve-out (Replay and lessons only; D10)
+Inside `/op/training/replay/*` and `/op/training/lesson/*`, a larger motion budget is allowed:
+- **Phase transitions** Brief → Investigate → Decide → Debrief: 240 ms slide.
+- **Evidence card open:** 200 ms sheet rise. The "opened ①" order stamp appears instantly.
+- **Decision countdown bars:** linear.
+- **Lesson quiz instant feedback:** a ✓/✕ reveal in 240 ms.
+- **Debrief score count-up:** at most 1.2 s.
+- **The debrief re-enactment:** map playback at 10×, with the trail drawing itself and the machine and wind moving. This is the one long animation in the product. It is user-controlled (play, pause, scrub), autoplays once, and never loops.
 
-Still banned: confetti, particles, bounce, looping idle animation. The carve-out stops at the replay frame. The persistent chrome stays static, and **a live Warning or Critical alert pauses the replay and takes over the screen**, because safety beats training.
+Still banned: confetti, particles, bounce, looping idle animation.
+**Safety colours stay out:** correct/wrong feedback, scores and the re-enacted hazard use ink (filled ✓ vs outlined ✕), never green or red. Filled safety colour always means a live state.
+The carve-out stops at the replay frame. The persistent chrome stays static, and **a live Warning or Critical alert pauses every replay timer and the playback and takes over the screen**, because safety beats training.
+Reduced motion: phase changes and reveals are instant, timers are stepped, and the re-enactment does not autoplay (scrubbing still works, because the user drives it).
 
 ## 6. Tailwind 4 mapping
 Tokens live in one file, `apps/web/src/styles/tokens.css`, as CSS custom properties. `@theme` maps them (`--color-ink`, `--color-state-critical`, `--spacing-hit`, …), so components use `bg-state-critical`, `min-h-hit` and so on. No hex values appear in components. The same file is the source for the Expo tokens in P2.

@@ -1,181 +1,340 @@
 # Interaction map (the single source for navigation, actions and states)
 
-- Status: design plan v1 (ui-ux-lead, 2026-09-23). Update this file with every new interaction (ui-framework §10).
-- Contract names are from docs/architecture/api-contracts.md v1.0.0 (Proposed). The backend-lead is revising the contracts in parallel. Mismatches found so far are marked **⚠C** and listed in frontend-tasks.md §5.
-- Visual tokens are in visual-language.md, and screen content is in screens.md.
+- Status: design plan **v2** (ui-ux-lead, 2026-09-23). v2 codes against **api-contracts revision 3**: UI gaps UI-1 to UI-15 are closed, and UI-16 is partly closed (see api-contracts §10). It adds the D10 training redesign and the human-verified ledger witness.
+- Update this file with every new interaction (ui-framework §10). Visual tokens are in visual-language.md, screen content in screens.md, tasks in frontend-tasks.md.
+- **⚠C** marks a remaining question for Track B (frontend-tasks §5).
 
 ## 0. Canonical vocabulary (one name per thing; no synonyms anywhere in the UI)
 
-| Kind | Canonical names (English source strings; i18n keys in brackets) |
+| Kind | Canonical names (English source strings) |
 |---|---|
-| Safety states | CLEAR `state.clear` · CAUTION `state.caution` · WARNING `state.warning` · CRITICAL `state.critical` · NO SIGNAL `state.nosignal` |
+| Safety states | CLEAR · CAUTION · WARNING · CRITICAL · NO SIGNAL |
 | Work states (hero word) | READY · WORKING · PAUSED · BLOCKED · DONE · FAULT |
-| Operator actions | Start task · Resume · Pause · Complete · Acknowledge · SOS (hold) · Cancel SOS · Log incident · Listen · Practise · Ask |
+| Operator actions | Start task · Resume · Pause · Complete · Acknowledge · SOS (hold) · Cancel SOS · Log incident · Listen · Ask · Practise · Start · Open (evidence) · Decide now · Confirm order · Play / Pause / Restart (re-enactment) · Next · Done |
 | Fleet-manager actions | Acknowledge · Grant override · Verify ledger · Compare with Telegram · Show on map |
-| Words we never use | "OK", "Cancel" as a confirm pair (use the verb plus "Back"); "Dismiss" on a safety alert; "Submit" |
+| Replay phases | BRIEF · INVESTIGATE · DECIDE · DEBRIEF |
+| Words we never use | "OK" / "Cancel" as a confirm pair (use the verb + "Back"); "Dismiss" on a safety alert; "Submit" |
 
 ## 1. Navigation
 
-### 1.1 Operator (5 items, icon + label always, bottom bar under 1024 px, left rail from 1024 px)
-| Item | Route | Holds (hierarchy) | Badge |
+### 1.1 Operator (5 items, icon + label always; bottom bar below 1024 px, left rail from 1024 px)
+| Item | Route | Holds | Badge |
 |---|---|---|---|
-| Home | `/op` | Hero card (L1-L3), Loop card (L4), today's tasks (L2-L3), conditions (L3) | none |
-| Task | `/op/task` | Current or next task: progress, ETA + why, Start/Pause/Complete, PPE block | none |
-| Safety | `/op/safety` | Active alerts, checks (seatbelt, PPE, proximity, conditions), my incidents, Log incident | count of alerts that need Acknowledge (ink badge, no colour) |
-| Map | `/op/map` | Site map, my trail, machines by health, Guardian rings and protocol card | none |
-| Training | `/op/training` | "Because of today" assignment, Replay, lessons | "1 new" when a lesson is assigned |
+| Home | `/op` | Hero card, Loop card, conditions, today's tasks | — |
+| Task | `/op/task` | Current or next task, Start/Resume/Pause/Complete, PPE block, why | — |
+| Safety | `/op/safety` | Active alerts, checks, Log incident | count of alerts that need Acknowledge |
+| Map | `/op/map` | Site map, trail, machines by health, Guardian | — |
+| Training | `/op/training` | Assignments ("Because of today"), completed practice | "1 new" on `training.replay_ready` / `lesson_assigned` |
 
-Sub-screens (with a back button to the parent, 80 px): `/op/training/replay/[id]`, `/op/training/lesson/[code]`. First launch: `/start` (outside the shell).
-The hero card links to Task, and a Guardian takeover links to Map. Those are the only cross-links, so there are no navigation loops.
+Sub-screens (each with a back control; leaving a replay mid-run asks first, T10):
+- `/op/training/replay/[id]`: one route, whose phase is internal state (Brief → Investigate → Decide → Debrief). No URL per phase, so the browser Back cannot skip into a later phase.
+- `/op/training/lesson/[code]`.
+- First launch: `/start`.
 
-### 1.2 Fleet manager (4 items, left rail, Detailed mode by default)
-| Item | Route | Holds |
-|---|---|---|
-| Inbox | `/fm` | Alerts from `sup:{site}` (SOS, Guardian, seatbelt, PPE missing, anomalies) with the dispatch log. The anomaly filter replaces a separate "anomaly table" (reduction) |
-| Fleet Map | `/fm/map` | The same Map component, site scope: all machines by health, all operators, zones |
-| Analytics | `/fm/analytics` | Evidence card (P0) plus one chart. The task-time analytics chart is P1 |
-| Ledger | `/fm/ledger` | Incident chain, Verify ledger, checkpoints with Compare with Telegram |
+Cross-links (the only ones; no loops): hero → Task · Guardian takeover → Map · Loop card → Replay · Debrief → Lesson.
 
-### 1.3 Director (hidden, demo only)
-`/director`: not linked from any nav. Needs the fleet-manager session **and** the director secret, which is typed once per tab and kept in `sessionStorage`. See §4.9.
+### 1.2 Fleet manager (4 items, left rail, Detailed mode)
+Inbox `/fm` · Fleet Map `/fm/map` · Analytics `/fm/analytics` (evidence card) · Ledger `/fm/ledger`.
 
-## 2. Persistent chrome (on every shell screen; it survives navigation, sheets and alerts)
+### 1.3 Director (hidden)
+`/director`: FM session + director secret (typed once per tab, kept in `sessionStorage`). See §4.9.
 
-Layout, phone (< 640 px): a **status strip** at the top, 80 px high: [Safety chip, grows] [Connectivity chip]. A **title row** below it: [screen title] … [Language] [Ask]. The **bottom nav** is 80 px. **SOS** is fixed bottom-right, 108 px, sitting 16 px above the nav.
-From 1024 px: a single top strip [Safety chip][Connectivity chip] … [Language][Ask], the left rail nav, and SOS fixed bottom-right of the viewport.
-Z-order: content 0 · chrome 10 · sheets 20 · motion lock 25 · alert takeover 30 · **SOS 40 (always on top)** · SOS status 45.
+## 2. Persistent chrome (unchanged from v1 except where noted)
+
+- **Phone:** status strip 80 px [Safety chip][Connectivity chip]; title row [title] … [Language][Ask]; bottom nav 80 px; **SOS** fixed bottom-right at 108 px.
+- **From 1024 px:** one top strip, a left rail, SOS bottom-right.
+- **Z-order:** content 0 · chrome 10 · sheets 20 · motion lock 25 · alert takeover 30 · **SOS 40** · SOS status 45.
 
 | Element | Shows | Tap | Rules |
 |---|---|---|---|
-| **SOS** | Red plate, "SOS" word (display font) + localised "Help" label; "SOS ACTIVE" while one is open | Hold 1.5 s (A10). While an SOS is open, a tap opens the SOS status sheet | Exempt from every reduction pass. Visible in motion lock, over alert takeovers, on first launch after consent. Operator only; fleet managers do not get SOS |
-| **Safety chip** | The highest active tier for me: plate colour + pictogram + word ("WARNING · Seatbelt"); CLEAR when none; "×3" when `occurrences` > 1 | Opens Safety | Mirrors the hero safety field 1:1. Suppressed alerts never show. Offline for more than 10 s: NO SIGNAL plate + "last: CLEAR 10:42". A stale CLEAR is never shown as CLEAR |
-| **Connectivity chip** | LIVE · SIM 10:42 ×60 / RECONNECTING… / NO SIGNAL · synced 10:42 | Opens a small sheet: last sync time, what still works offline | Always visible. "SIM" is our honesty label: the clock is the scenario clock |
-| **Language** | The active language in its own script: English / हिन्दी / தமிழ் | Opens the language sheet (A01) | One tap from anywhere (shared devices at shift handover) |
-| **Ask** | Question-bubble icon + "Ask" | Opens Ask Spotter: a full-height sheet on phones, a 420 px side panel from 1024 px (A17) | Hidden in motion lock and during the first launch |
+| **SOS** | Red plate, "SOS" + localised "Help"; "SOS ACTIVE" while one is open | Hold 1.5 s (A10); while active a tap opens the SOS sheet | Operator only. Visible in motion lock, over takeovers and during a replay |
+| **Safety chip** | Highest active tier: colour + pictogram + word, "×3" when `occurrences` > 1 | Opens Safety | NO SIGNAL after 10 s offline; a stale CLEAR is never shown |
+| **Connectivity chip** | LIVE · SIM 10:42 ×60 / RECONNECTING… / NO SIGNAL · synced 10:42 / FIXTURE | Opens the sync sheet | Clock from `ClockTick.sim_now`. Countdowns use the offset from `server_now` |
+| **Language** | English / हिन्दी / தமிழ் | Language sheet (A01) + "Switch user" | Cookie locale (the language RPC was rejected for P0, UI-16) |
+| **Ask** | Question-bubble icon + "Ask" | Ask sheet (A17) | Hidden in motion lock, first launch and inside a replay (so the answer key cannot be looked up mid-run) |
 
-## 3. Button states (shared by every action)
+## 3. Button states (shared)
 
-| State | Visual | Notes |
-|---|---|---|
-| Default | Primary: ink plate, white label. Secondary: 2 px ink outline on surface. Min `--hit` (80 px); `--hit-dense` 48 px in Detailed mode from 1024 px | At most **one primary button per view** |
-| Hover (desktop only) | Label underline | Never carries information |
-| Pressed | Surface darkens (ink → #000, outline → `--surface-sunk`), 2 px inset top rule, 80 ms | |
-| Focus | 3 px ink outline with a 3 px paper offset (paper outline on dark plates) | Keyboard path matches visual order |
-| Disabled | Dashed 2 px `--ink-3` border, `--ink-3` label, **plus a reason line under it** ("Needs vest", "Offline") | A control is never disabled without a stated reason |
-| Loading | The label stays; a 3 px indeterminate bar along the bottom edge appears after 300 ms; `aria-busy`; not pressable | |
-| Success | Tick + past-tense label ("Started") for 1.2 s, then the next state | Screen readers announce it through `aria-live="polite"` |
-| Error | Ink ✕ pictogram + one-line reason + "Try again" under the button; the button is re-enabled | Never red (red means danger) |
-| Offline | Disabled style + reason "Needs signal" | SOS is the exception (A10) |
-| Requires confirmation | The press opens a confirm sheet: question + primary verb button + "Back" | Only for irreversible actions (Complete, Grant override) |
+| State | Visual |
+|---|---|
+| Default | Primary = ink plate with a white label (at most one per view); secondary = 2 px ink outline. Min 80 px (48 px in FM Detailed from 1024 px) |
+| Hover | Desktop only: underline |
+| Pressed | Darkens, 2 px inset top rule, 80 ms |
+| Focus | 3 px ink outline with a 3 px paper offset |
+| Disabled | Dashed `--ink-3` border **plus a reason line** |
+| Loading | The label stays; a 3 px indeterminate bar after 300 ms; `aria-busy` |
+| Success | Tick + past tense for 1.2 s |
+| Error | Ink ✕ + one line + "Try again" (never red) |
+| Offline | Disabled + "Needs signal" (SOS excepted) |
+| Requires confirmation | A confirm sheet with the question, the verb button and "Back" |
 
-Idempotency: every action press creates one `request_id` (UUID). A retry of the same intent reuses it, so a double tap or a network retry can never do the action twice.
+Idempotency: one `request_id` per intent, reused on retry.
 
 ## 4. Action contracts
-
-Format: **Purpose · Visible when · On press · Success · Failure · Duplicate prevention · Undo · State exceptions** (the states in §3 apply unless listed).
+Format: **Purpose · Visible · On press · Success · Failure · Duplicate · Undo** (§3 states apply unless noted).
 
 ### 4.1 First launch and preferences
-**A01 Choose language.** Purpose: set the UI and alert-audio language. Visible: first-launch step 1; the Language chip everywhere. On press: select a plate (English / हिन्दी / தமிழ்); the language name plays aloud (pre-recorded, unlocks audio for later alerts); "Continue" (first launch) or an immediate switch (chip sheet): set the `NEXT_LOCALE` cookie, then `router.refresh()`. Success: the whole UI re-renders in the new script in under 1 s; the sheet closes. Failure: none possible locally. Duplicate: n/a. Undo: choose again. ⚠C: no RPC stores `profiles.language`, so P0 keeps it in the cookie.
-**A02 Choose role / Switch user.** Purpose: sign in as the seeded demo persona (Ravi, operator; Anita, fleet manager). Visible: first-launch step 2; "Switch user" at the bottom of the language sheet. On press: sign in → `my_snapshot` → route to `/op` or `/fm`. Failure: "Could not sign in. Try again." Duplicate: disabled while loading. Undo: Switch user. ⚠C: how the client signs in without exposing the demo passwords is undecided (frontend-tasks §5 #9).
-**A03 Confirm machine.** Purpose: the operator confirms today's machine. Visible: first-launch step 3 (operators only). Shows "Your machine today: EXC-007 · Cat 320" from `my_snapshot.machine`. On press "This is my machine": continue. "Not my machine" shows "Tell your supervisor" and still continues (P0). ⚠C: there is no pairing RPC, so this step is display-only in P0.
-**A04 Give consent.** Purpose: DPDP consent to location, machine and safety data. Visible: last first-launch step. On press "I agree": `rpc consent_set {p_version, p_granted:true, p_request_id}` → Home. "Not now": a plate says "Spotter needs this to keep you safe. Talk to your supervisor." and blocks entry. Failure: error + retry. Duplicate: request_id. Undo: P1 (a "My data" view).
-**A05 Simple / Detailed.** Purpose: show only `core` fields, or `core` + `detail`. Visible: a segmented control in the Home and Task title rows (fleet-manager screens are always Detailed). On press: toggle; saved in `localStorage` per user. No server call and no failure states.
+**A01 Choose language.**
+- Purpose: set the UI and audio language.
+- Visible: first launch step 1, and the Language chip.
+- On press: select a plate; its name plays aloud (this also unlocks audio). Then set the `NEXT_LOCALE` cookie and `router.refresh()`.
+- Success: re-render in under 1 s. Undo: choose again.
+
+**A02 Choose role / Switch user.**
+- Purpose: sign in as a demo persona (Ravi / Anita).
+- On press: `functions.invoke("demo-login", {persona})` → `{token_hash}` → `supabase.auth.verifyOtp({token_hash, type:"email"})` → `my_snapshot` → `/op` or `/fm`.
+- Failure: "Could not sign in. Try again."
+- Duplicate: button locked while loading. Undo: Switch user.
+- The director secret needed by `demo-login` lives in the deploy's server env. ⚠C: confirm it is called from a Next route handler, never from the browser.
+
+**A03 Pair machine.**
+- Purpose: link the operator to today's machine.
+- Visible: first launch step 3 (operators), **skipped** when `paired_machine_id` is already set (it shows "Your machine: EXC-007 ✓" instead).
+- On press: a code field (large, uppercase; the suggested code is shown as a chip) → [Pair] → `rpc pair_machine {p_machine_code, p_request_id}`.
+- Success: "Paired · EXC-007 · Cat 320". Failure: `not_found` → "No machine EXC-070 on this site"; network → Try again.
+- Undo: pair again (P1: unpair).
+
+**A04 Give consent.**
+- On press: `rpc consent_set {p_version: PRIVACY.consent_version, p_granted:true}`.
+- The copy says "kept for 90 days" (`PRIVACY.retention_days`).
+- "Not now" blocks entry, with "Spotter needs this to keep you safe. Talk to your supervisor."
+
+**A05 Simple / Detailed.** A segmented control on Home and Task. The choice is kept in `localStorage`; there is no server call.
 
 ### 4.2 Task
-**A06 Start task / Resume.** Purpose: begin or resume the task and store its ETA. Visible: Task screen, status `planned | paused | blocked_ppe`, not motion-locked. On press: `rpc task_start {p_task_id, p_request_id, p_eta_p50_min, p_eta_p90_min, p_eta_model_version}`. Success `status:"started"`: the button becomes Pause, the hero word WORKING, and `task.started` updates every view. `status:"blocked"`: **not an error**. The PPE block plate opens (§7). Failure: `invalid_state` → "This task changed. Updating…" + snapshot refetch; `override_expired` → the PPE block plate again; network → error + Try again (same request_id). Duplicate: loading lock + request_id. Undo: Pause. Label: "Start task" when planned, "Resume" when paused. ⚠C: is `task_start` valid from `paused`? Unspecified.
-**A07 Pause.** Purpose: stop the clock on the task (break, hazard, handover). Visible: task `in_progress`. On press: `rpc task_pause {p_task_id, p_request_id}` → hero word PAUSED, button becomes Resume. No confirmation (Resume undoes it). Failure / duplicate: as A06.
-**A08 Complete.** Purpose: close the task and record its actual time. Visible: task `in_progress` or `paused`. **Requires confirmation**: the sheet says "Complete Excavation? 72 % done, 41 min so far." [Complete] [Back]. On confirm: `rpc task_complete` → hero word DONE, the next planned task becomes current. Undo: none (no reopen in the contract), which is why it asks first. Failure / duplicate: as A06.
+**A06 Start task / Resume.**
+- Visible: status `planned | paused | blocked_ppe`, not motion-locked.
+- On press: `rpc task_start {p_task_id, p_request_id, p_eta_p50_min, p_eta_p90_min, p_eta_factors: EtaFactor[], p_eta_model_version}`. The same call resumes a paused task, and it re-checks PPE every time (UI-12).
+- Success `started` → WORKING. `blocked` → the PPE block plate (§7).
+- Failure: `blocked` with `override_expired` → "Override expired" on the plate (`ppe.missing` is re-emitted to the Inbox automatically); `not_paired` → go to A03; `invalid_state` → refetch; network → Try again.
+- Undo: Pause.
+
+**A07 Pause.** `rpc task_pause`. No confirmation; Resume undoes it.
+
+**A08 Complete.**
+- Requires confirmation: "Complete Excavation? 72 % done, 41 min so far." (the % comes from `task.progress`, UI-1).
+- On confirm: `rpc task_complete`. There is no undo, which is why it asks first.
 
 ### 4.3 Alerts and SOS
-**A09 Acknowledge (operator).** Purpose: tell the system "I have seen this", which stops the escalation timer. Visible: on a Warning or Critical takeover when `needs_ack`, and **not** in motion lock (§6). Size `--hit-sos`. On press: `rpc alert_ack {p_alert_id, p_request_id}`. **No optimistic update:** the takeover stays until `AlertAckOut` returns. Success: the takeover collapses into the Safety chip (the colour stays while the condition lasts) and the alert row reads "Acknowledged 10:43"; audio and vibration stop. Failure: "Not sent. Your supervisor will be alerted anyway." + Try again. Offline: the same message, button disabled. Duplicate: loading lock + request_id; an already-acknowledged alert returns its status. Undo: none (and none needed).
-**A10 SOS (hold to send).** Purpose: call for help now. Visible: always (operator), including motion lock and over takeovers. On press: hold for 1.5 s. A square border fill runs around the plate (linear), with vibration ticks at 0.5 s and 1.0 s. Releasing early does nothing except show "Hold to send". At 1.5 s: vibrate [100,50,100], then `rpc sos_raise {p_request_id, p_lat, p_lon, p_note:null}` (location from `operator_state.location`, else `machine.location` ⚠C). Success: the SOS status sheet (full screen, red): "SOS SENT 14:03:12", the dispatch line from `dispatch.*` events ("Telegram to Anita: sent ✓"), and "Calling your supervisor in 58 s unless acknowledged" (countdown to `escalate_at`). Then "Anita acknowledged 14:03:20", or "Calling Anita…". Failure or offline: "Not sent. No signal." + **"Call supervisor"** (a `tel:` link that uses the phone's voice network) + automatic retry every 5 s with the same request_id. Duplicate: while an SOS is open the button reads "SOS ACTIVE" and a tap opens the status sheet; it never raises a second SOS (this also sidesteps the backend dedupe bug, G2-backend #3). Undo: A11. Keyboard: hold Space or Enter for 1.5 s.
-**A11 Cancel SOS.** Purpose: withdraw an accidental SOS. Visible: the SOS status sheet, for 10 s after sending (a countdown on the button). On press: `rpc sos_cancel {p_alert_id, p_request_id}` → "SOS cancelled. Your supervisor was told." (Telegram message edited server-side). After 10 s the button is removed; the SOS can then only be resolved by the supervisor. Failure: error + Try again.
-**A12 Listen.** Purpose: hear the protocol card or alert text again (the literacy fallback). Visible: on Guardian protocol cards and alert takeovers. On press: replay the pre-generated clip for `kind × lang`. Pressed state while playing; a second press stops it. Missing clip: the button is hidden (never a dead button).
+**A09 Acknowledge (operator).**
+- Visible: Warning or Critical takeover with `needs_ack`, and not `motion_locked`. Size 108 px.
+- On press: `rpc alert_ack`. **No optimistic update.**
+- Success: the takeover collapses into the chip; audio and vibration stop.
+- Failure or offline: "Not sent. Your supervisor will be alerted anyway."
+
+**A10 SOS (hold to send).**
+- On press: hold 1.5 s (ticks at 0.5 s and 1.0 s; keyboard: hold Space/Enter). Then `rpc sos_raise {p_request_id, p_lat, p_lon, p_note:null}`. The location is the device/operator location **or null**; the server falls back to the machine, then the site (UI-14).
+- Success (`SosRaiseOut`): the SOS sheet shows "SOS SENT 14:03:12" and "Location: from machine" (`location_source`). A countdown to `escalate_at` is computed with `server_now`. A dispatch line comes from `dispatch.*` on `op:` (UI-10): "Telegram to Anita: sent ✓" → "Calling Anita…" / "Anita acknowledged 14:03:20". The ledger number arrives via `incident.logged`.
+- Failure or offline: "Not sent. No signal." + **Call supervisor** (`tel:` to `site.emergency_tel`, UI-11) + retry every 5 s with the same request_id.
+- Duplicate: while an SOS is open, the button opens the sheet and never raises again. Undo: A11.
+
+**A11 Cancel SOS.** Available for 10 s after sending: `rpc sos_cancel`. After that the button is removed.
+
+**A12 Listen.** Replays the pre-generated clip (alerts, protocol cards, lesson cards). It is hidden if the clip is missing.
 
 ### 4.4 Incidents
-**A13 Log incident.** Purpose: record a safety incident or near miss in the ledger. Visible: Safety screen (secondary button); not in motion lock. Sequence (one sheet, three rows, no extra screens): **type** (4 icon plates: Near miss · First aid · Damage · Other) → **how serious** (3 plates: Low / Serious / Injury → `p_severity` 1 / 3 / 5) → **note** (optional text; mic is P1) → [Log incident]. Near miss shows a fixed line: "For learning only, never for discipline" (`p_non_punitive = true`). On press: `rpc incident_log {p_request_id, p_incident_type, p_severity, p_description, p_lat, p_lon, p_non_punitive, p_source_event_id:null}`. An empty note sends the localised type name (⚠C: `p_description` needs at least 1 character). Success: "Recorded #216 · a71b…" (the first 8 hash characters), the sheet closes, the row appears in My incidents. Failure: error + Try again (the draft is kept). Offline: the draft is kept and the button is disabled with "Needs signal" (the queue is P1). Duplicate: request_id. Undo: none (the ledger is append-only). A fleet manager can add a `correction` entry (P1).
+**A13 Log incident.**
+- One sheet: type (Near miss · First aid · Damage · Other) → how serious (Low / Serious / Injury → 1/3/5) → an optional note → [Log incident].
+- On press: `rpc incident_log {…, p_description: note or null, p_non_punitive: type == near_miss}`. A null description gets the type label server-side (UI-15).
+- Success: `IncidentLogOut {event_id}` → "Sent · recording in the ledger…", then on `incident.logged` → "Recorded #216 · a71b…".
+- Failure: the draft is kept + Try again. Offline: disabled, draft kept.
+- Undo: none (append-only).
 
-### 4.5 Training (the Loop)
-**A14 Practise.** Purpose: open the Replay made from my own event. Visible: the "Because of today" card on Home and Training when a `lesson_assignments` row exists with a replay. On press: fetch the replay scenario → Replay intro. Failure: "Could not load the practice. Try again." ⚠C: the `ReplayScenario` schema and the assignment read are not in the contracts yet.
-**A15 Choose answer (Replay step and lesson quiz, one component).** Purpose: answer a decision under time pressure. Visible: each Replay step and each quiz question. On press: record `{step, choice, ms}` locally and advance; no per-step server call. When the timer runs out, "no answer" is recorded. After the last step, `rpc replay_submit {p_replay_id, p_choices, p_request_id}` runs automatically (there is no separate Submit button). Success: the score screen. Failure: "Score not saved. Try again." with the answers kept. Duplicate: request_id; the choices are locked after submit. Undo: "Practise again" starts a new attempt.
-**A16 Watch lesson / lesson done.** Purpose: the 60-90 s clip plus a 3-question icon quiz (A15). On quiz end: `rpc lesson_complete {p_assignment_id, p_quiz_score, p_request_id}` → "Done" state on the card.
+### 4.5 Training: Replay (D10, four phases) and micro-lessons
+
+**Replay state machine** (client-side; the answer key never reaches the client before submit):
+```
+LOADING ─replay_get─► BRIEF ─Start─► INVESTIGATE ─(Decide now | budget 0)─► DECIDE step 1..n ─(last step)─► SUBMITTING ─► DEBRIEF
+   any phase ── live Warning/Critical ──► PAUSED (every timer frozen) ── alert handled + Resume ──► same phase
+   any phase before DEBRIEF ── Back ──► confirm "Leave practice? Your answers will be lost." [Leave] [Back]
+```
+
+**T1 Practise.**
+- Purpose: open the replay built from my own event.
+- Visible: an assignment in `my_snapshot.assignments` with `replay_id` (the Loop card on Home and on Training). It appears live on `training.replay_ready`.
+- On press: `rpc replay_get {p_replay_id}` → `ReplayScenario` → BRIEF.
+- Failure: "Could not load the practice. Try again." Offline: disabled. Duplicate: loading lock.
+
+**T2 Start (Brief → Investigate).**
+- The Brief shows `brief.title`, `situation`, `goal`, and "You have {time_budget_s} s to look at the evidence". The situation audio plays once.
+- **The Brief is not timed** (the 10 s in the spec is its target length, not a limit): a low-literacy operator must be able to hear it through before the clock starts.
+- On press: the Investigate timer starts.
+
+**T3 Open evidence card.**
+- Purpose: look at one piece of evidence. Opening is scored as process: which cards, and in what order.
+- Visible: the Investigate grid (3-7 closed card plates: type pictogram + `title`).
+- On press: the card opens as a sheet with its content (screens.md S5b). The **first** open appends the card id to `open_order` and stamps the plate "①". Closing and reopening is free and does not re-record.
+- `max_open` set: a counter "3 of 4 opened". At the limit, the unopened plates are disabled with the reason "Limit reached".
+- Relevance is never hinted before the Debrief.
+
+**T4 Decide now.**
+- Purpose: end Investigate early.
+- Visible: Investigate, after at least 1 card is opened (before that it is disabled with the reason "Open at least one card").
+- On press: DECIDE step 1. No confirmation: the timer would end the phase anyway.
+
+**T5 Choose (Decide step, `kind: "single"`).**
+- Visible: each step, with its prompt, 2-5 choice plates (pictogram + label) and the step countdown.
+- On press: the plate shows as selected (inverted ink) and the step locks. After 400 ms it advances and records `{step, choice_ids:[id], ms}`.
+- No correctness feedback here (Solve-style); it comes in the Debrief. No undo within a step.
+
+**T6 Confirm order (`kind: "order"`, arrange protocol actions).**
+- A tap on a choice assigns the next number (1, 2, 3…). A tap on the **last** numbered choice removes its number, so the sequence can be corrected from the end.
+- [Confirm order] is enabled when every choice is numbered. On press it records `{step, choice_ids:[in order], ms}` and advances.
+
+**Timer behaviour (Investigate and every Decide step):**
+- **Display:** a full-width ink bar that drains linearly, plus the seconds left as a `--t-figure` number. The bar is ink, **never a safety colour**: urgency in training must not look like a live alarm. No vibration and no alarm sound. From 5 s, the number is announced to screen readers once per second (`aria-live="polite"`) and a soft tick plays in the audio channel.
+- **Clock:** the client's monotonic clock (`performance.now()`). The server does not time the phases; `ms` is measured from when the step is shown to when it is locked.
+- **Pauses:** the timer freezes when the page is hidden (`visibilitychange`) and while a live alert has taken over. It resumes only on an explicit [Resume], so a live alert never costs the operator training time.
+- **Timeout:** at 0 a "Time's up" plate shows for 800 ms. In Investigate the flow moves to DECIDE with the cards opened so far. In a Decide step the step is **omitted from `p_choices`** (the contract needs at least one `choice_ids`), and scoring treats it as not answered in time (⚠C UI-18: confirm).
+- **Reduced motion:** the bar updates once per second.
+
+**T7 Submit (automatic).**
+- After the last step: `rpc replay_submit {p_replay_id, p_request_id, p_open_order, p_choices}` → `ReplayDebriefResult` → DEBRIEF. There is no Submit button.
+- Failure: "Score not saved. Try again." (the answers are kept; the same request_id is reused). Offline: waits and retries every 5 s with "Waiting for signal".
+
+**T8 Re-enactment playback (Debrief).**
+- Purpose: watch my own event, rebuilt from `reenactment` (trail, machine track with speed and pitch, wind) at 10×.
+- Controls (all 80 px):
+  - **Play / Pause** (one toggle);
+  - a **scrubber** (80 px hit height) with two markers: ⚑ the event moment and ⏱ "you responded" at `real_response_ms`;
+  - **Restart**;
+  - a fixed "10×" label (no speed menu; the reduction pass).
+- Readouts under the map: sim time, speed, pitch, and seatbelt as an ink pictogram.
+- Behaviour: it autoplays once when the Debrief opens (no autoplay with reduced motion) and stops at the end on the final frame, with no loop. Dragging the scrubber pauses it. Keyboard: Space = play/pause, ←/→ = ±1 s of sim time.
+- Playback length = `duration_ms / 10`. A live alert pauses it.
+
+**T9 Debrief next steps.**
+- "Lesson: Seatbelt on slopes" (primary, when `lesson_code` is set) → `/op/training/lesson/[code]`.
+- "Practise again" (secondary): a new attempt from the Brief with a new request_id, reusing the cached scenario.
+- "← Training".
+
+**T10 Leave replay.** Back or a nav tap before the Debrief opens a confirm sheet: "Leave practice? Your answers will be lost." [Leave] [Back]. After the Debrief, no confirmation.
+
+**T11 Lesson card: Next / Listen.**
+- Purpose: go through 3-5 illustrated cards (`LessonContent.cards`: kind label RULE / WHY / HOW / EXAMPLE / CHECK, a title, a body, and a pictogram or image).
+- Each card's Hindi (or English) audio plays when the card opens; A12 replays it.
+- [Next] (primary) and "← Back" (secondary, from card 2). Swiping is allowed as well, never instead of the buttons. Progress shows as "2 / 4".
+- Audio: ⚠C UI-17, below.
+
+**T12 Quiz answer (instant feedback).**
+- 3 questions with 2-4 icon choices each. A tap locks the choice and reveals the result at once: the chosen plate shows ✓ (filled ink) or ✕ (outlined), the correct choice is marked ✓, and `why` shows with its audio. `correct_id` is sent to the client: lessons are practice, not assessment.
+- [Next] after the reveal.
+- After question 3: "2 of 3" → `rpc lesson_complete {p_assignment_id, p_quiz_score: 67, p_request_id}` → "Done ✓" and back to Training.
+- Failure: "Not saved. Try again." There is no quiz retry in P0.
 
 ### 4.6 Ask Spotter
-**A17 Ask.** Purpose: a shift-aware answer grounded in the manuals and live data. Visible: the Ask chip (not in motion lock). Sequence: type a question (or tap one of 3 suggested questions based on the current alert or task) → optional **photo** (camera or file; compressed on the client to ≤ 1,600 px; uploaded to `ask-photos/{uid}/{uuid}.jpg`) → [Ask]. On press: `functions.invoke("ask", AskRequest)`. Success (`answered`): numbered steps (at most 3 for operators), a RULE plate when `rule` is present, citation chips (title + page), and "Talk to your supervisor" when `handover_to_supervisor`. `refused`: the plate "No answer in the manuals. Ask your supervisor." `degraded`: the answer plus the meta line "Backup model". Failure: "Spotter could not answer. Try again." Offline: disabled, "Needs signal". Duplicate: request_id; the Ask button stays disabled while waiting (p95 target 8 s; the loading bar shows what is happening: "Reading manuals…"). Undo: n/a.
-**A18 Log this incident (from Ask).** Visible: only when `proposed_action` is present. Label "Review and log". On press: opens A13 prefilled with the type and description. **The model never writes by itself; the operator confirms in A13.**
+**A17 Ask.**
+- A question (typed, or one of 3 suggestions based on the current alert or task), an optional photo (compressed to ≤ 1,600 px, uploaded to `ask-photos/{uid}/{uuid}.jpg`), then [Ask] → `functions.invoke("ask", AskRequest)`.
+- `answered`: numbered steps, each with its citation marks (`steps[].cited_ids`); a RULE plate quoting `rule.text` with its source; "Talk to your supervisor" when `handover_to_supervisor`; and a photo chip "Looks like: hydraulic leak · 72 %" (`photo.category`, `confidence`).
+- `refused`, by `refusal_reason`:
+  - `no_evidence`, `rule_not_verbatim`, `citation_invalid` → "No answer in the manuals. Ask your supervisor.";
+  - `rate_limited` → "Too many questions. Wait a minute.";
+  - `provider_down` → "Spotter is unavailable. Ask your supervisor.";
+  - `injection_suspected`, `policy_violation` → "Spotter can't answer that. Ask your supervisor."
+- `degraded`: the answer plus the meta line "Backup model".
+- Offline: disabled.
+
+**A18 Review and log.** Shown only when `proposed_action` is set. It opens A13 prefilled; the operator confirms. The model never writes by itself.
 
 ### 4.7 Fleet manager
-**A20 Acknowledge (fleet manager).** As A09, from an Inbox row (`alert_ack` accepts the fleet-manager role). The row shows "Acknowledged by you 14:03" and the Telegram message is edited server-side.
-**A21 Grant override.** See §7. Requires confirmation (the sheet is the confirmation).
-**A22 Verify ledger.** Purpose: recompute the hash chain. Visible: Ledger screen, always. On press: `rpc ledger_verify {p_from:1, p_to:null}`. Loading: "Checking 214 entries…". Success ok: a CLEAR plate "Chain intact · 214 entries · head a71b…". Success not ok: a CRITICAL plate "Chain breaks at #187 (hash mismatch)", the row is highlighted, and expected vs stored hashes show in detail. Failure: error + Try again. Duplicate: disabled while running (it is a read, so repeats are harmless). Undo: n/a.
-**A23 Compare with Telegram.** Purpose: check the database against the root that was published outside it. Visible: each checkpoint row. On press: `rpc ledger_root_check {p_root_id}` → match: CLEAR "Matches the root sent to Telegram at 13:05 (message #812)"; mismatch: CRITICAL "Database root ≠ published root". Both roots are shown in full (monospace, grouped by 4) so the demo can hold the phone's Telegram message next to the screen. That comparison by a person is the real external witness (G2-backend #4).
-**A24 Show on map.** Navigation from an Inbox row or a Guardian takeover to the Map, centred on the machine, with that alert's ring highlighted.
+**A20 Acknowledge.** As A09, from an Inbox row.
 
-### 4.8 What is deliberately not a button
-- No "dismiss" on Warning or Critical: they leave when acknowledged or resolved.
-- No "Request override" on the operator side: `ppe.missing` already lands in the fleet manager's Inbox, so the operator sees "Supervisor notified" (§7).
-- No settings screen in P0: language is the chip, Simple/Detailed is on Home, and switching user is in the language sheet.
-- No "refresh": Realtime plus the snapshot refetch on reconnect keep screens current.
+**A21 Grant override.** See §7.
 
-### 4.9 Director (demo only; the states are simpler: default / loading / done / error)
-Buttons map one-to-one to `DirectorCommand`: New run (scenario `review1`, speed) · Play · Pause · Speed 1× / 10× / 60× · Jump to beat 1-5 (preset `sim_offset_ms`) · Inject: vest on, seatbelt off, seatbelt on · Publish checkpoint · Tamper #N (edit) · Tamper #N (rehash) · Dry run on/off (shown as a large state label, because a live demo in dry-run mode would silently skip the call). Each sends `DirectorRequest {request_id, command}`, and the response `message` is shown in a log list. A persona switch opens the demo personas in two browser windows side by side.
+**A22 Verify ledger.**
+- `rpc ledger_verify {p_from:1, p_to:null}` → `LedgerVerifyOut`.
+- ok: a CLEAR plate "Chain intact · {checked} entries · head a71b…".
+- Not ok: a CRITICAL plate "Chain breaks at #{first_bad_seq} ({reason})", the row highlighted, and expected vs stored hashes shown.
+- The plate says "The database agrees with itself". That is the *internal* check only.
+
+**A23 Compare with Telegram (human-verified witness; N1).**
+- Purpose: check the ledger against the checkpoint Anita received **outside** the database.
+- Visible: always on Ledger.
+- Sequence:
+  1. "Open the SPOTTER-LEDGER message in your Telegram."
+  2. **Paste the line** into a monospace field. It is parsed live with `WITNESS_LINE`, which fills **From** and **To** (both editable number fields; she can also type the range from the message by hand) and shows the published root and head, labelled "From your Telegram".
+  3. [Compare] → `rpc ledger_recompute {p_first_seq, p_last_seq}` → `LedgerRecomputeOut`.
+  4. Two aligned rows per hash (root, then head): "From your Telegram" above "Recomputed from ledger rows now", 64 hex characters grouped by 4.
+- Match (root, head and `leaf_count = n`): a CLEAR plate "Matches your Telegram checkpoint · {n} entries".
+- Mismatch: a CRITICAL plate "Does not match. The ledger changed after this checkpoint." The **first differing 4-character group is boxed** in ink, and an arrow marks the exact first character.
+- No line pasted (range typed only): the recomputed values show with the note "Paste the Telegram line to compare".
+- Failure: `validation` (first > last, or out of range) → a message on the field; network → Try again. Duplicate: locked while loading. Undo: n/a (read only).
+- **Nothing on the "From your Telegram" side comes from the database.** A footer states the claim exactly: "Externally witnessed, human-verifiable."
+
+**A24 Show on map.** Navigation to the machine, with the alert ring highlighted.
+
+### 4.8 Deliberately not a button
+No Dismiss on Warning or Critical. No operator "Request override" (`ppe.missing` already reaches the Inbox). No settings screen. No refresh. No Submit in Replay. No speed menu on the re-enactment.
+
+### 4.9 Director (demo only; states: default / loading / done / error)
+Each button sends one `DirectorCommand`:
+- New run (`review1`, speed, **rehearsal** on/off) · Play · Pause · Speed 1× / 10× / 60× · Jump to beat 1-5;
+- Inject: vest on · seatbelt off · seatbelt on;
+- Publish checkpoint · Tamper #N (edit) · Tamper #N (rehash);
+- Dry run on/off, shown as a large state label;
+- Purge rehearsals (requires confirmation).
+
+Every response `message` is appended to a log.
 
 ## 5. Alert tiers
 
-| Tier | Trigger examples | Screen | Vibration (Vibration API) | Audio | Needs Acknowledge | Escalation (server) |
-|---|---|---|---|---|---|---|
-| **Info** | Idle excess, weather note | A row in the Home/Safety feed. Chip unchanged | none | none | no | none |
-| **Caution** | PPE missing, anomaly on my machine, proximity awareness | A yellow **banner** under the status strip (80 px): pictogram + one line + "›" to Safety. Clears itself when resolved | [200] once | none | no | none |
-| **Warning** | Seatbelt off while moving, Guardian < 50 m, proximity warning | An orange **takeover** covering the content area (the chrome and SOS stay): pictogram, WARNING word, one-line cause ("Seatbelt off · 17° slope"), protocol card if any, the escalation countdown ("Supervisor alerted in 14 s"), [Acknowledge] + [Listen], "Show on map" for Guardian | [400,200,400] every 5 s until acknowledged or resolved | TTS clip in the UI language at once, repeated every 10 s (at most 6 times) | yes | Timeout (20 s seatbelt, 15 s Guardian) → Telegram to the supervisor; operator call only if on foot or parked |
-| **Critical** | Guardian < 15 m, seatbelt off on a slope over the limit, SOS | The same takeover in red, **full screen including the status strip** (SOS stays on top). Dispatch line: "Supervisor alerted · Telegram sent ✓ · Calling…" | [800,200,800,200,800] every 4 s until acknowledged | TTS at once, repeated every 10 s | yes | External escalation fires **at once**, without waiting for the acknowledgement |
+| Tier | Screen | Vibration | Audio | Needs Acknowledge | Escalation (server) |
+|---|---|---|---|---|---|
+| **Info** | A row in the Home/Safety feed | none | none | no | none |
+| **Caution** | A yellow banner under the strip (80 px) → Safety; clears itself | [200] once | none | no | none |
+| **Warning** | An orange takeover over the content (the chrome and SOS stay): pictogram, WARNING, cause, protocol card (`ProtocolCard`), countdown to `escalate_at`, [Acknowledge] [Listen], "Show on map" for Guardian | [400,200,400] every 5 s | TTS at once, repeated every 10 s (at most 6) | yes | Timeout → Telegram to the supervisor; an operator call only when `call_allowed` |
+| **Critical** | The same takeover in red, full screen including the strip (SOS on top), with the dispatch line | [800,200,800,200,800] every 4 s | TTS at once, repeated every 10 s | yes | External escalation fires **at once** |
 
-Lifecycle mapping of `AlertStatus`: `open` → shown as above · `acknowledged` → the takeover closes, the chip keeps the colour, the row reads "Acknowledged" · `escalating`/`escalated` → dispatch line "Supervisor alerted / Calling Anita…" · `resolved` → the chip drops to the next highest tier or CLEAR and the row moves to history · `suppressed` → never shown to the operator (fleet managers see a collapsed "Suppressed (n)" group).
-Concurrency: only the **highest** tier shows as a takeover. Others queue under it as "+1 more" (the server already suppresses lower tiers). Two Criticals stack, newest first, and each needs its own Acknowledge.
-Countdown: computed from `escalate_at` minus the **server** time (⚠C: `server_now` is needed, frontend-tasks §5 #4). The countdown bar is linear and turns into text at 0 ("Supervisor alerted").
-Autoplay: audio unlocks with the first tap of first launch (A01). If the browser still blocks it, the takeover shows "Sound blocked, tap Listen" (never silent without saying so).
-Unknown event types or alert kinds render as a generic row (`type` + tier), so an additive contract change never crashes the UI.
+- **Tier upgrade:** an alert raised with `upgraded_from` (for example Guardian warning → critical under 15 m) swaps colour instantly, plays the 480 ms border stamp once, and restarts audio and vibration at the new tier.
+- **Lifecycle:** `open` → shown · `acknowledged` → the takeover closes and the chip keeps the colour · `escalating`/`escalated` → the dispatch line · `resolved` → the chip drops · `suppressed` → operator never sees it; the FM sees "Suppressed (n)".
+- **FM-only kinds:** `alert_flood` (a summary row) and `ledger_tamper` (critical, from `ledger.tamper_detected`).
+- **Concurrency:** only the highest tier shows as a takeover; others show as "+1 more"; Criticals stack.
+- **Countdown:** `escalate_at` minus server time (`server_now` offset, UI-4).
+- **Autoplay:** audio unlocks at A01. If it is still blocked: "Sound blocked, tap Listen".
+- **Unknown event types:** rendered as a generic row (`type` + tier).
 
 ## 6. Motion-lock view
 
-- **Enter:** at once when `motion_locked` is true. P0 client predicate: `machine.moving && !operator_state.on_foot` (⚠C: ask for a server-computed `motion_locked` so the UI and `can_call_operator` always agree).
-- **Exit:** after the machine has been stopped for **3 s** (hysteresis, so the screen does not flicker at walking pace). 160 ms cross-fade back to the previous screen.
-- **Layout:** full screen, 8 px ink/paper hazard-stripe frame. Inside: machine code; the **work state word** at `--t-state`; the **safety plate**, full width, with its word; ETA figure and progress bar; one line, "Stop the machine to use Spotter". The connectivity chip sits in the top corner. **SOS stays** bottom-right. Nav, Ask, Language and every other control are gone.
-- **Input:** every touch is ignored except the SOS hold. No accidental navigation is possible.
-- **Alerts during lock:** Warning or Critical takeovers show **without** an Acknowledge button. In its place: "Fix it: fasten seatbelt, or stop to respond". The alert resolves through the sensor (`alert.resolved`, `via: sensor`) or escalates to the supervisor's Telegram. The server never phones the operator while moving (`dispatch.suppressed {reason:'motion_lock'}`). When the machine stops, any alert still needing acknowledgement shows its Acknowledge button at once.
-- Caution under lock: a yellow band inside the frame with one short vibration.
+- **Source of truth:** `operator_state.motion_locked`, computed by the same SQL function as the call rule, and live via `operator.motion_lock_changed` (UI-5). `reason: state_unknown` counts as locked. The client adds a **3 s display hold before unlocking** (it never affects calls, which are decided server-side).
+- **Layout:** the hero card at full screen inside the 8 px ink/paper stripe frame, the connectivity chip in the corner, **SOS** bottom-right, and one line: "Stop the machine to use Spotter". Nothing else is shown.
+- **Input:** every touch is ignored except the SOS hold.
+- **Alerts:** a Warning or Critical takeover shows **without** Acknowledge. In its place: "Fix it: fasten seatbelt, or stop to respond". It resolves by sensor (`alert.resolved via sensor`) or escalates to the supervisor's Telegram (no operator call while locked). When the machine stops, the Acknowledge button appears at once.
+- **Replay** can't be open while locked (the lock covers it). An in-progress replay pauses.
 
 ## 7. PPE warning and logged supervisor override
 
 ```
-Operator (Task screen)                         Fleet manager (Inbox)
-A06 Start task → task_start → {blocked, missing:[vest]}
+Operator (Task)                                          Fleet manager (Inbox)
+A06 Start → task_start → {blocked, missing:[vest]}
 BLOCKED plate: blue mandatory sign "Wear vest"
-  + TTS "पहले जैकेट पहनें" + "Supervisor notified"      ← ppe.missing (caution) arrives as an Inbox row
-Start: disabled, reason "Needs vest"                    Row: CAUTION · PPE missing · Ravi · vest · Excavation
-                                                         [Grant override]  (primary on this row only)
-path A (demo): vest tag seen → ppe.restored
-  plate: "Vest detected ✓", Start enabled
-  → operator presses Start → started
-                                                        path B: A21 Grant override → sheet:
-                                                          "Let Ravi start without: vest"
-                                                          Reason (required, 10-500 chars, counter)
-                                                          two quick reasons: "Tag faulty, checked in person"
-                                                          · "Vest on, sensor not reading"
-                                                          [Grant 15-min override]  [Back]
-                                                          → rpc ppe_override {p_task_id, p_reason, p_request_id}
-                                                          → "Recorded in ledger #215 · valid until 14:17"
-path B arrives: ppe.override_granted
-  plate: "Override by Anita · until 14:17 · ledger #215"
-  Start enabled → operator presses Start → started
+  + TTS + "Supervisor notified"                     ←   ppe.missing row: CAUTION · Ravi · vest · Excavation
+Start disabled: "Needs vest"                             [Grant override]
+path A (demo): ppe.restored → "Vest detected ✓"
+  → Start → started                                      path B: A21 sheet "Let Ravi start without: vest"
+                                                           reason 10-500 chars (counter) + 2 quick reasons
+                                                           [Grant 15-min override] [Back]
+                                                           → rpc ppe_override → {override_id, valid_until}
+                                                           → "Recorded in ledger · valid until 14:17"
+ppe.override_granted → "Override by Anita · until 14:17"
+  → Start → started
+expired → task_start returns blocked + override_expired → "Override expired", and ppe.missing re-appears in the Inbox
 ```
-A21 contract. Purpose: allow one start without the missing PPE, with who, why and when recorded in the ledger. Visible: an Inbox row of kind `ppe_missing` whose task is `blocked_ppe`. Success: the row reads "Override granted · until 14:17 · #215". Failure: `forbidden` → "Only a fleet manager can grant this"; `invalid_state` → "Task is no longer blocked"; `validation` → counter turns into the error line; network → error + Try again. Duplicate: request_id + the button locked while loading. Undo: **none** (append-only ledger). The sheet says so: "This is recorded permanently. It expires in 15 minutes." Expiry: if the operator starts after `valid_until`, `task_start` returns `override_expired` and the operator sees the BLOCKED plate again (⚠C: whether a new `ppe.missing` re-notifies the fleet manager is unspecified).
 
-## 8. Offline matrix (P0: cached last snapshot, no action queue)
+A21:
+- Visible: an Inbox row of kind `ppe_missing` whose task is `blocked_ppe`.
+- Failure: `forbidden` / `invalid_state` / `validation` messages, or network + Try again.
+- Duplicate: request_id.
+- Undo: none. The sheet says "Recorded permanently. Expires in 15 minutes."
+- The ledger number arrives via `incident.logged`.
+
+## 8. Offline matrix (P0)
 
 | Thing | Offline behaviour |
 |---|---|
-| Chips | Connectivity → NO SIGNAL · synced HH:MM. Safety → NO SIGNAL plate + "last: <state> HH:MM" after 10 s |
-| Hero, tasks, map | Render from the cached `my_snapshot` (saved to `localStorage` on each successful fetch) with an "as of HH:MM" stamp and dashed rules |
-| SOS | Enabled. Retries every 5 s + "Call supervisor" `tel:` fallback |
-| Start / Pause / Complete / Acknowledge / Log incident / Ask / Practise | Disabled with "Needs signal". The incident draft is kept |
-| Reconnect | Rejoin private channels → Broadcast replay (≤ 25) → `my_snapshot` refetch → chips return to LIVE |
+| Chips | NO SIGNAL states (§2) |
+| Hero, tasks, map | Render from the cached `my_snapshot` with an "as of" stamp |
+| SOS | Retries + `tel:` `site.emergency_tel` |
+| Actions (Start, Pause, Complete, Acknowledge, Log incident, Ask, Practise, Pair) | Disabled with "Needs signal" |
+| A replay already loaded | Can be played through; the submit waits and retries |
+| A lesson already loaded | Cards and quiz work; `lesson_complete` retries |
+| Reconnect | Rejoin → Broadcast replay (≤ 25) → `my_snapshot` |

@@ -1,23 +1,57 @@
-# Resume prompt
+# Resume prompts
 
-Paste this into a fresh Claude Code session opened in this folder:
-
+## A. Orchestrator session (planning, gates, reviews): model Opus
+Open Claude Code in `C:\Users\Shlok\Downloads\Catepillar Hackathon` and paste:
 ```
-Resume the Caterpillar Hackathon project exactly where we left off.
+Resume the Caterpillar Hackathon project (product: Spotter) exactly where we left off.
 1. Read CLAUDE.md, then STATE.md, then CHECKLIST.md, then the last 3 entries of
-   docs/project-memory/timeline.md and docs/project-memory/unanswered-questions.md.
-   Read nothing else yet.
+   docs/project-memory/timeline.md, docs/project-memory/decisions.md (D1-D10) and
+   docs/project-memory/unanswered-questions.md. Read nothing else yet.
 2. If graphify-out/ exists, use it for any codebase question before grepping.
-3. Reply with: current phase, last completed task, task in flight, the next action from
-   STATE.md, and any open questions. Then wait for my go-ahead before doing anything.
-Do not re-research or re-decide anything recorded in docs/project-memory/decisions.md.
+3. Reply with: current phase, last completed task, task in flight, the next action from STATE.md,
+   open decisions for Shlok. Then wait for my go-ahead.
+Do not re-research or re-decide anything recorded in decisions.md.
 ```
 
-## Before leaving a session (checklist for Claude)
+## B. Build sessions (after G2 approval): model Fable 5.1, two sessions in parallel
+Set up once (the orchestrator does this at H0):
+```bash
+git worktree add ../spotter-track-b -b track-b
+git worktree add ../spotter-track-f -b track-f
+```
+Copy `.env` into both worktrees (it is git-ignored). **Contracts freeze first:** Track B's contract
+task merges to `main` before Track F integrates. Merge order and the rules for shared files are in
+docs/architecture/backend-tasks.md.
+
+**Session B** (open Claude Code in `../spotter-track-b`, select Fable 5.1), paste:
+```
+You are Track B (backend) of Spotter. Act as the backend-lead agent (.claude/agents/backend-lead.md).
+Read CLAUDE.md, STATE.md, docs/specs/idea.md, docs/architecture/ADR-001-backend-architecture.md,
+then docs/architecture/backend-tasks.md. Execute tasks strictly in order, one at a time, touching
+only supabase/, scripts/, packages/shared and deploy config. After each task: run its tests, get a
+review from backend-reviewer (.claude/agents/backend-reviewer.md, model opus) and code-reviewer,
+fix the findings, commit, and tick the task in CHECKLIST.md (Track B section only). Run defenso
+guard_code on auth/DB/env/request-body code. Twilio live calls ONLY with DRY_RUN off and after
+asking me ($5.90 budget). Update STATE.md at every task boundary. Start with task B0.
+```
+
+**Session F** (open Claude Code in `../spotter-track-f`, select Fable 5.1), paste:
+```
+You are Track F (frontend) of Spotter. Act as the ui-ux-lead agent (.claude/agents/ui-ux-lead.md).
+Read CLAUDE.md, STATE.md, docs/specs/idea.md, docs/design/visual-language.md,
+docs/design/interaction-map.md, docs/design/screens.md, then docs/design/frontend-tasks.md. Execute
+tasks strictly in order, touching only apps/web. Build against the fixture adapter until Track B's
+contracts land on main, then integrate. After each task: screenshot it at 375/768/1440 in the
+browser pane, get a review from code-reviewer (.claude/agents/code-reviewer.md), fix the findings,
+commit, and tick the task in CHECKLIST.md (Track F section only). Update STATE.md at every task
+boundary. Start with task F01.
+```
+
+## Before leaving any session (checklist for Claude)
 - [ ] End-of-Session Routine in `claude/routines.md` done
 - [ ] STATE.md "Next action" is specific and has a reason
 - [ ] CHECKLIST.md statuses current; validator verdicts recorded
 - [ ] timeline.md entry appended
-- [ ] graphify graph refreshed if code changed (`/graphify .` skill; CLI is `python -m graphify`,
-      binary not on PATH)
-- [ ] git commit of docs + code
+- [ ] graphify graph refreshed if code changed (`/graphify .` skill; the CLI is `python -m graphify`,
+      because the binary is not on PATH)
+- [ ] git commit + push (verify with `git status -sb`)
