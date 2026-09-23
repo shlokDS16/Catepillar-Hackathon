@@ -1,0 +1,114 @@
+// Vitest Snapshot v1, https://vitest.dev/guide/snapshot.html
+
+exports[`AskAnswer JSON schema (strict output for Groq; B19 verifies live and strips unsupported keywords) > matches the snapshot 1`] = `
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "additionalProperties": false,
+  "properties": {
+    "grounded": {
+      "type": "boolean",
+    },
+    "handover_to_supervisor": {
+      "type": "boolean",
+    },
+    "proposed_action": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "description": {
+              "maxLength": 500,
+              "type": "string",
+            },
+            "incident_type": {
+              "enum": [
+                "seatbelt_breach",
+                "guardian_hazard",
+                "sos",
+                "ppe_override",
+                "near_miss",
+                "first_aid",
+                "property_damage",
+                "manual",
+                "correction",
+              ],
+              "type": "string",
+            },
+            "type": {
+              "const": "log_incident",
+              "type": "string",
+            },
+          },
+          "required": [
+            "type",
+            "incident_type",
+            "description",
+          ],
+          "type": "object",
+        },
+        {
+          "type": "null",
+        },
+      ],
+    },
+    "rule": {
+      "anyOf": [
+        {
+          "additionalProperties": false,
+          "properties": {
+            "cited_id": {
+              "type": "string",
+            },
+            "text": {
+              "maxLength": 300,
+              "type": "string",
+            },
+          },
+          "required": [
+            "text",
+            "cited_id",
+          ],
+          "type": "object",
+        },
+        {
+          "type": "null",
+        },
+      ],
+    },
+    "steps": {
+      "items": {
+        "additionalProperties": false,
+        "properties": {
+          "cited_ids": {
+            "items": {
+              "type": "string",
+            },
+            "minItems": 1,
+            "type": "array",
+          },
+          "text": {
+            "maxLength": 200,
+            "type": "string",
+          },
+        },
+        "required": [
+          "text",
+          "cited_ids",
+        ],
+        "type": "object",
+      },
+      "maxItems": 6,
+      "minItems": 1,
+      "type": "array",
+    },
+  },
+  "required": [
+    "steps",
+    "rule",
+    "grounded",
+    "handover_to_supervisor",
+    "proposed_action",
+  ],
+  "type": "object",
+}
+`;

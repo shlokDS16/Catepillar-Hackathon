@@ -9,7 +9,7 @@
   F = Track F (Fable 5.1, ../spotter-track-f). Prompts in RESUME.md; rules in docs/sessions/build-protocol.md.
 - **Live URL:** https://spotter-five-brown.vercel.app (Vercel project shlok-goenkas-projects/spotter, root apps/web,
   git-connected: EVERY push to main is a production deploy, so push main only when the build is green).
-- **In flight:** Track B: B0 merged (455b317); B1 (contracts v1.0.0 + seed generator + fixtures) in progress. Track F: F01-F03 merged to main; next F04 alerts, F05 SOS, F06 hero, F07 fixtures, F08 Home, F12 map toward
+- **In flight:** Track B: B0 merged (455b317); B1 merged (contracts-v1.0.0 frozen, IP0 done); B2 (migration 001) in progress. Track F: F01-F05 merged to main; next F06 hero, F07 fixtures/DataPort (switch to @cat/shared/fixtures), F08 Home, F12 map toward
   **Showable 1** (fixtures, ≈ H3-4). Track F commits on `claude/spotter-track-f-a12198` and
   fast-forwards `track-f` (the app's worktree guard blocks edits in ../spotter-track-f); accepted.
 - **Next action (integrator):** watch the track logs → merge contracts → merge Track F → deploy
@@ -17,6 +17,7 @@
   show hard-coded dashboards).
 - **Mobile (after review 1, D4):** load Shlok's skills ios-app-development + iosui (iOS/TestFlight) and
   Andriod_app + Andriod_APPUI (Android APK), adapted to Spotter. Credentials: .env.example "Mobile" section.
+- **AFTER THE REVIEW (integrator, do first):** set Vercel production SOS_LIVE=0 (public unauthenticated route places real Twilio calls) and remove KIT_PUBLIC unless Shlok keeps /dev/kit public; redeploy.
 - **Shlok actions during build:** B24c SOP review (~20 min, when Track B asks); OK before any live Twilio call.
 - **Verified env (2026-09-23):** Supabase (Mumbai, active), Groq A+B, Gemini, Pinecone, Voyage,
   LlamaCloud, Twilio (trial, $5.90, both demo phones verified), Telegram (@Spotter125Bot, chat

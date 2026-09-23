@@ -58,17 +58,21 @@ Only the integrator ticks this section, from docs/sessions/track-b.md and track-
 - [ ] B0 → … (tick each task ID as merged; full list in backend-tasks.md)
 - [x] B0 project link, function config, secrets, Vault, COMMIT probe PASS, Pinecone spotter-kb, smoke 11/11: merged 455b317
 - [x] B0b Vercel: project shlok-goenkas-projects/spotter (Next.js, root apps/web), 3 prod env vars, git-connected; production https://spotter-five-brown.vercel.app (200)
+- [x] B1 contracts v1.0.0 frozen (tag contracts-v1.0.0), SQL seed generator, 93 fixtures as @cat/shared/fixtures: merged f9f4a3f; shared vitest 113 + scripts green, tsc shared/scripts/web exit 0, web build green
 ### Track F (docs/design/frontend-tasks.md)
 - [ ] F01 → … (tick each task ID as merged; full list in frontend-tasks.md)
 - [x] F01 tokens, fonts, Plate/Button/Chip, pictograms, /dev/kit, haptics-test page: merged 4393f2c (favicon fix 73c6e58), web build green
 - [x] F02 cookie locale en/hi/ta, LanguageSheet, dialog Sheet: merged a4324ba, web build green (routes now dynamic: locale cookie)
 - [x] F03 op/fm shells, strip, nav + rail, SOS/Ask slots, z-layers: merged (see git log), build green; deviation: sheets non-modal so SOS stays tappable
+- [x] F04 alert tiers, useAlertFeedback, selectors, takeover + banner: merged 7087ab9; vitest 15/15 (log said 20), typecheck + build green
+- [x] F05 SOS hold-to-arm + SOS sheet on fixtures: merged d1bcd33, build green, deployed for the review; KIT_PUBLIC=1 set in Vercel production so /dev/kit serves (revert after the review)
+- [x] F05b SOS review-demo route /api/sos-demo (Telegram + one Twilio call per hold): merged 090acbf; SOS_LIVE=1 + 6 sensitive Twilio/Telegram vars in Vercel production, Shlok approved LIVE FOR THE REVIEW ONLY (set SOS_LIVE=0 after). Stand-in until F13 uses sos_raise.
 ### Showable milestones (build-protocol.md)
 - [ ] Showable 1 (≈ H3-4): fixture-driven cockpit, alerts, SOS, map, EN/HI deployed
 - [ ] Showable 2 (≈ H8-9): + Replay 4 phases, FM inbox + ledger UI
 - [ ] Showable 3 (≈ H11-12): live data, real Telegram + Twilio (Shlok's OK)
 ### Integration checkpoints
-- [ ] Contracts frozen and merged to main
+- [x] Contracts frozen and merged to main (contracts-v1.0.0, f9f4a3f)
 - [ ] Track F switched from the fixture adapter to live data
 - [ ] G3 checkpoint (runbook): preview deploy + judge-simulator + phase-validator
 - [ ] graphify update after each milestone
