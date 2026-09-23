@@ -71,3 +71,7 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 ## 2026-09-23 — D12: Integrator runs from its own worktree (Shlok)
 - Session A works in `.claude/worktrees/caterpillar-spotter-resume-c02a8b` instead of the main folder. It merges into `main` with `git -C "<main folder>" merge ...`, because `main` stays checked out in the main folder. Docs changes are committed on the worktree branch, then fast-forwarded into main.
 - Tracks stay in `../spotter-track-b` (track-b) and `../spotter-track-f` (track-f); only those folders have `.env`, `.env.local` and installs.
+
+## 2026-09-23 — D13: Gemini model id gemini-3.6-flash (Track B B0, measured)
+- `gemini-2.5-flash` returns 404 "no longer available to new users" on our key; the API's suggested replacement `gemini-3.6-flash` is listed for the key. B1 freezes `GEMINI_MODEL = "gemini-3.6-flash"`, env-overridable. Chain order unchanged (D9: Groq A → Gemini → Groq B).
+- Also from B0: the role-level statement_timeout backstop (N4) is unavailable (`postgres` is not superuser); bounded work per step plus the 2-min role timeout carries the guarantee. COMMIT probe PASS, so the worker-procedure design stands.
