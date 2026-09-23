@@ -182,7 +182,7 @@ re-notification.
 
 ## 5. Ledger tamper and verify (demo step 5; G2-4, N1, #4)
 
-Claim on stage: **"externally witnessed, human-verifiable"**, and nothing stronger.
+Claim on stage: **"tamper-evident, human-verifiable" (the checkpoint is externally witnessed in Telegram)**, and nothing stronger.
 1. **Publish checkpoint** (director) → Anita's Telegram shows
    `SPOTTER-LEDGER v1 seq=1..214 n=214 root=<64 hex> head=<64 hex> at=14:02 IST`.
 2. **Verify** → internal chain check ✓ ("the database agrees with itself").
@@ -342,7 +342,7 @@ Seed (`ALERT_POLICIES`, generated into `alert_policies`) [A: tunable]:
 | **S**poofing | Edge Functions `ask`, `director` | user JWT authenticated in code (not `verify_jwt` + publishable key, G2-6); `director` also needs role FM + `DEMO_DRIVER_SECRET` (constant-time) | stolen session until expiry |
 | S | Telegram / Twilio webhooks | secret header (constant-time) / HMAC-SHA1 signature over the public URL; Telegram chat id bound to the supervisor | bot token or auth token leak |
 | S | Device login | Supabase Auth sessions: JWT expiry 1 h (default [A]), refresh tokens; demo accounts with strong passwords; "time-box sessions" is a paid Auth setting [U] | shared demo laptop |
-| **T**ampering | Ledger | canonical hash chain; append-only grants + triggers; Merkle checkpoint sent to the fleet manager's Telegram and compared by a human against a root recomputed from the rows ("externally witnessed, human-verifiable") | a party holding both DB ownership and the bot token; entries after the last checkpoint; OpenTimestamps/RFC 3161 on the roadmap |
+| **T**ampering | Ledger | canonical hash chain; append-only grants + triggers; Merkle checkpoint sent to the fleet manager's Telegram and compared by a human against a root recomputed from the rows ("tamper-evident, human-verifiable" (the checkpoint is externally witnessed in Telegram)) | a party holding both DB ownership and the bot token; entries after the last checkpoint; OpenTimestamps/RFC 3161 on the roadmap |
 | T | Events, alerts | writes only via security-definer RPCs; append-only events | DB owner |
 | **R**epudiation | SOS, PPE override, acks | who/why/when in the ledger; `ack_via`, `ack_by`; dispatch log with provider ids | — |
 | **I**nformation disclosure | Phone numbers, GPS trail, photos | numbers only in Edge Function secrets; RLS per role; photos owner-only, never sent to Gemini; near-miss rows pseudonymised for FM | Groq processes photos (vendor terms) |

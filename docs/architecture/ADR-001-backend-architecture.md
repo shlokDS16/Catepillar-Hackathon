@@ -48,7 +48,7 @@ Adopt **Option C, "the database owns time and truth"**:
    call status), `ask` (RAG), `director` (demo control: FM JWT + `DEMO_DRIVER_SECRET`), `demo-login` (persona
    sign-in without shipping passwords). The automated `ledger-witness` was dropped in revision 3 (N1):
    the ledger's external witness is a **human comparison** of the Telegram checkpoint line with a root
-   recomputed from the rows ("externally witnessed, human-verifiable"). All run with `verify_jwt = false` and authenticate
+   recomputed from the rows ("tamper-evident, human-verifiable" (the checkpoint is externally witnessed in Telegram)). All run with `verify_jwt = false` and authenticate
    the caller in code (user JWT, secret header, HMAC signature or secret key). They call providers
    with plain `fetch`, not npm SDKs, to avoid Deno compatibility surprises.
 3. **`packages/shared` (TypeScript)** holds the frozen zod contracts, the ETA model (pure function
@@ -172,7 +172,7 @@ Source: the "Re-check" section of `docs/gates/G2-backend-review.md` (N1-N5 and r
 
 | Finding # | Action | Where fixed |
 |---|---|---|
-| N1 witness trusts a DB-supplied message id | **Fixed by removing the automated check.** `ledger-witness` is dropped. The fleet manager reads the range and root from her own Telegram chat; the console recomputes the root from the ledger rows for that range (`ledger_recompute`) and shows both side by side. The claim is "externally witnessed, human-verifiable". **Second anchor rejected for P0:** OpenTimestamps attestation arrives hours later [U] and a public git commit is force-pushable with our own token; both go to the roadmap with RFC 3161 | DM §4.5-4.6 · EP §5 · AC §4, §6 · BT B5, B13, §5 cut 11 |
+| N1 witness trusts a DB-supplied message id | **Fixed by removing the automated check.** `ledger-witness` is dropped. The fleet manager reads the range and root from her own Telegram chat; the console recomputes the root from the ledger rows for that range (`ledger_recompute`) and shows both side by side. The claim is "tamper-evident, human-verifiable" (the checkpoint is externally witnessed in Telegram). **Second anchor rejected for P0:** OpenTimestamps attestation arrives hours later [U] and a public git commit is force-pushable with our own token; both go to the roadmap with RFC 3161 | DM §4.5-4.6 · EP §5 · AC §4, §6 · BT B5, B13, §5 cut 11 |
 | G2-4 (re-check: PARTIAL) | **Fixed.** `ledger_verify` is labelled internal consistency only; `demo_tamper(rehash)` rewrites `root_hex` **and** `head_hash`, so the demo no longer stages an anchor failure; the only external evidence is the human compare | DM §4.4, §4.6 · EP §5 |
 | N2 Loop builder inside the frame subtransaction | **Fixed.** The event trigger only inserts into `private.loop_queue`; the worker's step 2 builds lessons and replays in its own transaction; a failing build marks the queue row and never touches the event, alert or ledger. B10b re-runs the reviewer's repro | DM §2.8 · EP §0 · BT B10b, B12 |
 | N3 lag, ordering, lock scope, double enqueue | **Fixed.** A single ledger write path (event trigger, key `ledger:{event key}`); RPCs no longer enqueue; `incident_log` emits `incident.reported`. Checkpoint, tamper and verify take lock 4210001. Lock duration and `seq` ≠ `occurred_at` ordering are stated. Lag bound 3 s with a `demo-check` alarm at 5 s | DM §4.2 · EP §0, §1, §8 · AC §3, §4 · BT B4, B5, B21 |

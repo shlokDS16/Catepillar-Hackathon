@@ -179,8 +179,9 @@ RLS: OP own; FM, TR all. Writes: RPC.
 `weather_raw`, `operator_skill`, `machine_age_years`, `organiser_estimate_min`, `actual_min`; assumed:
 `operator_id`, `machine_id`, `site_id`, `started_at`, `temperature_c`, `wind_kmh`, `humidity_pct`,
 `material`, `shift_hour`, `split` (train, calib, test). Unique (source, external_ref).
-RLS: FM, TR select; OP own. View **`v_task_analytics`** (avg actual by task_type × weather, bias =
-mean(actual − estimate) for organiser and model; PA-8) owned by task B16.
+RLS: FM, TR select; OP own. View **`v_task_analytics`** (the one P0 supervisor chart: per task_type ×
+weather on the `test` split, n, mean actual, mean organiser estimate, mean model P50, MAE and bias of
+each; row shape `TaskAnalyticsRow` in api-contracts §14); SQL in B2, model columns filled by B16.
 
 ### 2.3 Scenario engine
 
@@ -255,7 +256,9 @@ pitch/roll > zone `max_slope_deg`), `overspeed` (zone `max_speed_kmh`), `slope_e
 `in_alarm`, `consecutive`.
 
 **anomalies**: `id`, `run_id null`, `machine_id`, `operator_id null`, `anomaly_type`, `method`,
-`ts_start`, `ts_end`, `severity_score`, `features jsonb` (numbers), **`location geography(Point)`**
+`ts_start`, `ts_end`, `severity_score`, `severity_tier`, **`explanation jsonb {en, hi}`** (rendered in SQL
+with `format()` from `EXPLANATION_TEMPLATES`, never by an LLM; spec M5), **`fuel_l`**, **`cost_inr`**
+(formula and `FUEL_PRICE` in api-contracts §12), `features jsonb` (numbers), **`location geography(Point)`**
 (G2-14), `event_id`. RLS: OP where own or `operator_id is null`; FM, TR all.
 
 **private.injected_labels** (the answer key): `id`, `machine_id`, `anomaly_type`, `ts_start`, `ts_end`,
@@ -321,7 +324,10 @@ Scoring (server-side in `replay_submit`): **safety** = weighted correct choices 
 **procedure** = protocol order correctness (Kendall-style: share of correctly ordered pairs vs
 `correct_protocol_order`) + investigation process (share of relevant cards opened, minus irrelevant ones,
 and order agreement with `ideal_open_order`); **efficiency** = share of steps answered within their
-countdown. The response carries the process trace vs the ideal.
+countdown. A timed-out step that the UI omits from `p_choices` counts as wrong on its axis and not
+within its countdown (UI-18). Only the first `max_open` ids of `open_order` are scored (UI-20). The
+response carries the process trace vs the ideal, and `training.replay_completed` carries **the same
+`ReplayScores`** as the response (G2 drift fix, UI-19). OP may select own `replay_attempts`.
 
 **Loop builder (task B10b), after commit (N2):** the events insert trigger only inserts the event id into
 **`private.loop_queue`** (`event_id pk`, `enqueued_at`, `done_at`, `error`) when the event type has a

@@ -30,7 +30,9 @@ key, `z.partialRecord()` does not; `z.toJSONSchema()` exists.
 ```
 contracts/version.ts   contracts/enums.ts   contracts/registry.ts (EVENT_REGISTRY, ALERT_POLICIES)
 contracts/events.ts    contracts/rpc.ts     contracts/functions.ts   contracts/realtime.ts
-contracts/replay.ts    contracts/evidence.ts   contracts/assumed.ts
+contracts/replay.ts    contracts/evidence.ts   contracts/assumed.ts (FIELD_PROVENANCE, §11)
+contracts/explain.ts (EXPLANATION_TEMPLATES, FUEL_PRICE, §12)   contracts/audio.ts (PHRASES, AUDIO_MANIFEST, §13)
+contracts/analytics.ts (TaskAnalyticsRow, §14)
 eta/model.ts, eta/model.v1.json     ledger/canonical.ts (+ golden vectors from data-model §4.3)
 fixtures/*.json        (one valid example per schema; also the contract tests)
 ```
@@ -99,6 +101,9 @@ export const Proximity = z.object({ other_kind: z.enum(["person", "machine"]), o
 export const OrganiserAlert = z.object({ raw: z.string().max(200) });
 export const AnomalyDetected = z.object({ anomaly_id: Id, anomaly_type: AnomalyType,
   method: z.enum(["rule", "ewma"]), severity_score: z.number().int().min(0).max(100),
+  severity_tier: AlertTier,                                                  // from severity_score bands (§12)
+  explanation: z.object({ en: z.string(), hi: z.string() }),                 // M5: rendered from fixed templates, never by an LLM (§12)
+  fuel_l: z.number().nullable(), cost_inr: z.number().nullable(),            // M5 cost; null where no fuel effect
   features: z.record(z.string(), z.number()), lat: z.number(), lon: z.number() });
 export const GuardianHazard = z.object({ anomaly_id: Id, machine_code: z.string(), distance_m: z.number(),
   bearing_deg: z.number(), wind_from_deg: z.number().nullable(), zone: ProximityZone, protocol_card_id: z.string() });
@@ -127,7 +132,9 @@ export const LedgerCheckpoint = z.object({ root_id: Id, root_hex: Hash64, head_h
 export const LessonAssigned = z.object({ assignment_id: Id, lesson_code: z.string(), because_event_id: Id.nullable() });
 export const LessonCompleted = z.object({ assignment_id: Id, quiz_score: z.number() });
 export const ReplayReady = z.object({ replay_id: Id, source_event_id: Id });
-export const ReplayCompleted = z.object({ replay_id: Id, outcome_score: z.number(), process_score: z.number() });
+export const ReplayScores = z.object({ safety: z.number().min(0).max(100), procedure: z.number().min(0).max(100),
+  efficiency: z.number().min(0).max(100) });
+export const ReplayCompleted = z.object({ replay_id: Id, attempt_id: Id, scores: ReplayScores });   // identical to the debrief (G2 drift fix, UI-19)
 export const ScenarioChange = z.object({ status: RunStatus, speed: Speed, sim_now: Ts });
 export const IncidentReported = z.object({ incident_type: IncidentType, severity: z.number().int().min(1).max(5),
   description: z.string(), non_punitive: z.boolean(), lat: z.number().nullable(), lon: z.number().nullable() });
@@ -327,9 +334,12 @@ export const EvidenceCard = z.discriminatedUnion("type", [
 export const ReplayScenario = z.object({
   id: Id, event_id: Id, event_type: z.enum(["safety.seatbelt_breach"]), occurred_sim_ts: Ts,
   machine_code: z.string(), summary: I18nText,
-  brief: z.object({ title: I18nText, situation: I18nText, goal: I18nText, time_budget_s: z.number().int() }),
-  investigate: z.object({ cards: z.array(EvidenceCard).min(3).max(7), max_open: z.number().int().nullable() }),
-  decide: z.object({ steps: z.array(z.object({ step: z.number().int(), prompt: I18nText,
+  brief: z.object({ title: I18nText, situation: I18nText, goal: I18nText,
+    time_budget_s: z.number().int(),                                  // = the Investigate budget (UI-20)
+    audio_id: z.string().nullable() }),
+  investigate: z.object({ cards: z.array(EvidenceCard).min(3).max(7),
+    max_open: z.number().int().nullable() }),                          // hard limit: the server scores only the first max_open ids (UI-20)
+  decide: z.object({ steps: z.array(z.object({ step: z.number().int(), prompt: I18nText, audio_id: z.string().nullable(),
     time_limit_s: z.number().int().positive(),
     kind: z.enum(["single", "order"]),                                // "order" = arrange protocol actions in sequence
     choices: z.array(z.object({ id: z.string(), label: I18nText, pictogram: z.string() })).min(2).max(5) })).min(3).max(4) }),
@@ -339,19 +349,19 @@ export const ReplayScenario = z.object({
 });
 
 export const ReplayDebriefResult = z.object({
-  scores: z.object({ safety: z.number().min(0).max(100), procedure: z.number().min(0).max(100),
-    efficiency: z.number().min(0).max(100) }),
+  scores: ReplayScores,                                               // same object as training.replay_completed
   process_trace: z.object({ opened: z.array(z.string()), ideal: z.array(z.string()),
     relevant: z.array(z.object({ card_id: z.string(), relevant: z.boolean(), why: I18nText })) }),
   review: z.array(z.object({ step: z.number().int(), chosen: z.array(z.string()), best: z.array(z.string()), why: I18nText })),
-  rule: z.object({ card_id: z.string(), text: I18nText }),            // quoted from the fixed protocol card, never generated
+  rule: z.object({ card_id: z.string(), text: I18nText, audio_id: z.string().nullable() }),   // quoted from the fixed protocol card
   lesson_code: z.string().nullable(),
 });
 
 export const LessonContent = z.object({                               // D10: card-based micro-lesson
   code: z.string(), title: I18nText, duration_s: z.number().int().max(120),
   cards: z.array(z.object({ id: z.string(), kind: z.enum(["rule", "why", "how", "example", "check"]),
-    title: I18nText, body: I18nText, pictogram: z.string(), image_path: z.string().nullable() })).min(3).max(5),
+    title: I18nText, body: I18nText, pictogram: z.string(), image_path: z.string().nullable(),
+    audio_id: z.string().nullable() })).min(3).max(5),                  // phrase id → AUDIO_MANIFEST (§13, UI-17)
   quiz: z.array(z.object({ id: z.string(), prompt: I18nText,
     choices: z.array(z.object({ id: z.string(), label: I18nText, pictogram: z.string() })).min(2).max(4),
     correct_id: z.string(), why: I18nText })).length(3),              // correct_id is sent: lessons are practice, not assessment
@@ -477,8 +487,12 @@ the `train` split; P90 = P50 · exp(q), q = split-conformal 90 % quantile of log
   registry (count, flags, audiences).
 - `z.toJSONSchema(AskAnswer)` snapshot; accepted by Groq with `strict: true` (checked live in B19).
 - `ledger/canonical.ts` reproduces golden vectors 1-3 of data-model §4.3.
+- Every `EXPLANATION_TEMPLATES` entry has `en` and `hi` with identical slot names; every `PHRASES` id has
+  an `AUDIO_MANIFEST` entry after B23 (missing clips are allowed only as `status: "missing"`).
+- `FIELD_PROVENANCE.organiser` lists exactly the 9 + 7 organiser headers.
 
-## 10. UI gap disposition (`docs/design/frontend-tasks.md` §5, UI-1 … UI-16)
+
+## 10. UI gap disposition (`docs/design/frontend-tasks.md` §5, UI-1 … UI-22)
 
 | # | Gap | Disposition | Where |
 |---|---|---|---|
@@ -498,5 +512,117 @@ the `train` split; P90 = P50 · exp(q), q = split-conformal 90 % quantile of log
 | UI-14 | `sos_raise` needs lat/lon | **Closed.** Nullable; server falls back to machine, then site centre, and returns `location_source` | §4 |
 | UI-15 | `retention_days`; `p_description` min 1 | **Closed.** `PRIVACY.retention_days = 90`; `p_description` nullable (server uses the type label) | §4 |
 | UI-16 | language and pairing RPC | **Partly closed.** `pair_machine` exists (§4). **Language RPC rejected for P0**: the UI keeps the cookie locale, which is enough for the demo and avoids a profile write path; P1 | §4 |
+| UI-17 | audio paths for lesson, replay and alert clips | **Answered; owner B23** (subagent lane, by ≈ H11). Path `apps/web/public/audio/{lang}/{phrase_id}.mp3` (the coordinator's convention replaces the UI proposal); `audio_id` fields on lesson cards and replay brief/steps/rule; `AUDIO_MANIFEST` says which clips exist | §5 · §13 · BT B23 |
+| UI-18 | a timed-out Decide step is omitted from `p_choices` | **Answered; owner B10b** (scoring). An omitted step counts as **wrong** on its safety/procedure axis and **not within its countdown** for efficiency; the debrief `review` lists it with `chosen: []` | §5 · DM §2.8 |
+| UI-19 | replay_completed scores vs debrief scores; the Training "done" row | **Fixed in B1**: `training.replay_completed` carries `ReplayScores`, the same object as the debrief. OP may `select` own `replay_attempts` (the three scores) | §3 · §5 · DM §2.8 |
+| UI-20 | `brief.time_budget_s`; `max_open` | **Answered; owner B1/B10b.** `time_budget_s` is the Investigate budget (at 0 the flow moves to Decide); `max_open` is a hard limit: the server scores only the first `max_open` ids of `p_open_order` | §5 |
+| UI-21 | `DEMO_DRIVER_SECRET` for `demo-login` from a Next route handler | **Answered; owner B0b** (integrator deploy): the variable is set in Vercel as a **server-only** env var (never `NEXT_PUBLIC_`), and in `apps/web/.env.local` at H0 | BT B0b |
+| UI-22 | merge path before each redeploy | **Answered; owner: the integrator** (the orchestrator session in the primary folder on `main`): at each IP it merges `track-f` then `track-b`, runs `vercel deploy --prod` from that folder, and both tracks then `git merge main` | BT §0 |
 | (row 14 of UI §4) | Vercel deploy → localhost | **Overridden:** deploy is P0, owned by Track B; the Android demo phone needs HTTPS for vibration/audio (BT §0, B0b) | BT |
 
+## 11. Field provenance: the "assumed" registry (`contracts/assumed.ts`; G2 drift)
+
+The UI labels every value by where it comes from. Columns not listed are internal.
+```ts
+export const Provenance = z.enum(["organiser", "assumed_sensor", "real_open_data", "synthetic", "derived"]);
+export const FIELD_PROVENANCE = {
+  telemetry_readings: {
+    organiser: ["ts", "machine_id", "operator_id", "engine_hours", "fuel_used_l", "load_cycles",
+                "idle_hours", "seatbelt_fastened", "organiser_safety_alert"],            // the 9 organiser fields
+    assumed_sensor: ["rpm", "engine_load_pct", "coolant_temp_c", "hydraulic_temp_c", "hydraulic_pressure_bar",
+                     "speed_kmh", "pitch_deg", "roll_deg", "parking_brake", "fuel_level_pct", "def_pct", "location"],
+  },
+  task_history: {
+    organiser: ["external_ref", "task_type", "weather", "operator_skill", "machine_age_years",
+                "organiser_estimate_min", "actual_min"],                                  // the 7 organiser fields
+    real_open_data: ["temperature_c", "wind_kmh", "humidity_pct"],                        // Open-Meteo archive (CC BY 4.0)
+    synthetic: ["operator_id", "machine_id", "site_id", "started_at", "material", "shift_hour"],
+  },
+  operator_state: { assumed_sensor: ["location", "on_foot", "in_cab_machine_id", "ppe"], derived: ["motion_locked", "call_allowed", "nearest"] },
+  machine_state:  { assumed_sensor: ["speed_kmh", "pitch_deg", "roll_deg", "location", "hydraulic_temp_c", "coolant_temp_c", "parking_brake"],
+                    organiser: ["seatbelt_fastened", "load_cycles"], derived: ["moving", "health"] },
+  weather_snapshots: { real_open_data: ["temperature_c", "apparent_temperature_c", "humidity_pct", "wind_kmh",
+                       "wind_from_deg", "wind_gust_kmh", "precipitation_mm", "weather_code", "shortwave_wm2"],
+                       derived: ["wbgt_c", "wind_chill_c", "forecast_peak_c", "forecast_peak_at"] },
+  tasks: { synthetic: ["planned_cycles", "planned_start"], derived: ["progress_pct", "eta_p50_min", "eta_p90_min", "eta_factors"] },
+  anomalies: { derived: ["severity_score", "explanation", "fuel_l", "cost_inr"] },
+} as const satisfies Record<string, Partial<Record<z.infer<typeof Provenance>, readonly string[]>>>;
+// UI rule: assumed_sensor → "assumed" chip; synthetic → "simulated" chip; real_open_data → source line; organiser → no chip
+```
+
+## 12. Anomaly explanation and cost (`contracts/explain.ts`; spec M5, G2 orphan)
+
+- The explanation is **rendered in SQL from fixed templates** (`format()` over the template text with
+  numeric slots), stored on `anomalies.explanation jsonb {en, hi}` and copied into the
+  `anomaly.detected` payload. **No LLM** is involved. Templates are generated into the migration seed
+  from `EXPLANATION_TEMPLATES`; the Hindi text is written by the team and reviewed by a native reader
+  (part of B23's content work).
+- Cost formula (idle excess, the only P0 type with a fuel effect; others return null):
+  `excess_idle_h = idle_hours_window − baseline_idle_pct/100 × engine_hours_window`;
+  `fuel_l = round(excess_idle_h × machine_models.idle_fuel_lph, 1)`;
+  `cost_inr = round(fuel_l × FUEL_PRICE.diesel_inr_per_l, -1)`.
+  `ratio_to_normal = idle_pct ÷ baseline_idle_pct`.
+- `FUEL_PRICE = { diesel_inr_per_l: 92, as_of: "2026-09-23", source: "team assumption" }` [A: an
+  approximate Indian retail diesel price; Shlok or B6 replaces it with a sourced figure; the UI shows it
+  as "at ₹92/L (assumed)"].
+- Severity: `severity_score` 0-100 (weighted rule consequence × likelihood [R research 11 §4.4]);
+  `severity_tier` = info < 25 ≤ caution < 50 ≤ warning < 75 ≤ critical.
+```ts
+export const EXPLANATION_TEMPLATES = {
+  idle_excess: {
+    en: "{machine} idled {idle_pct}% of the last hour, {ratio}× its normal. About {fuel_l} L of diesel (≈ ₹{cost_inr}).",
+    hi: "{machine} पिछले एक घंटे में {idle_pct}% समय खाली चली, सामान्य से {ratio} गुना। लगभग {fuel_l} लीटर डीज़ल (≈ ₹{cost_inr})।",
+  },
+  seatbelt_off_moving: { en: "{machine} moved at {speed_kmh} km/h with the seatbelt off on a {pitch_deg}° slope.",
+                         hi: "{machine} {pitch_deg}° ढलान पर बिना सीटबेल्ट {speed_kmh} किमी/घंटा चली।" },
+  overspeed: { en: "{machine} ran at {speed_kmh} km/h in a {limit_kmh} km/h zone.", hi: "{machine} {limit_kmh} किमी/घंटा ज़ोन में {speed_kmh} किमी/घंटा चली।" },
+  slope_exceeded: { en: "{machine} worked on a {pitch_deg}° slope; the limit is {limit_deg}°.", hi: "{machine} {pitch_deg}° ढलान पर चली; सीमा {limit_deg}° है।" },
+  fault_continued_operation: { en: "{machine} kept working for {minutes} min with fault {code} active.", hi: "{machine} फ़ॉल्ट {code} के साथ {minutes} मिनट चलती रही।" },
+  hydraulic_temp_drift: { en: "{machine} hydraulic oil is at {value}°C, rising above its normal {mean}°C.", hi: "{machine} का हाइड्रोलिक तेल {value}°C है, सामान्य {mean}°C से ऊपर।" },
+  coolant_temp_drift: { en: "{machine} coolant is at {value}°C, above its normal {mean}°C.", hi: "{machine} का कूलेंट {value}°C है, सामान्य {mean}°C से ऊपर।" },
+} as const satisfies Record<z.infer<typeof AnomalyType>, { en: string; hi: string }>;   // Hindi: native review required (B23)
+```
+
+## 13. Audio phrases and manifest (`contracts/audio.ts`; D7 Sarvam, UI-17)
+
+- **TTS = Sarvam** (decision D7; keys `SARVAM_API_KEY_1`, `SARVAM_API_KEY_2` are in `.env`). API
+  [V docs.sarvam.ai text-to-speech]: `POST https://api.sarvam.ai/text-to-speech`, header
+  `api-subscription-key`, body `text`, `language_code` (`hi-IN`, `en-IN`), `model` (`bulbul:v3`, max 2,500
+  characters; or `bulbul:v2`), `speaker`, `output_audio_codec: "mp3"`; response `audios` = base64 strings.
+  **Gemini TTS (`gemini-2.5-flash-preview-tts`) is the fallback only if Sarvam fails; its Hindi quality is
+  unverified.**
+- **Path (replaces the UI's proposed convention):** `apps/web/public/audio/{lang}/{phrase_id}.mp3`, served
+  as `/audio/{lang}/{phrase_id}.mp3`. The files are produced by `scripts/tts/generate.ts` (B23) and
+  committed **by the integrator on `main`** (Track F does not edit that folder by hand).
+- Phrase ids: `alert.{kind}.{tier}`, `guardian.{card_id}.step{n}`, `sos.{state}`,
+  `lesson.{code}.{card_id}`, `lesson.{code}.quiz.{q_id}`, `replay.{event_type}.brief`,
+  `replay.{event_type}.step{n}`, `replay.{event_type}.rule`. Dynamic numbers are **not** spoken from
+  clips (the UI shows them); clips carry fixed phrases only.
+```ts
+export const Phrase = z.object({ id: z.string().regex(/^[a-z0-9_.]+$/), group: z.enum(["alert", "guardian",
+  "sos", "lesson", "replay"]), text: I18nText.extend({ hi: z.string() }) });
+export const AUDIO_MANIFEST_ENTRY = z.object({ phrase_id: z.string(), lang: z.enum(["en", "hi"]),
+  path: z.string(), bytes: z.number().int(), duration_ms: z.number().int().nullable(),
+  provider: z.enum(["sarvam", "gemini"]), model: z.string(), text_sha256: Hash64,
+  status: z.enum(["ok", "missing"]) });
+export const AudioManifest = z.array(AUDIO_MANIFEST_ENTRY);   // packages/shared/src/audio/manifest.json, written by B23
+// PHRASES: the registry (packages/shared/src/audio/phrases.ts); lesson and replay texts reference ids via audio_id
+```
+The UI plays `/audio/{lang}/{audio_id}.mp3` when the manifest says `ok`, and hides [Listen] otherwise.
+`text_sha256` lets B23 regenerate only changed phrases.
+
+## 14. Supervisor analytics: one P0 chart (`contracts/analytics.ts`)
+
+One chart in P0: **ETA by task type × condition, estimate vs actual**. Data: the view
+`public.v_task_analytics` over `task_history` split `test` (FM and TR select), built in B2 and filled
+by B16.
+```ts
+export const TaskAnalyticsRow = z.object({
+  task_type: TaskType, condition: WeatherKind, n: z.number().int(),
+  mean_actual_min: z.number(), mean_organiser_estimate_min: z.number(), mean_model_p50_min: z.number(),
+  mae_organiser_min: z.number(), mae_model_min: z.number(),
+  bias_organiser_min: z.number(), bias_model_min: z.number(),     // mean(estimate − actual)
+});
+```
+Track F re-adds the chart (grouped bars per task type, one group per condition: actual vs organiser
+estimate vs our P50).
