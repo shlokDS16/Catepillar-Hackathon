@@ -207,3 +207,146 @@ Strawberry sandbox. B0 plans `npx supabase@latest` (2.117), which is not the ins
 `select version()` returns "PostgreSQL 17.x ...", not the Supabase image version 15.1.1.61. The image
 version comes from the Management API (`database.version`). Also, `cron.log_statement` defaults to
 `true` (postgres-log-config.md), which adds 86,400 log lines a day.
+
+---
+
+## Re-check (revision 2, 2026-09-23)
+
+I re-read all six revised files. ADR-001 now ends with a G2 disposition table (ADR:109-147).
+
+### Verdict: **PASS-WITH-FIXES**
+
+All five blockers are closed. Three items must be fixed in the docs and in the named tasks' acceptance
+criteria before B5, B10b and B13b start: the two new MAJOR findings (N1, N2) and #4, which is only
+PARTIAL. None of them blocks B0-B4.
+
+### My findings against the revised text
+
+| # | Verdict | Evidence (revised text) |
+|---|---|---|
+| 1 | FIXED | four jobs, each its own transaction (DM:486-495, EP:10-18); per-frame `begin … exception` → `tick_errors` (DM:170-171); `sos_raise` only enqueues to the ledger (EP:123-124). B12 acceptance re-runs my repro (BT:56). Residual: N2, N4 |
+| 2 | FIXED | pure detectors vs `apply_findings` (DM:197-203); `eval` schema built by the script, one day per call, over a direct connection (DM:232-240); B17 asserts zero new rows (BT:74) |
+| 3 | FIXED | `unique (hazard_key) where … and kind <> 'sos'` (DM:333-334); B4 test "two SOS rows coexist" (BT:50) |
+| 4 | **PARTIAL** | full 64-hex root and head hash in a parseable line (DM:447); root check now reads Telegram's copy, not `root_hex` (DM:451-457). New holes: see N1. The head anchor still compares against `ledger_roots.head_hash`, a database value (DM:436-437). `demo_tamper` rewrites `root_hex` but not `head_hash` (DM:469), so "anchor ✗" is staged; a consistent attacker rewrites both |
+| 5 | FIXED | catch-up only when `seq ≤ catchup_until_seq` or older than `speed × 5 s` of sim time (EP:31-35); B9 acceptance "zero catch_up suppressions at 60×" (BT:52) |
+| 6 | FIXED | `verify_jwt = false` for every function; `auth.getUser(jwt)` in code, key-only → 401 (AC:298-304); B19 "forged publishable-key call → 401" (BT:76) |
+| 7 | FIXED | signature over `PUBLIC_FUNCTIONS_URL + "/twilio-voice" + "?" + exact query`, never `req.url` (AC:307-309) |
+| 8 | FIXED | (a) upgrade in place (EP:237, 86-88); (b) suppression only within the same hazard, only by an open alert (EP:239); (c) all windows wall-clock (DM:16, EP:25); (d) flood summary has a hazard key and a subject id (DM:345-346). Note: with wall-clock windows at 60×, two sim-distinct breaches inside 120 s wall merge into one alert. This is accepted by design |
+| 9 | FIXED | `EVENT_REGISTRY` / `ALERT_POLICIES` generate the SQL seed (AC:18, 139-193; DM:105-113); all missing types present; `ledger_tamper` and `alert_flood` policies (EP:255-256); `EtaFactor[]` everywhere, and `task_start` takes `p_eta_factors` (AC:209, 258). Residual: see N3 (double enqueue) |
+| 10 | FIXED | kick on insert or on update to `queued`; attempts counter on one row; pg_net timeout 20 s; `provider_ref` rows never re-sent (DM:341-353); `dispatch` re-checks alert status before an escalation call (EP:133) |
+| 11 | FIXED | `private.telegram_callback`: dedupe + chat binding + ack in one transaction, rolled back on failure (DM:356-360); constant-time header compare (AC:306) |
+| 12 | FIXED | restricted canonical v1 (DM:386-406). I recomputed all three golden vectors (see (c)) |
+| 13 | FIXED | vision reduced to an enum category, no image text kept, never citable; `rule` must quote a cited chunk verbatim; every step cites a source (EP:205-217, AC:315-320); photos never go to Gemini |
+| 14 | FIXED | progress from load cycles (DM:130-138); Replay template, builder and scoring (DM:252-271, AC:274-294, BT:54); evidence keys `loop.repeat_rate.*`, `fleet.idle_pct` (DM:227-228); `pair_machine` (DM:98-99); anomaly location (DM:216) |
+| 15 | FIXED | rehearsal purge, delta broadcasts, transient eval, housekeeping, 400 MB guard, B0 checks the org-level sum (DM:499-515). Residual [A]: `purge_run` deletes events that surviving ledger rows (`source_event_id`), `lesson_assignments` and `replay_scenarios` point at. FK behaviour is unspecified |
+| 16 | FIXED | `tick_log`; B11 p95 ≤ 250 ms and max ≤ 800 ms at 60×, with a fallback (BT:55). Residual: N2, N4 |
+| 17 | FIXED | decision table with default deny and 10 s staleness (EP:99-110) |
+| 18 | FIXED | 120b → Gemini text directly; eval after review 1 and records the model per row; Voyage [U] accepted as a risk (EP:219-228) |
+| 19 | FIXED | an `audiences` column drives both the RLS and the topics (DM:305, 313-319). Residual [A]: events with `site_id` null (e.g. `ledger.checkpoint_published`, `system.warning`) match neither the FM RLS `site_id = my site` nor a `sup:{site_id}` topic unless the emitter sets a site |
+| 20 | FIXED | BO:49, BT:33-37 |
+| 21 | FIXED | image version read from the Management API plus a probe `1 seconds` job (BT:47) |
+
+### (a) Telegram `forwardMessage` as the witness re-fetch
+
+Bot API (core.telegram.org/bots/api, fetched today):
+- "Use this method to forward messages of any kind … On success, **the sent Message is returned**."
+  It **sends a new message** into `chat_id`. Here that is the supervisor's own chat (DM:451-452), so
+  every Verify adds a visible duplicate of the witness line to Anita's chat.
+- The returned Message carries only `forward_origin` (`MessageOrigin`: `type`, `date`, sender). The
+  original's `edit_date` is a field of the original Message and is not carried over. An edit by the
+  bot-token holder is therefore invisible to the check, even though DM:459-460 lists `edit_date` as
+  the edit signal.
+- `copyMessage` returns only a `MessageId`, and the API has no method that reads a message by id.
+  Forwarding is therefore the only way to read a message back.
+
+**N1 MAJOR: the witness check can be defeated by the adversary it targets.** Where: AC:347
+(`LedgerWitnessRequest = {root_id}`), DM:448-457, DM:341-348.
+- `ledger-witness` takes `telegram_chat_id` and `telegram_message_id` from `ledger_roots`, a database
+  table.
+- The design's adversary is the database owner (DM:458-460 separates the database owner from the
+  secrets holder). The database owner can:
+  1. insert a `dispatches` row (`purpose ledger_checkpoint`, status `queued`, forged root in `body`);
+  2. let the kick trigger make `dispatch`, which holds the bot token, post a fresh, correctly formatted
+     `SPOTTER-LEDGER` line;
+  3. repoint `ledger_roots.telegram_message_id` at that new message.
+- `forwardMessage` then returns the forged line and the check reports a match.
+- The separation fails because the database drives the bot through the outbox.
+- Every Verify's forwarded copy is itself another well-formed witness line in the same chat.
+- Sound use of the forward requires a message id and date that do not come from the database. Examples:
+  the human comparing against the chat history, `forward_origin.date` checked against an independently
+  known checkpoint time, or the RFC 3161 second witness already on the roadmap.
+- Repro:
+  1. Checkpoint.
+  2. `demo_tamper(rehash)`.
+  3. As owner, insert a queued checkpoint dispatch with the recomputed root.
+  4. Update `telegram_message_id` to the new message.
+  5. Call `ledger-witness`, which returns `match`.
+
+### (b) Ledger writer queue and pg_cron: ordering and lag
+
+**N3 MINOR.** Where: DM:374-384, EP:17, AC:139-175.
+- **Lag:** an entry exists 0-2 s after the enqueuing transaction commits (1 s schedule plus drain).
+  There is no upper bound if `ledger-writer` is failing. Demo-check only checks that jobs are alive.
+  The seatbelt acceptance of "one ledger entry within 2 s of release" (EP:65-66) is at the edge,
+  because tick commit time plus writer lag can exceed 2 s.
+- **Ordering:** `ledger_queue.id` is assigned at insert but becomes visible at commit. A tick that
+  enqueued id n and commits after `sos_raise` enqueued n+1 gets written after it, so `seq` order is
+  not the same as enqueue or `occurred_at` order. Integrity is unaffected; the docs do not state it.
+- **Lock scope:**
+  - `ledger_checkpoint()` and `demo_tamper()` do not take lock 4210001 ("the only holder of the ledger
+    lock", EP:17). Under READ COMMITTED, a checkpoint can compute the root over `1..N` and read the
+    head as `N+1` if the writer commits between its statements. The result is a self-inconsistent
+    witness line and a false `anchor_mismatch`.
+  - A `rehash` that races the writer produces `link_broken` at the newest row, not the staged result.
+  - "The lock is held for microseconds" (DM:383) is wrong. A transaction-level advisory lock taken in
+    a committed subtransaction lasts until the whole drain transaction (≤ 50 rows) ends. This is
+    harmless while the writer is the only locker.
+- **Double enqueue:** `sos.raised` and `ppe.override_granted` have `ledger: true` in `EVENT_REGISTRY`
+  (AC:162, 166). `sos_raise` and `ppe_override` also call `ledger_enqueue` explicitly (EP:124, 163).
+  Unless both paths use the same idempotency key (unspecified), each SOS writes two ledger entries.
+
+### (c) Golden vectors: recomputed
+
+I rebuilt vector 1's input in Python (`json.dumps(ensure_ascii=False, separators=(',',':'),
+sort_keys=True)`, UTF-8, SHA-256):
+- **v1:** 797 bytes, `b04bf3cbe21a368128e2f5eb4d7d0d8a3b3a8491f84998aa2869e3cb88b51181`. Matches DM:421-423.
+- **v2:** seq 2, `prev_hash` = v1, sos/5/"SOS"/`{}`. 606 bytes,
+  `db5217f0823bfc42c5c14ca00414c2c24da4dae60819589d7f63db77f03e065f`. Matches DM:427.
+- **v3:** leaf node = `sha256(0x00 ‖ raw 32-byte entry_hash)`, root =
+  `sha256(0x01 ‖ l1 ‖ l2)` = `603286c8575192d014b33463f312267d7dc8e7ab398b163959a91438e69b3574`. Matches
+  DM:429. Hashing the hex text, or skipping domain separation, gives different roots (checked).
+  "entry_hash bytes" therefore has to mean the raw 32 bytes, and the TS and SQL implementations must do
+  the same.
+- The vectors come from Python's encoder, not from SQL or TS. That B5 reproduces them in both is still
+  pending. The `to_json(text)` escaping [A] (DM:430-431) is untested here: Docker Desktop is not
+  running, so there is no local Postgres.
+
+### (d) What the four-job split breaks
+
+**N2 MAJOR: the Loop builder runs inside the tick's frame subtransaction.** Where: DM:266-267 against
+EP:19-20, 54, 84.
+- DM says `loop_on_event` runs "after an event commits (via the events insert trigger, **not** inside
+  the tick's detector subtransaction)". An `after insert` row trigger cannot run after commit. It
+  runs inside the inserting (sub)transaction, which here is the frame's `begin … exception` block.
+- `build_replay` does zone, trail and machine-position queries and builds JSON. Any error in it rolls
+  back that frame's `guardian.hazard_near_operator` event, the alert and the ledger enqueue, logs the
+  frame to `tick_errors` and skips it. Demo step 3 silently disappears.
+- It also spends the tick's 250 ms p95 budget.
+- It runs inside the `sos-escalator` and `ledger-writer` transactions too, because both emit events.
+- Repro (B10b): make `build_replay` raise, for example with no template row. Play to 01:30. You get
+  no Guardian alert, and one `tick_errors` row.
+
+**N4 MINOR [U].** Where: DM:489, EP:10, BT:52.
+- `set local statement_timeout = '5s'` inside `private.scenario_tick()` does not limit the statement
+  already running (the pg_cron command `select private.scenario_tick()`). PostgreSQL arms the statement
+  timer when a statement starts, using the value in force then, so the effective cap stays at the
+  2-min `postgres` limit.
+- Not executed here, because Docker Desktop is not running.
+- Repro (B9): a tick function that does `set local statement_timeout='1s'` then `pg_sleep(3)` completes
+  instead of being cancelled.
+
+**N5 MINOR.**
+- pg_cron opens a new libpq connection per run by default (pg_cron README). Three 1-second jobs mean
+  about 3 new connections per second, roughly 260k a day, on Free compute. This is unmeasured; B11/B21
+  measure the tick only. [U] whether Supabase enables `cron.use_background_workers`.
+- The director's `manual_tick` does not say that it takes the tick's try-lock 4210002 (AC:338).
