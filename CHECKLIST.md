@@ -24,8 +24,8 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 - [x] **Gate PW**: 1st pass FAIL (2 blockers) → fixes applied → re-check PASS-WITH-FIXES (docs/gates/PW.md)
 
 ## P1 — Problem understanding (starts when problem statement arrives — follow docs/specs/ps-arrival-runbook.md)
-- [ ] P1.1 Ingest brief (markitdown → disk → slices); extract judging criteria, deliverables, deadlines
-- [ ] P1.2 Multi-pass research fan-out (domain, users, Caterpillar products, competitors, data sources)
+- [x] P1.1 Ingest brief (markitdown → disk → slices); extract judging criteria, deliverables, deadlines
+- [~] P1.2 Multi-pass research fan-out (docs/research/10-14) (domain, users, Caterpillar products, competitors, data sources)
 - [ ] P1.3 Founder-validator challenges every finding
 - [ ] P1.4 Idea longlist → scored shortlist (judge criteria × feasibility × wow × Caterpillar fit)
 - [ ] P1.5 Shlok adds modifications / improvements
