@@ -1,0 +1,49 @@
+# Master checklist
+
+Status: `[ ]` todo · `[~]` in progress · `[x]` done · `[!]` blocked.
+Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) and Shlok's approval.
+
+## P0 — Orchestration setup (this session)
+- [x] P0.1 Project OS scaffold (CLAUDE.md, claude/, docs/)
+- [x] P0.2 STATE.md, CHECKLIST.md, RESUME.md
+- [x] P0.3 Hackathon intel research → docs/research/01-hackathon-intel.md
+- [x] P0.4 Tool/skill/plugin inventory + phase map → docs/research/02-tool-inventory.md
+- [x] P0.5 Session-persistence + folder-framework research → docs/research/03-persistence-and-structure.md
+- [x] P0.5b Validator gate on research → docs/research/04-validator-gate-P0.md: PASS-WITH-FIXES (fixes applied)
+- [~] P0.6 Master plan presented to Shlok
+- [ ] **Gate P0**: validator PASS · Shlok approves master plan
+
+## P1 — Problem understanding (starts when problem statement arrives)
+- [ ] P1.1 Ingest brief (markitdown → disk → slices); extract judging criteria, deliverables, deadlines
+- [ ] P1.2 Multi-pass research fan-out (domain, users, Caterpillar products, competitors, data sources)
+- [ ] P1.3 Founder-validator challenges every finding
+- [ ] P1.4 Idea longlist → scored shortlist (judge criteria × feasibility × wow × Caterpillar fit)
+- [ ] P1.5 Shlok adds modifications / improvements
+- [ ] **Gate P1**: idea frozen, written to docs/specs/idea.md
+
+## P2 — PPT round (format supplied by Shlok)
+- [ ] P2.1 Storyline + slide outline against the supplied template
+- [ ] P2.2 Visuals (architecture diagram, mockups, charts)
+- [ ] P2.3 Build deck (Gamma / pptx / Canva — per Shlok's instructions)
+- [ ] P2.4 Red-team review as a Caterpillar judge; humanizer pass on copy
+- [ ] **Gate P2**: validator PASS · Shlok approves · submitted
+
+## P3 — Architecture and repo setup
+- [ ] P3.1 Architecture options (3 framings) + red team → ADR-001
+- [ ] P3.2 Folder structure (researched) scaffolded; git + GitHub remote
+- [ ] P3.3 Skills tailored per phase (copies under .claude/skills/, originals untouched)
+- [ ] P3.4 Task breakdown (task-master or writing-plans) with subtasks
+- [ ] **Gate P3**: validator PASS · Shlok approves
+
+## P4 — Build (session model switched to Fable 5.1)
+- [ ] P4.x Tasks from P3.4, one at a time; coder-reviewer after each
+- [ ] graphify update after each milestone
+- [ ] **Gate P4**: feature-complete against spec, demo path works end to end
+
+## P5 — Quality
+- [ ] Tests, security (defenso guard_code / scan_repo), performance, accessibility, mobile QA
+- [ ] **Gate P5**: validator PASS
+
+## P6 — Submission
+- [ ] Deploy (web) / build (APK or Expo), README, demo video, final pitch deck
+- [ ] **Gate P6**: dry-run of the full demo · Shlok approves · submitted
