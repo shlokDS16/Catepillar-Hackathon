@@ -22,7 +22,7 @@ The same shape and position on Home at every breakpoint. **The motion-lock view 
 
 ```
 ┌────────────────────────────────────────────┐  3 px ink rule, --surface, radius 0
-│ EXC-007 · Cat 320 [assumed]                 │  --t-label ink-2       detail: model, "moving 6 km/h"
+│ EXC-007 · Cat 320                           │  --t-label ink-2       detail: "moving 6 km/h [assumed]" (speed_kmh = assumed_sensor)
 │ WORKING                                     │  --t-state (the largest text on any screen)
 ├────────────────────────────────────────────┤
 │ Excavation · Bay 3                          │  --t-title

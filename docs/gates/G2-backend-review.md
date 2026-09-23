@@ -350,3 +350,123 @@ EP:19-20, 54, 84.
   about 3 new connections per second, roughly 260k a day, on Free compute. This is unmeasured; B11/B21
   measure the tick only. [U] whether Supabase enables `cron.use_background_workers`.
 - The director's `manual_tick` does not say that it takes the tick's try-lock 4210002 (AC:338).
+
+---
+
+## Re-check 2 (revision 3, 2026-09-23)
+
+I re-read ADR-001, data-model, event-pipeline, api-contracts and backend-tasks at revision 3.
+
+### Verdict: **PASS-WITH-FIXES**
+
+There are no blockers. G2 can pass on four conditions, which go into the task acceptance criteria:
+1. B0 runs the COMMIT probe in item 2.
+2. B9, B10b and B12 test the procedures outside `begin … rollback` (R2-1).
+3. The human witness recomputation does not rely on SQL alone (R2-2).
+4. The SOPs get a provenance label and a reviewer (R2-3).
+
+### 1. Earlier findings
+
+| # | Verdict | Evidence |
+|---|---|---|
+| #4 | FIXED | `ledger_verify` is labelled "internal consistency only" (DM:518-523). `demo_tamper(rehash)` now also rewrites `root_hex` **and** `head_hash`, and takes lock 4210001 (DM:558-561). The residual is R2-2 |
+| N1 | FIXED | `ledger-witness` / `forwardMessage` is dropped. The range N is typed from Anita's own chat and is not read from `ledger_roots` (DM:534-542; BT §5 cut 11). The residual is R2-2 |
+| N2 | FIXED | The event trigger only inserts into `private.loop_queue`, and worker step 2 builds in its own transaction; a failed build marks only the queue row (DM:332-339, EP:14, 24). The B10b acceptance runs my repro (BT:71) |
+| N3 | FIXED | Single write path: `emit_event` with key `ledger:{event key}`, and RPCs no longer enqueue; `incident.reported` added (DM:449-453, AC:184, 240). Checkpoint, tamper and verify take 4210001 (DM:459-462). Ordering and lock scope are stated. Lag bound is 1-3 s, with a `demo-check` alarm at 5 s (DM:463-468, BT:77) |
+| N4 | FIXED, accepted risk | The guarantee is now bounded work per step (≤ 200 frames, 50 rows, 20 Loop items, 50 alerts). The role timeout backstop via `cron.schedule_in_database(…, username)` is [U], and the fallback is the 2-min cap (DM:586-598). B9 runs the sleep probe. Note: a role timeout applies to the whole `CALL`, not to each step [A]. A cancel (`query_canceled`) is not caught by `WHEN OTHERS`, so later steps in that run are skipped |
+| N5 | FIXED | Two 1-second jobs, about 173k connections a day (DM:577-602). `manual_tick` takes 4210002 (DM:603-604). B11 measures `cron.job_run_details` and queued runs (BT:72) |
+
+### 2. Can a plpgsql procedure called by pg_cron COMMIT between steps?
+
+**Yes, under five conditions. This is backed by the PostgreSQL docs and by user reports, not by pg_cron or Supabase documentation. It stays [A] until B0 runs it on the project.**
+- **PostgreSQL 17** (sql-call.html): "If CALL is executed in a transaction block, then the called procedure
+  cannot execute transaction control statements."
+- **PostgreSQL 17** (sql-createprocedure.html): "A SECURITY DEFINER procedure cannot execute transaction
+  control statements" and "If a SET clause is attached to a procedure, then that procedure cannot
+  execute transaction control statements".
+- **PostgreSQL 17** (plpgsql-transactions.html): a block with exception handlers "forms a subtransaction,
+  which means that transactions cannot be ended inside such a block". Transaction control also works
+  only through a chain of CALL/DO with no intervening `SELECT func()`.
+- **pg_cron:** the README shows `CALL process_updates()` jobs, and the Supabase Cron quickstart shows
+  `'CALL do_something()'`. Neither documents COMMIT.
+  - Issue #85 reports that multi-statement commands are wrapped in an implicit transaction, causing
+    "invalid transaction termination".
+  - Issues #85 and #407 report that a single `CALL` may COMMIT. These are user reports; no maintainer
+    has confirmed them.
+  - In the default libpq mode, a single-statement command runs in its own transaction.
+  - Background-worker mode is [U] (B0 reads `cron.use_background_workers`).
+- The design already avoids the `set …; call …` form (DM:586-589).
+
+Conditions the docs do not yet state, each a silent failure if missed:
+- (a) `private.worker_step` and `escalate_step` must be **SECURITY INVOKER with no `SET` clause**. This
+  contradicts the house rule "security definer … `set search_path = ''`" (DM:24-25). It also needs a
+  written waiver for Supabase's mutable-search-path advisor in B21. Privileged work goes in
+  security-definer **functions** called by the procedure, with COMMIT only in the procedure.
+- (b) Each `COMMIT` must sit **after the step's `begin … exception … end`**, never inside it.
+  DM:582 and EP:21 say "each step sits in its own exception block" and "COMMIT" without placing it.
+  A COMMIT inside the block raises, the step's own handler swallows the error, and the step never
+  persists anything.
+- (c) The command must be exactly `call private.worker_step();`, with no other statement and no wrapper
+  function.
+- (d) If B0 runs the job as `spotter_worker`, that role is not the table owner, so RLS and grants apply.
+  Only the called security-definer functions bypass them.
+
+B0 probe:
+1. Schedule `'1 seconds'` → `call private.probe()`, which inserts row A, COMMITs, inserts row B, then
+   raises.
+2. Expect row A to persist and row B not to.
+3. Expect `cron.job_run_details.status = failed`.
+4. Unschedule.
+
+### 3. New problems
+
+**R2-1 MAJOR: the SQL test harness cannot run the procedures.**
+Where: BT:54-55 ("each file wrapped in `begin; … rollback;`") against B9, B10b and B12 acceptance
+(BT:69, 71, 73).
+- `CALL private.worker_step()` inside the harness's transaction block raises "invalid transaction
+  termination" (sql-call.html).
+- The acceptance tests are the "poison frame", "raising build_replay leaves the event intact" and
+  "SOS escalates while a poison frame fails the tick" runs. They must run outside a transaction block
+  and leave rows in the shared project.
+- That conflicts with BT §0.6 (destructive database operations only at integration points).
+Repro: `begin; call private.worker_step(); rollback;`
+
+**R2-2 MAJOR: the human witness compare still trusts the adversary's database for the recomputation.**
+Where: DM:534-539, BT:68 and 74 (`ledger_recompute` is a SQL RPC).
+- The threat model's adversary is the database owner (DM:543-546). The owner can
+  `create or replace function private.ledger_recompute …` or its Merkle helper to return the published
+  root. Anita's side-by-side compare then shows a match.
+- The TS canonicaliser mirror and `v_ledger_canonical_input` exist (DM:486-487) but are used only by the
+  evidence script.
+- The claim "human-verifiable" holds against row edits, not against function edits. The slide must say
+  which one it covers.
+Repro: `demo_tamper(rehash)`, then redefine `ledger_recompute` to return the old root. Anita's compare
+shows equal.
+
+**R2-3 MAJOR: unreviewed, team-authored SOPs become citable "rules".**
+Where: BT:96 (B24b: "≈ 20 team-authored SOPs written during the build" in 45 min, subagent lane).
+- The acceptance criterion checks only manifest licence lines. There is no review and no provenance
+  label.
+- The Ask gate quotes `rule` verbatim from cited chunks (EP §6). An SOP written by a subagent becomes a
+  cited safety rule shown to operators.
+- Protocol cards, by contrast, are "fixed, reviewed" (DM:101-103). This collides with spec §3 honesty
+  and the M8 "cite the source → state the rule" pattern.
+
+**R2-4 MINOR: documents out of date after revision 3.**
+- ADR Decision 1 still says "`scenario-tick` every 1 s, its own transaction" and "a queue drained by one
+  writer job" (ADR:36, 39).
+- Disposition rows G2-1 ("Four independent pg_cron jobs"), G2-4 (`ledger-witness` / `forwardMessage`)
+  and G2-6 (`ledger-witness` FM role) are not marked superseded (ADR:136, 139, 141).
+- The ADR follow-up says "Sarvam was dropped by Shlok" (ADR:123). This contradicts D7 Sarvam in
+  AC:586-593 and B23.
+- BT §4 has two conflicting TTS rows (BT:139, 141).
+- The corpus path is `docs/brief/data/kb/` in BT:137 but `scripts/corpus/` in B24 (BT:96).
+- The BT title still says "revision 2".
+- AC:555 says the explanations are rendered with `format()`, but the templates use named `{slot}`
+  placeholders (AC:573-582). `format()` only takes `%s`/`%1$s`, so named-slot substitution
+  (`replace()`) is needed. Otherwise the B10 golden rows fail.
+
+**R2-5 MINOR: `ledger_verify` can time out behind the drain lock.**
+`ledger_verify` takes 4210001 (DM:459-461) as an RPC with `lock_timeout 2s` (DM:24-25). It waits
+behind a worker drain holding the same lock. A drain slower than 2 s makes Verify fail on stage
+instead of waiting.

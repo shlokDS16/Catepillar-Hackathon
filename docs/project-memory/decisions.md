@@ -63,3 +63,4 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 - Both tracks' cut lists approved as written in backend-tasks.md / frontend-tasks.md.
 - Proximity radar folded into the map rings (departure from spec M2 cockpit mini-radar) approved.
 - H0 setup authorised; vercel login done (account shlokds16).
+- D11 addendum: UI decisions 2-4 in frontend-tasks.md (untimed Replay Brief; ink-only training urgency; collapsed provenance chips in Simple mode) accepted by default (orchestrator), Shlok may override.

@@ -1,8 +1,9 @@
 # Interaction map (the single source for navigation, actions and states)
 
-- Status: design plan **v2** (ui-ux-lead, 2026-09-23). v2 codes against **api-contracts revision 3**: UI gaps UI-1 to UI-15 are closed, and UI-16 is partly closed (see api-contracts §10). It adds the D10 training redesign and the human-verified ledger witness.
+- Status: design plan **v3** (ui-ux-lead, 2026-09-23). It codes against api-contracts after the G2 fix round: UI-1 to UI-22 are all answered (§10), with audio (§13), provenance (§11), explanation (§12) and analytics (§14). v2 added D10 training and the human-verified ledger witness.
+- **A24b Show anomaly detail** (FM): tapping an Inbox anomaly row expands it, and tapping a faulty machine on the Fleet Map opens a side sheet. Both render `AnomalyExplain` (screens.md §S4a). It is read-only. **A25 Condition selector** (Analytics): switches the chart's `WeatherKind` locally, with no server call.
 - Update this file with every new interaction (ui-framework §10). Visual tokens are in visual-language.md, screen content in screens.md, tasks in frontend-tasks.md.
-- **⚠C** marks a remaining question for Track B (frontend-tasks §5).
+- **⚠C** marks a remaining question for Track B. Questions go to `docs/sessions/handoff.md` with the `[F→B]` prefix (docs/sessions/build-protocol.md).
 
 ## 0. Canonical vocabulary (one name per thing; no synonyms anywhere in the UI)
 
@@ -34,7 +35,7 @@ Sub-screens (each with a back control; leaving a replay mid-run asks first, T10)
 Cross-links (the only ones; no loops): hero → Task · Guardian takeover → Map · Loop card → Replay · Debrief → Lesson.
 
 ### 1.2 Fleet manager (4 items, left rail, Detailed mode)
-Inbox `/fm` · Fleet Map `/fm/map` · Analytics `/fm/analytics` (evidence card) · Ledger `/fm/ledger`.
+Inbox `/fm` · Fleet Map `/fm/map` · Analytics `/fm/analytics` (the estimate-vs-actual chart + the evidence card) · Ledger `/fm/ledger`.
 
 ### 1.3 Director (hidden)
 `/director`: FM session + director secret (typed once per tab, kept in `sessionStorage`). See §4.9.
@@ -85,7 +86,7 @@ Format: **Purpose · Visible · On press · Success · Failure · Duplicate · U
 - On press: `functions.invoke("demo-login", {persona})` → `{token_hash}` → `supabase.auth.verifyOtp({token_hash, type:"email"})` → `my_snapshot` → `/op` or `/fm`.
 - Failure: "Could not sign in. Try again."
 - Duplicate: button locked while loading. Undo: Switch user.
-- The director secret needed by `demo-login` lives in the deploy's server env. ⚠C: confirm it is called from a Next route handler, never from the browser.
+- The director secret needed by `demo-login` lives in a server-only env var (`DEMO_DRIVER_SECRET`; set in Vercel and `.env.local`, UI-21). The browser calls our Next route handler `api/demo-login`, never the Edge Function directly.
 
 **A03 Pair machine.**
 - Purpose: link the operator to today's machine.
@@ -130,7 +131,7 @@ Format: **Purpose · Visible · On press · Success · Failure · Duplicate · U
 
 **A11 Cancel SOS.** Available for 10 s after sending: `rpc sos_cancel`. After that the button is removed.
 
-**A12 Listen.** Replays the pre-generated clip (alerts, protocol cards, lesson cards). It is hidden if the clip is missing.
+**A12 Listen.** Replays `/audio/{lang}/{phrase_id}.mp3` (api-contracts §13; phrase ids in screens.md i18n rules). It is shown only when `AUDIO_MANIFEST` has that `{phrase_id, lang}` with `status: "ok"`. In the Tamil UI, alerts fall back to the `en` clip, and other [Listen] buttons are hidden.
 
 ### 4.4 Incidents
 **A13 Log incident.**
@@ -185,7 +186,7 @@ LOADING ─replay_get─► BRIEF ─Start─► INVESTIGATE ─(Decide now | bu
 - **Display:** a full-width ink bar that drains linearly, plus the seconds left as a `--t-figure` number. The bar is ink, **never a safety colour**: urgency in training must not look like a live alarm. No vibration and no alarm sound. From 5 s, the number is announced to screen readers once per second (`aria-live="polite"`) and a soft tick plays in the audio channel.
 - **Clock:** the client's monotonic clock (`performance.now()`). The server does not time the phases; `ms` is measured from when the step is shown to when it is locked.
 - **Pauses:** the timer freezes when the page is hidden (`visibilitychange`) and while a live alert has taken over. It resumes only on an explicit [Resume], so a live alert never costs the operator training time.
-- **Timeout:** at 0 a "Time's up" plate shows for 800 ms. In Investigate the flow moves to DECIDE with the cards opened so far. In a Decide step the step is **omitted from `p_choices`** (the contract needs at least one `choice_ids`), and scoring treats it as not answered in time (⚠C UI-18: confirm).
+- **Timeout:** at 0 a "Time's up" plate shows for 800 ms. In Investigate the flow moves to DECIDE with the cards opened so far. In a Decide step the step is **omitted from `p_choices`** (the contract needs at least one `choice_ids`), and scoring treats it as wrong and not within its countdown; the debrief lists it with `chosen: []` (UI-18, answered).
 - **Reduced motion:** the bar updates once per second.
 
 **T7 Submit (automatic).**
@@ -259,7 +260,7 @@ LOADING ─replay_get─► BRIEF ─Start─► INVESTIGATE ─(Decide now | bu
 - Mismatch: a CRITICAL plate "Does not match. The ledger changed after this checkpoint." The **first differing 4-character group is boxed** in ink, and an arrow marks the exact first character.
 - No line pasted (range typed only): the recomputed values show with the note "Paste the Telegram line to compare".
 - Failure: `validation` (first > last, or out of range) → a message on the field; network → Try again. Duplicate: locked while loading. Undo: n/a (read only).
-- **Nothing on the "From your Telegram" side comes from the database.** A footer states the claim exactly: "Externally witnessed, human-verifiable."
+- **Nothing on the "From your Telegram" side comes from the database.** The screen subtitle and footer state the claim exactly: "Tamper-evident, human-verifiable". Never "tamper-proof" or "proves".
 
 **A24 Show on map.** Navigation to the machine, with the alert ring highlighted.
 
@@ -282,8 +283,8 @@ Every response `message` is appended to a log.
 |---|---|---|---|---|---|
 | **Info** | A row in the Home/Safety feed | none | none | no | none |
 | **Caution** | A yellow banner under the strip (80 px) → Safety; clears itself | [200] once | none | no | none |
-| **Warning** | An orange takeover over the content (the chrome and SOS stay): pictogram, WARNING, cause, protocol card (`ProtocolCard`), countdown to `escalate_at`, [Acknowledge] [Listen], "Show on map" for Guardian | [400,200,400] every 5 s | TTS at once, repeated every 10 s (at most 6) | yes | Timeout → Telegram to the supervisor; an operator call only when `call_allowed` |
-| **Critical** | The same takeover in red, full screen including the strip (SOS on top), with the dispatch line | [800,200,800,200,800] every 4 s | TTS at once, repeated every 10 s | yes | External escalation fires **at once** |
+| **Warning** | An orange takeover over the content (the chrome and SOS stay): pictogram, WARNING, cause, protocol card (`ProtocolCard`), the anomaly sentence for Guardian (`AnomalyExplain`, compact), countdown to `escalate_at`, [Acknowledge] [Listen], "Show on map" for Guardian | [400,200,400] every 5 s | clip `alert.{kind}.warning` at once, repeated every 10 s (at most 6) | yes | Timeout → Telegram to the supervisor; an operator call only when `call_allowed` |
+| **Critical** | The same takeover in red, full screen including the strip (SOS on top), with the dispatch line | [800,200,800,200,800] every 4 s | clip `alert.{kind}.critical` at once, repeated every 10 s | yes | External escalation fires **at once** |
 
 - **Tier upgrade:** an alert raised with `upgraded_from` (for example Guardian warning → critical under 15 m) swaps colour instantly, plays the 480 ms border stamp once, and restarts audio and vibration at the new tier.
 - **Lifecycle:** `open` → shown · `acknowledged` → the takeover closes and the chip keeps the colour · `escalating`/`escalated` → the dispatch line · `resolved` → the chip drops · `suppressed` → operator never sees it; the FM sees "Suppressed (n)".
