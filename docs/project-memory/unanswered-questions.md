@@ -10,3 +10,5 @@ Format: **[date]** - the question, why it matters, what would answer it.
 **[2026-09-23]** - Is the build round time-boxed (e.g. 24 h on site) or multi-day remote? Decides how much we pre-build (boilerplate, design system, deploy pipeline) before the statement drops.
 **[2026-09-23]** - Are problem statements department-gated (the 2025 edition was)? Decides which statements we may pick.
 **[2026-09-23]** - Solo or team; if team, members' skills and who presents. Decides task split and pitch roles.
+**[2026-09-23]** - Is the "first review" (≈24 h) a demo, a code review, or a pitch? Decides whether we polish the demo path or breadth.
+**[2026-09-23]** - Does Shlok have an Expo account, and which Apple ID/team is used for TestFlight? Needed before the first EAS build.

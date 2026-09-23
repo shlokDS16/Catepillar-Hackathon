@@ -10,8 +10,17 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 - [x] P0.4 Tool/skill/plugin inventory + phase map → docs/research/02-tool-inventory.md
 - [x] P0.5 Session-persistence + folder-framework research → docs/research/03-persistence-and-structure.md
 - [x] P0.5b Validator gate on research → docs/research/04-validator-gate-P0.md: PASS-WITH-FIXES (fixes applied)
-- [~] P0.6 Master plan presented to Shlok
-- [ ] **Gate P0**: validator PASS · Shlok approves master plan
+- [x] P0.6 Master plan presented to Shlok
+- [x] **Gate P0**: validator PASS-WITH-FIXES · Shlok approved master plan (2026-09-23)
+
+## PW — Pre-work (before problem statement)
+- [x] PW.1 Project agents defined (.claude/agents: ui-ux-lead, backend-lead, backend-reviewer, code-reviewer, founder-validator, phase-validator, judge-simulator)
+- [~] PW.2 Domain primer: 05 Cat operator ecosystem, 06 AI training SOTA, 07 offline/mobile feasibility
+- [ ] PW.3 Founder-validator pass on 05-07 → docs/research/08-founder-review.md
+- [ ] PW.4 Starter repo: pnpm workspace, apps/web (Next.js + Tailwind + shadcn, neutral tokens), shared package, offline-ready shell; builds green
+- [ ] PW.5 Pitch skeleton for first review (docs/pitch/review-1-outline.md)
+- [ ] PW.6 Accounts: gh auth login, vercel login, eas login (Shlok)
+- [ ] **Gate PW**: phase-validator PASS
 
 ## P1 — Problem understanding (starts when problem statement arrives)
 - [ ] P1.1 Ingest brief (markitdown → disk → slices); extract judging criteria, deliverables, deadlines
