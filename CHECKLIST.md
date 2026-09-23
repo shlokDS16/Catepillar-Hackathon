@@ -28,9 +28,10 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 - [x] P1.2 Multi-pass research fan-out (docs/research/10-14; 12 final compile pending) (domain, users, Caterpillar products, competitors, data sources)
 - [x] P1.3 Spec v1 reviewed (founder PROMISING, judges 26/40, program READY-WITH-CHANGES) → spec v2 written
 - [x] P1.3b .env.example written (verification by scout 12 pending)
-- [~] P1.4 Final plan presented to Shlok (spec v2 + decisions: UI direction, Ask Spotter P0?, datasets, Twilio upgrade)
+- [x] P1.4 Final plan presented; Shlok decisions → spec v3
+- [x] P1.6 Research 15 (Groq/voice), 16 (multimodal RAG)
 - [ ] P1.5 Shlok adds modifications / improvements
-- [ ] **Gate P1**: idea frozen, written to docs/specs/idea.md
+- [x] **Gate P1 (G1)**: approved with changes 2026-09-23 (D6)
 
 ## P2 — Review pitch (presentation round already done; this is the review-1 deck + demo script, runbook T+20–22)
 - [ ] P2.1 Storyline + slide outline against the supplied template
@@ -40,7 +41,7 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 - [ ] **Gate P2**: validator PASS · Shlok approves · submitted
 
 ## P3 — Architecture and repo setup
-- [ ] P3.1 Architecture options (3 framings) + red team → ADR-001
+- [~] P3.1 Architecture options (3 framings) + red team → ADR-001 (backend-lead drafting)
 - [ ] P3.2 Folder structure (researched) scaffolded; git + GitHub remote
 - [ ] P3.3 Skills tailored per phase (copies under .claude/skills/, originals untouched)
 - [ ] P3.4 Task breakdown (task-master or writing-plans) with subtasks
