@@ -14,14 +14,15 @@
     "close": "Close",
     "sosActive": "SOS active",
     "live": "Live",
-    "sim": "Sim",
     "reconnecting": "Reconnecting…",
-    "synced": "synced {time}",
     "fixture": "Fixture",
-    "openSafety": "Open safety",
     "openSync": "Connection",
     "comingSoon": "Coming in a later task.",
-    "languageNamed": "Language: {name}"
+    "languageNamed": "Language: {name}",
+    "simStatus": "Sim {time} ×{speed}",
+    "noSignalStatus": "No signal · synced {time}",
+    "safetyLabel": "{count, plural, =1 {Open safety: {state}} other {Open safety: {state}, {count} alerts}}",
+    "skipToContent": "Skip to content"
   },
   "start": {
     "chooseLanguage": "Choose your language"

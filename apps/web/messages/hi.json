@@ -14,14 +14,15 @@
     "close": "बंद करें",
     "sosActive": "SOS चालू",
     "live": "लाइव",
-    "sim": "सिम",
     "reconnecting": "जोड़ रहे हैं…",
-    "synced": "सिंक {time}",
     "fixture": "फ़िक्स्चर",
-    "openSafety": "सुरक्षा खोलें",
     "openSync": "कनेक्शन",
     "comingSoon": "आगे के काम में आएगा।",
-    "languageNamed": "भाषा: {name}"
+    "languageNamed": "भाषा: {name}",
+    "simStatus": "सिम {time} ×{speed}",
+    "noSignalStatus": "ऑफ़लाइन · सिंक {time}",
+    "safetyLabel": "{count, plural, =1 {सुरक्षा खोलें: {state}} other {सुरक्षा खोलें: {state}, {count} अलर्ट}}",
+    "skipToContent": "सीधे सामग्री पर जाएँ"
   },
   "start": {
     "chooseLanguage": "अपनी भाषा चुनें"
