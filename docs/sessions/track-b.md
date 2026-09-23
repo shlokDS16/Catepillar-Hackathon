@@ -68,7 +68,7 @@
 
 | time | task | status | SHA | blockers |
 |---|---|---|---|---|
-| 2026-09-23 19:10 IST | B2 migration 001: extensions, enums (generated), reference, profiles, pairings, RLS helpers, scenario, telemetry/state, tasks, task_history, v_task_analytics, gen types | done, merge-ready | (set on commit) | none |
+| 2026-09-23 19:10 IST | B2 migration 001: extensions, enums (generated), reference, profiles, pairings, RLS helpers, scenario, telemetry/state, tasks, task_history, v_task_analytics, gen types | done, merge-ready | 0954306 | none |
 
 **Applied with `supabase db push --linked` (in order):** `20260923000000_contracts_enums.sql` (23 enums, generated) → `20260923100000_001_core.sql` (26 public tables, 2 private, 1 view, RLS on every table) → `20260923100100_001b_fk_indexes.sql` (19 covering indexes the performance advisor asked for) → `20260923100200_001c_privileges.sql` (review fixes, below) → `20260923100300_001d_function_defaults.sql` (one more default-privilege revoke found by the new test). `supabase gen types` → `packages/shared/src/db/types.ts` (export `@cat/shared/db`, 26 tables + the view; Track F uses it for FM `select`s).
 
