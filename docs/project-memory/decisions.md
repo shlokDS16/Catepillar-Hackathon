@@ -34,3 +34,7 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 - UI: A "Site Signage". Chatbot: advanced multimodal role-based RAG on Pinecone, P0. LLM: Groq (multiple keys + fallback), replacing Anthropic + Sarvam. Twilio: existing trial (~$5). Team: two people, one laptop.
 - Adopted teammate improvements: scenario engine + events table as the spine, hidden-effect generator, motion lock, PPE override, alert budget, canonical ledger + external Merkle root, STRIDE slide, privacy by design.
 - Rejected: none. Open: TTS provider for Hindi (research 15), Pinecone vs Voyage embeddings (research 16), sample dataset file pending.
+
+## 2026-09-23 — D7: Providers finalised (Shlok)
+- LLM: Groq primary + Groq backup key; no Gemini (Shlok: add another Groq backup later if needed). TTS: Sarvam (2 keys, ₹100 each), alert audio pre-generated once.
+- Twilio budget guard: ~$5.90 trial balance ≈ 100 India-minutes; all rehearsals use a dry-run flag; live calls only in scheduled tests + demo.
