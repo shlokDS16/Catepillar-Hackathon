@@ -53,3 +53,9 @@ in `claude/`. End-of-session routine runs before any session finishes.
 ## 2026-09-23 — Session 2 (integrator) start
 - D4 approved; D12 integrator location. Nothing to merge yet: track-b and track-f still at 1473244, both logs empty.
 - Track B session started in an app-made worktree (claude/spotter-backend-track-b-a0d0a3, no .env); redirected to ../spotter-track-b via handoff message. No Track F session running yet.
+- Open questions triaged against docs/brief and decisions (session 2):
+  - Team: two people, one laptop (G1 answer 6, D6). Resolved.
+  - Department-gated statements: moot; one problem statement received ("Smart Operator Assistant for CAT Machinery"). Resolved.
+  - Time box: about 24 h to the first review; website complete by then (D2). Resolved.
+  - First review format: the presentation round is done; review 1 = deck + demo script (CHECKLIST P2). Partly resolved: the exact judging rubric was never supplied.
+  - Still open: event portal / exact dates, the judging rubric per round, and the Expo account + Apple ID (needed only after review 1, D4).
