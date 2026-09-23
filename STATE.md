@@ -3,8 +3,11 @@
 > **PAUSED 2026-09-23 (Shlok).** The team did not proceed past review 1; Spotter continues later as a
 > side project. On resume: read the final lines of docs/sessions/track-b.md and track-f.md (each track
 > was asked to leave a WIP commit + "where I stopped" line), then merge in protocol order.
-> Resume points: Track B mid-B4 (migration 002 already applied to Supabase, reviews pending; realtime
-> partitions only through 26 Sep, re-run scripts/b0/realtime-wake.ts first).
+> Track B STOPPED at track-b 76e6278 (WIP, pushed, NOT merged). Migrations 002/002b are applied to
+> Supabase (7 migrations, local = remote). Both B4 reviews received, NOT applied: the fixes draft is
+> supabase/wip/002c_review_fixes.NOT_APPLIED.sql (outside migrations/, never pushed). Resume: apply
+> 002c + test patch, re-review, then merge; realtime safeguard = demo-check runs realtime-wake and
+> fails loudly (partitions exist only through 26 Sep); then B5. Details: PAUSED entry in track-b.md.
 > Track F STOPPED at track-f 8c1a019 (pushed, NOT merged): F06 hero + motion lock, F07 fixtures/
 > DataPort/store/provenance/useAudio (@cat/shared), F08 Home, fixture /director, F12 started (no
 > MapView). Green: typecheck, lint, 44 vitest, build. The F06-F08 code-reviewer pass never returned:
