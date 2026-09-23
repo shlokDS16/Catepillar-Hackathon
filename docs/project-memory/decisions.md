@@ -64,3 +64,10 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 - Proximity radar folded into the map rings (departure from spec M2 cockpit mini-radar) approved.
 - H0 setup authorised; vercel login done (account shlokds16).
 - D11 addendum: UI decisions 2-4 in frontend-tasks.md (untimed Replay Brief; ink-only training urgency; collapsed provenance chips in Simple mode) accepted by default (orchestrator), Shlok may override.
+
+## 2026-09-23 — D4 approved (Shlok)
+- D4 (web only until review 1) is final. Mobile (Expo, TestFlight, APK) starts after review 1, reusing @cat/shared.
+
+## 2026-09-23 — D12: Integrator runs from its own worktree (Shlok)
+- Session A works in `.claude/worktrees/caterpillar-spotter-resume-c02a8b` instead of the main folder. It merges into `main` with `git -C "<main folder>" merge ...`, because `main` stays checked out in the main folder. Docs changes are committed on the worktree branch, then fast-forwarded into main.
+- Tracks stay in `../spotter-track-b` (track-b) and `../spotter-track-f` (track-f); only those folders have `.env`, `.env.local` and installs.

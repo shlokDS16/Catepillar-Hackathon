@@ -49,3 +49,7 @@ in `claude/`. End-of-session routine runs before any session finishes.
 - G1 (spec v3 + D10 simulation-first training) and G2 (backend rev 3+, frontend plan v2, build protocol) passed after 5 red-team/validator rounds; all findings dispositioned in ADR-001.
 - H0: worktrees track-b/track-f, shared dependency commit (vitest, tsx, postgres, supabase-js, next-intl, maplibre-gl, @supabase/ssr), env copies incl. regenerated webhook + director secrets.
 - Next: three sessions (A integrator Opus; B and F on Fable 5.1). Showable 1 at ≈ H3-4.
+
+## 2026-09-23 — Session 2 (integrator) start
+- D4 approved; D12 integrator location. Nothing to merge yet: track-b and track-f still at 1473244, both logs empty.
+- Track B session started in an app-made worktree (claude/spotter-backend-track-b-a0d0a3, no .env); redirected to ../spotter-track-b via handoff message. No Track F session running yet.
