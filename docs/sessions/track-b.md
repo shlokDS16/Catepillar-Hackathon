@@ -63,3 +63,35 @@
 **Reviews:** code-reviewer CHANGES REQUIRED (7) and backend-reviewer FAIL (5) on the first diff, all applied before the commit: extensionless imports (the `.ts` suffix would have forced `allowImportingTsExtensions` on web and mobile), `eventSchema` keeps each type's own payload type (no `as unknown as`), fixtures grew to one per event type (47) plus every RPC in/out, all seven evidence cards and the function/realtime/content schemas (**93** total), the fixture test now checks a lossless round-trip and breaks a **nested** field per fixture, ETA fixtures are produced by `estimateEta`, the quoting helper is tested directly, `AudioManifestEntry` (alias `AUDIO_MANIFEST_ENTRY` kept for the spec name), the log corrections above.
 
 **For Track F (also in handoff.md):** import `@cat/shared` for schemas and types and `@cat/shared/fixtures` for `FIXTURES`, `mySnapshot`, `replayScenario`, `lessonContent`, `askResponse`, … Contracts are frozen: request changes in `docs/sessions/track-f.md`; anything after v1.0.0 is additive.
+
+## B2 (2026-09-23, Fable 5.1) · migration 001 (+ 001b, 001c, 001d) applied to the shared project
+
+| time | task | status | SHA | blockers |
+|---|---|---|---|---|
+| 2026-09-23 19:10 IST | B2 migration 001: extensions, enums (generated), reference, profiles, pairings, RLS helpers, scenario, telemetry/state, tasks, task_history, v_task_analytics, gen types | done, merge-ready | 0954306 | none |
+
+**Applied with `supabase db push --linked` (in order):** `20260923000000_contracts_enums.sql` (23 enums, generated) → `20260923100000_001_core.sql` (26 public tables, 2 private, 1 view, RLS on every table) → `20260923100100_001b_fk_indexes.sql` (19 covering indexes the performance advisor asked for) → `20260923100200_001c_privileges.sql` (review fixes, below) → `20260923100300_001d_function_defaults.sql` (one more default-privilege revoke found by the new test). `supabase gen types` → `packages/shared/src/db/types.ts` (export `@cat/shared/db`, 26 tables + the view; Track F uses it for FM `select`s).
+
+**Reviews:** code-reviewer CHANGES REQUIRED (9) and backend-reviewer FAIL (7) on 001; every finding is fixed in 001c/001d and covered by a test:
+- **Default privileges** (both reviewers, the high one): 001's per-schema `revoke execute … from public` on `private` was a no-op (a per-schema default cannot remove the built-in PUBLIC grant), and Supabase's own per-schema grant made every new `public` function callable by `anon`/`authenticated`. Now: global `alter default privileges for role postgres revoke execute on functions from public`, per-schema revokes of tables, sequences and functions from `anon`/`authenticated` in `public`, explicit `revoke execute on all functions in schema private` with only the five helpers re-granted, sequences revoked. `tests/003_privileges.sql` creates a probe table and function inside the rolled-back transaction and asserts neither is reachable by clients; B4/B5/B15 objects therefore start closed and are granted explicitly.
+- **Pseudonym leak** (backend-reviewer, privacy): FM could read `operators.pseudonym` next to `display_name`, defeating near-miss mode. Now `authenticated` has column-level `select` on `operators` **without `pseudonym`**; only the `near_miss_list` RPC (B15, security definer) returns pseudonyms. Consequence for Track F (handoff): select explicit columns on `operators`; `select=*` is refused by PostgREST.
+- `scenario_frames`: the `select` grant to `authenticated` is revoked (RLS with no policy was already hiding rows; now the table is not reachable at all).
+- Telemetry `(run_id, frame_seq)`: a plain **unique constraint** (usable by `on conflict` in B9) plus `check ((run_id is null) = (frame_seq is null))` so a null frame number cannot bypass it.
+- `operator_pairings`: readable by every signed-in role (data-model §2.1), not OP-own as 001 had it. `profiles.operator_id` is unique. Helper functions carry a comment saying why they are security definer (the `profiles` policy must not recurse).
+- Tests: `002_core_rls.sql` now seeds trail, pairing, shift, override and consent rows and asserts OP / FM / TR on each; anon is checked on **every** public table, view and sequence by catalog (`has_table_privilege`), not on two tables.
+
+**Checks after the fixes:** sqltest **4/4**; Security Advisor: one INFO (`scenario_frames` RLS enabled, no policy: by design); performance advisor: unused-index INFOs only (fresh tables).
+
+**Decisions inside B2 (within the data model's intent):**
+1. RLS helpers in `private` (`app_role`, `my_operator_id`, `my_site_id`, `is_staff`, `is_fm`): `authenticated` gets `usage` on the schema and `execute` on exactly these five (policy expressions run as the caller). `private` is not a PostgREST-exposed schema.
+2. Helpers are created after `profiles` (SQL-language bodies are validated at creation; the first push failed on this).
+3. Clients get `select` only, nothing for `anon`, `service_role` keeps all; writes arrive in B15 as security-definer RPCs.
+4. FM/TR "all" policies are org-wide as the data model says; events (B4) are site-scoped per §3.1.
+5. `ppe_overrides.ledger_queue_id` is a plain bigint (no FK: the ledger never depends on purgeable rows); `tasks ↔ ppe_overrides` FK is added after both tables exist.
+6. `task_history.model_p50_min` / `model_p90_min` are the columns B16 fills; `v_task_analytics` needs `n ≥ 5` per task_type × weather on the `test` split. The generated types show the view's columns as nullable (Postgres cannot infer non-null on aggregates); the UI parses rows with `TaskAnalyticsRow`.
+7. `app_config.fuel_price_inr_per_l` (default 92 = `FUEL_PRICE`) so B10's cost formula reads one row; `machine_models.source_url` records the spec-sheet source (D8).
+8. `explanation_templates` and `alert_policies.notify_now` exist here so B4's embedded seed can fill them.
+9. GIST on `machine_state.location` / `operator_state.location` for the Guardian `ST_DWithin` (B11); telemetry has unique `(run_id, frame_seq)`, `(machine_id, ts)`, `(run_id, machine_id, ts)`, BRIN(ts), GIST(location), `operator_id`.
+
+**For the integrator (docs):** data-model §2.1 is stale in three places (`protocol_cards.steps` shape, `alert_policies.tier_max`/`notify_now`, `operators.preferred_language` is the `lang` enum); worth one line at the next docs pass.
+**For B8 (seed):** `profiles.user_id` references `auth.users`; the RLS test inserts test users into `auth.users` directly (the `postgres` role may), which is how `scripts/seed.ts` can create the three demo logins.
