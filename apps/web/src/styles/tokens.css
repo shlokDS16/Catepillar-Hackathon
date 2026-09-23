@@ -102,6 +102,7 @@
   --dur-count: 1200ms; /* debrief score count-up, max */
   --dur-wait: 300ms; /* loading bar appears only after this */
   --dur-bar: 1000ms; /* one sweep of the indeterminate bar */
+  --dur-tick: 1000ms; /* countdown bars: one linear step per second */
   --ease: cubic-bezier(0.2, 0, 0, 1);
 
   /* Z-order: content 0 · chrome 10 · sheets 20 · motion lock 25 · takeover 30 · SOS 40 · SOS status 45 */
@@ -164,5 +165,6 @@
     --dur-phase: 0ms;
     --dur-count: 0ms;
     --dur-bar: 0ms;
+    --dur-tick: 0ms;
   }
 }

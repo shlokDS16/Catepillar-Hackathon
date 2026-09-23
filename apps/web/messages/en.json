@@ -56,5 +56,30 @@
     "ledger": "Ledger",
     "primary": "Main",
     "new": "{n} new"
+  },
+  "alerts": {
+    "kind": {
+      "seatbelt_off_moving": "Seatbelt off while moving",
+      "guardian_hazard": "Faulty machine nearby",
+      "proximity_zone": "Person or machine close",
+      "ppe_missing": "PPE missing",
+      "anomaly_machine": "Machine anomaly",
+      "idle_excess": "Idling too long",
+      "sos": "SOS",
+      "ledger_tamper": "Ledger changed",
+      "alert_flood": "Too many alerts"
+    },
+    "acknowledge": "Acknowledge",
+    "listen": "Listen",
+    "showOnMap": "Show on map",
+    "escalatesIn": "Supervisor alerted in {s} s",
+    "escalated": "Supervisor alerted",
+    "soundBlocked": "Sound blocked, tap Listen",
+    "more": "+{n} more",
+    "occurrences": "×{n}",
+    "notSent": "Not sent. Your supervisor will be alerted anyway.",
+    "fixIt": "Fix it: fasten seatbelt, or stop to respond",
+    "upgraded": "Raised from {tier}",
+    "takeover": "{tier} alert"
   }
 }
