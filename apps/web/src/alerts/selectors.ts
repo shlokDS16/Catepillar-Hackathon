@@ -5,6 +5,11 @@ export const NO_SIGNAL_AFTER_MS = 10_000;
 
 export type SafetyState = AlertTier | "clear" | "nosignal";
 
+/** Chip tone for a safety state: Info has no colour of its own (a row, not a plate). */
+export function safetyTone(s: SafetyState): Exclude<SafetyState, "info"> | "outline" {
+  return s === "info" ? "outline" : s;
+}
+
 /** Still waiting for the operator: open, or escalated past them without an acknowledgement. */
 const UNACKNOWLEDGED: ReadonlySet<AlertRecord["status"]> = new Set(["open", "escalating", "escalated"]);
 

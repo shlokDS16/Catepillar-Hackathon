@@ -1,6 +1,8 @@
 import type { ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
+import { AlertLayer } from "@/components/alerts/alert-layer";
 import { AskChip } from "@/components/chrome/ask-chip";
+import { AppProviders } from "@/components/chrome/providers";
 import { LanguageChip } from "@/components/chrome/language-sheet";
 import { ActiveTitle, Nav } from "@/components/chrome/nav";
 import type { ShellRole } from "@/components/chrome/nav-items";
@@ -18,6 +20,7 @@ export async function Shell({ role, children }: ShellProps) {
   const operator = role === "operator";
   const t = await getTranslations("chrome");
   return (
+    <AppProviders role={role}>
     <div className="shell" data-role={role} data-mode={operator ? undefined : "detailed"}>
       <a href="#main" className="skip-link t-label">
         {t("skipToContent")}
@@ -36,7 +39,9 @@ export async function Shell({ role, children }: ShellProps) {
           {children}
         </main>
       </div>
+      {operator ? <AlertLayer /> : null}
       {operator ? <SosControl /> : null}
     </div>
+    </AppProviders>
   );
 }

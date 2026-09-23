@@ -1,60 +1,41 @@
 /**
- * Local mirror of the frozen contracts in docs/architecture/api-contracts.md (§2-§4, §13).
- * TEMPORARY until IP0 lands `@cat/shared` on main; F07 replaces every import from here with
- * `@cat/shared` types. Field names and enums are copied verbatim so the swap is mechanical.
+ * UI-side names for the frozen contracts (@cat/shared v1.0.0). Everything here is a type alias over
+ * the shared zod schemas, so the wire format has exactly one definition. Names that @cat/shared
+ * exports as types are re-used directly; the rest are inferred from their schema constant.
  */
+import type { z } from "zod";
+import type {
+  ActiveAlert,
+  AlertKind,
+  AlertTier,
+  AnyEvent,
+  AudioManifest,
+  AudioManifestEntry as AudioManifestEntrySchema,
+  ClockTick as ClockTickSchema,
+  GenericEvent,
+  Lang,
+  MachineDelta as MachineDeltaSchema,
+  MySnapshotOut,
+  ProtocolCard,
+} from "@cat/shared";
 
-export type AlertTier = "info" | "caution" | "warning" | "critical";
-export type AlertStatus = "open" | "acknowledged" | "escalating" | "escalated" | "resolved" | "suppressed";
-export type AlertKind =
-  | "seatbelt_off_moving"
-  | "guardian_hazard"
-  | "proximity_zone"
-  | "ppe_missing"
-  | "anomaly_machine"
-  | "idle_excess"
-  | "sos"
-  | "ledger_tamper"
-  | "alert_flood";
-export type Lang = "en" | "hi" | "ta";
+export type { AlertKind, AlertTier, AudioManifest, Lang, ProtocolCard };
+export type AlertRecord = z.infer<typeof ActiveAlert>;
+export type AlertStatus = AlertRecord["status"];
 export type AudioLang = "en" | "hi";
-
 export type I18nText = { en: string; hi?: string; ta?: string };
+export type AudioManifestEntry = z.infer<typeof AudioManifestEntrySchema>;
+export type ClockTick = z.infer<typeof ClockTickSchema>;
+export type MachineDelta = z.infer<typeof MachineDeltaSchema>;
 
-/** `alert.raised` payload plus the snapshot's status fields (`MySnapshotOut.active_alerts`). */
-export type AlertRecord = {
-  alert_id: string;
-  kind: AlertKind;
-  tier: AlertTier;
-  needs_ack: boolean;
-  escalate_at: string | null;
-  occurrences: number;
-  protocol_card_id: string | null;
-  upgraded_from: AlertTier | null;
-  status: AlertStatus;
-  first_seen: string;
-};
+export type Snapshot = MySnapshotOut;
+export type Task = Snapshot["tasks"][number];
+export type Machine = NonNullable<Snapshot["machine"]>;
+export type OperatorState = NonNullable<Snapshot["operator_state"]>;
+export type Weather = NonNullable<Snapshot["weather"]>;
+export type Assignment = Snapshot["assignments"][number];
 
-export type ProtocolCard = {
-  id: string;
-  title: I18nText;
-  steps: I18nText[];
-  pictogram: string;
-  upwind_hint: boolean;
-  version: number;
-};
-
-export type AudioManifestEntry = {
-  phrase_id: string;
-  lang: AudioLang;
-  path: string;
-  bytes: number;
-  duration_ms: number | null;
-  provider: "sarvam" | "gemini";
-  model: string;
-  text_sha256: string;
-  status: "ok" | "missing";
-};
-export type AudioManifest = AudioManifestEntry[];
+/** A typed event when the registry knows it, a generic row otherwise (unknown types render generically). */
+export type AppEvent = AnyEvent | z.infer<typeof GenericEvent>;
 
 export const TIER_RANK: Record<AlertTier, number> = { info: 0, caution: 1, warning: 2, critical: 3 };

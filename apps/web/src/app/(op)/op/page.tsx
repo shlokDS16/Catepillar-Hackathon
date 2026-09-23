@@ -1,5 +1,5 @@
-import { Stub } from "@/components/ui/stub";
+import { HomeScreen } from "@/components/home/home-screen";
 
 export default function Page() {
-  return <Stub task="F08" />;
+  return <HomeScreen />;
 }

@@ -601,3 +601,136 @@
   border-color: var(--state-critical);
   color: var(--on-ink);
 }
+
+/* ---------- Hero card (screens.md §0): same shape everywhere; the lock view is it at full screen ---------- */
+.hero-link {
+  display: block;
+  color: inherit;
+  text-decoration: none;
+}
+.hero {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  background: var(--surface);
+  color: var(--ink);
+  border: var(--bw-heavy) solid var(--ink);
+  border-radius: var(--r-0);
+  padding: var(--s-4);
+  container-type: inline-size;
+}
+.hero[data-dashed="true"] {
+  border-style: dashed;
+}
+.hero-head,
+.hero-task,
+.hero-foot {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.hero-state {
+  font-size: min(var(--t-state), 18cqi);
+}
+.hero-task {
+  border-top: var(--bw-hair) solid var(--rule-soft);
+  padding-top: var(--s-3);
+}
+.hero-foot {
+  flex-direction: row;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: var(--s-4);
+  border-top: var(--bw-hair) solid var(--rule-soft);
+  padding-top: var(--s-3);
+}
+.hero-safety {
+  display: flex;
+  align-items: center;
+}
+.hero-safety-chip {
+  min-height: var(--hit);
+  padding: var(--s-2) var(--s-4);
+}
+.hero-why {
+  border-top: var(--bw-hair) solid var(--rule-soft);
+  padding-top: var(--s-2);
+}
+.hero[data-lock="true"] {
+  flex: 1;
+  justify-content: center;
+}
+.hero-slot {
+  width: 100%;
+}
+@media (min-width: 1024px) {
+  .hero-slot {
+    width: var(--hero-max);
+    flex: none;
+  }
+  .home {
+    display: flex;
+    gap: var(--s-6);
+    align-items: flex-start;
+  }
+  .home-rest {
+    flex: 1;
+    min-width: 0;
+  }
+}
+.home,
+.home-rest {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+@media (min-width: 1024px) {
+  .home {
+    flex-direction: row;
+  }
+}
+
+/* Today's tasks: time · task · state · ETA; the current row has a 6 px ink bar */
+.task-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2) var(--s-3);
+  min-height: var(--hit);
+  padding: var(--s-2) var(--s-3);
+  border-bottom: var(--bw-hair) solid var(--rule-soft);
+  border-left: calc(var(--bw-heavy) * 2) solid transparent;
+}
+.task-row[data-current="true"] {
+  border-left-color: var(--ink);
+}
+.task-row > .t-body {
+  flex: 1 1 auto;
+}
+
+/* ---------- Motion lock (interaction-map §6): the 8 px hazard stripe is used here and nowhere else ---------- */
+.lock {
+  position: fixed;
+  inset: var(--strip-h) 0 0 0;
+  z-index: var(--z-lock);
+  background: repeating-linear-gradient(45deg, var(--ink) 0, var(--ink) var(--stripe), var(--paper) var(--stripe), var(--paper) calc(var(--stripe) * 2));
+  padding: var(--stripe);
+  touch-action: none;
+}
+.lock-frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  height: 100%;
+  padding: var(--s-4) var(--gutter) calc(var(--hit-sos) + var(--s-6));
+  background: var(--paper);
+  overflow: hidden;
+}
+.lock-line {
+  text-align: center;
+}
+@media (min-width: 1024px) {
+  .lock {
+    inset: var(--strip-h) 0 0 var(--rail-w);
+  }
+}

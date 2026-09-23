@@ -6,6 +6,7 @@ import { Chip, type ChipTone } from "@/components/ui/chip";
 import { Mark, Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { Plate, type PlateTone } from "@/components/ui/plate";
 import { KitAlerts } from "./kit-alerts";
+import { KitHero } from "./kit-hero";
 
 const TONES: PlateTone[] = ["surface", "sunk", "ink", "clear", "caution", "warning", "critical", "mandatory", "nosignal"];
 const SAFETY: Array<{ tone: ChipTone; word: string; picto: PictogramName }> = [
@@ -163,6 +164,10 @@ export function Kit() {
           <Chip tone="ink">②</Chip>
           <Chip tone="mandatory" icon={<Pictogram name="vest" />}>Wear vest</Chip>
         </div>
+      </Section>
+
+      <Section title="Hero card states (fixtures) and the motion lock">
+        <KitHero />
       </Section>
 
       <Section title="Alert tiers (fixtures): vibration, audio, stamp, +n more">

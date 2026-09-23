@@ -24,7 +24,8 @@
     "safetyLabel": "{count, plural, =1 {सुरक्षा खोलें: {state}} other {सुरक्षा खोलें: {state}, {count} अलर्ट}}",
     "skipToContent": "सीधे सामग्री पर जाएँ",
     "sosHold": "SOS: भेजने के लिए 1.5 सेकंड दबाए रखें",
-    "sosOpen": "खोलने के लिए छुएँ"
+    "sosOpen": "खोलने के लिए छुएँ",
+    "fixtureStatus": "फ़िक्स्चर {time} ×{speed}"
   },
   "start": {
     "chooseLanguage": "अपनी भाषा चुनें"
@@ -44,6 +45,32 @@
       "blocked": "अटका",
       "done": "पूरा",
       "fault": "ख़राबी"
+    },
+    "task": {
+      "excavation": "खुदाई",
+      "trenching": "नाली खुदाई",
+      "material_loading": "माल लोडिंग",
+      "grading": "समतल करना",
+      "demolition": "तोड़ना"
+    },
+    "factor": {
+      "heat": "गर्मी",
+      "cold": "ठंड",
+      "wind": "हवा",
+      "skill": "कौशल",
+      "novice": "नया ऑपरेटर",
+      "machine_age": "मशीन की उम्र",
+      "shift_hour": "शिफ्ट का समय",
+      "weather": "मौसम",
+      "assumed": "अनुमानित"
+    },
+    "taskStatus": {
+      "planned": "तय",
+      "in_progress": "चालू",
+      "paused": "रुका",
+      "completed": "पूरा",
+      "cancelled": "रद्द",
+      "blocked_ppe": "अटका"
     }
   },
   "nav": {
@@ -103,5 +130,44 @@
     "callSupervisor": "सुपरवाइज़र को कॉल करें",
     "listen": "सुनें",
     "soundBlocked": "आवाज़ बंद है, सुनें दबाएँ"
+  },
+  "provenance": {
+    "assumed": "अनुमानित",
+    "simulated": "नकली डेटा",
+    "someAssumed": "कुछ मान अनुमानित हैं"
+  },
+  "hero": {
+    "moving": "चल रही है {speed} किमी/घंटा",
+    "noTask": "कोई काम शुरू नहीं",
+    "nextTask": "अगला: {task} {time}",
+    "progress": "{pct} % पूरा",
+    "eta": "बचा समय",
+    "etaMin": "{min} मिनट",
+    "etaUpTo": "अधिकतम {min}",
+    "why": "कारण: {factors}",
+    "notUpdated": "अपडेट नहीं",
+    "asOf": "{time} तक",
+    "stopMachine": "स्पॉटर के लिए मशीन रोकें",
+    "openTask": "काम खोलें"
+  },
+  "home": {
+    "conditions": "हालात",
+    "wbgt": "WBGT {c} °C",
+    "temp": "{c} °C",
+    "forecast": "{time} तक {c} °C का अनुमान (परिदृश्य पूर्वानुमान)",
+    "etaImpact": "बचा समय {pct, number, +#;-#} %",
+    "loopTitle": "आज की वजह से",
+    "becauseToday": "आज की वजह से",
+    "practise": "अभ्यास · लगभग 3 मिनट",
+    "lessonCards": "पाठ · {n} कार्ड",
+    "todaysTasks": "आज के काम",
+    "noTasks": "आज कोई काम नहीं। सुपरवाइज़र से पूछें।",
+    "modeLabel": "दृश्य",
+    "simple": "सरल",
+    "detailed": "विस्तृत",
+    "lesson": {
+      "seatbelt_slopes": "ढलान पर सीटबेल्ट खुली",
+      "faulty_machine_nearby": "पास में ख़राब मशीन"
+    }
   }
 }

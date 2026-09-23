@@ -24,7 +24,8 @@
     "safetyLabel": "{count, plural, =1 {Open safety: {state}} other {Open safety: {state}, {count} alerts}}",
     "skipToContent": "Skip to content",
     "sosHold": "SOS: hold for 1.5 seconds to send",
-    "sosOpen": "Tap to open"
+    "sosOpen": "Tap to open",
+    "fixtureStatus": "Fixture {time} ×{speed}"
   },
   "start": {
     "chooseLanguage": "Choose your language"
@@ -44,6 +45,32 @@
       "blocked": "Blocked",
       "done": "Done",
       "fault": "Fault"
+    },
+    "task": {
+      "excavation": "Excavation",
+      "trenching": "Trenching",
+      "material_loading": "Material loading",
+      "grading": "Grading",
+      "demolition": "Demolition"
+    },
+    "factor": {
+      "heat": "heat",
+      "cold": "cold",
+      "wind": "wind",
+      "skill": "skill",
+      "novice": "novice",
+      "machine_age": "machine age",
+      "shift_hour": "shift hour",
+      "weather": "weather",
+      "assumed": "assumed"
+    },
+    "taskStatus": {
+      "planned": "Planned",
+      "in_progress": "Working",
+      "paused": "Paused",
+      "completed": "Done",
+      "cancelled": "Cancelled",
+      "blocked_ppe": "Blocked"
     }
   },
   "nav": {
@@ -103,5 +130,44 @@
     "callSupervisor": "Call supervisor",
     "listen": "Listen",
     "soundBlocked": "Sound blocked, tap Listen"
+  },
+  "provenance": {
+    "assumed": "assumed",
+    "simulated": "simulated",
+    "someAssumed": "Some values are assumed"
+  },
+  "hero": {
+    "moving": "moving {speed} km/h",
+    "noTask": "No task started",
+    "nextTask": "next: {task} {time}",
+    "progress": "{pct} % done",
+    "eta": "ETA",
+    "etaMin": "{min} min",
+    "etaUpTo": "up to {min}",
+    "why": "Why: {factors}",
+    "notUpdated": "Not updated",
+    "asOf": "as of {time}",
+    "stopMachine": "Stop the machine to use Spotter",
+    "openTask": "Open task"
+  },
+  "home": {
+    "conditions": "Conditions",
+    "wbgt": "WBGT {c} °C",
+    "temp": "{c} °C",
+    "forecast": "peak {c} °C forecast by {time} (scenario forecast)",
+    "etaImpact": "ETA {pct, number, +#;-#} %",
+    "loopTitle": "Because of today",
+    "becauseToday": "Because of today",
+    "practise": "Practise · about 3 min",
+    "lessonCards": "Lesson · {n} cards",
+    "todaysTasks": "Today's tasks",
+    "noTasks": "No tasks today. Ask your supervisor.",
+    "modeLabel": "View",
+    "simple": "Simple",
+    "detailed": "Detailed",
+    "lesson": {
+      "seatbelt_slopes": "Seatbelt off on a slope",
+      "faulty_machine_nearby": "Faulty machine nearby"
+    }
   }
 }
