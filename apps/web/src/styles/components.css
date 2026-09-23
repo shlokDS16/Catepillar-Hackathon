@@ -577,3 +577,27 @@
     inset: 0 0 0 var(--rail-w);
   }
 }
+
+/* ---------- SOS hold-to-arm (A10): the fill is the one allowed continuous motion ---------- */
+.btn.sos {
+  position: relative;
+  overflow: hidden;
+  touch-action: none;
+}
+.btn.sos > * {
+  position: relative;
+}
+.sos-fill {
+  position: absolute !important;
+  inset: 0;
+  background: var(--ink);
+  opacity: 0.35;
+  transform-origin: bottom;
+  transform: scaleY(0);
+  pointer-events: none;
+}
+.btn.sos[data-active="true"] {
+  background: var(--ink);
+  border-color: var(--state-critical);
+  color: var(--on-ink);
+}

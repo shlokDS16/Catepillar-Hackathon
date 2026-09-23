@@ -22,7 +22,9 @@
     "simStatus": "सिम {time} ×{speed}",
     "noSignalStatus": "ऑफ़लाइन · सिंक {time}",
     "safetyLabel": "{count, plural, =1 {सुरक्षा खोलें: {state}} other {सुरक्षा खोलें: {state}, {count} अलर्ट}}",
-    "skipToContent": "सीधे सामग्री पर जाएँ"
+    "skipToContent": "सीधे सामग्री पर जाएँ",
+    "sosHold": "SOS: भेजने के लिए 1.5 सेकंड दबाए रखें",
+    "sosOpen": "खोलने के लिए छुएँ"
   },
   "start": {
     "chooseLanguage": "अपनी भाषा चुनें"
@@ -81,5 +83,25 @@
     "fixIt": "ठीक करें: सीटबेल्ट लगाएँ, या रुककर जवाब दें",
     "upgraded": "{tier} से बढ़ा",
     "takeover": "{tier} अलर्ट"
+  },
+  "sos": {
+    "title": "SOS",
+    "sending": "SOS भेज रहे हैं…",
+    "sent": "SOS भेजा गया",
+    "location": {
+      "device": "जगह: आपके फ़ोन से",
+      "machine": "जगह: मशीन से",
+      "site": "जगह: साइट का केंद्र"
+    },
+    "escalatesIn": "जवाब न मिला तो {s} सेकंड में सुपरवाइज़र को कॉल",
+    "escalated": "सुपरवाइज़र को कॉल किया",
+    "cancel": "SOS रद्द करें",
+    "cancelWindow": "रद्द करने के लिए {s} सेकंड बचे",
+    "cancelled": "SOS रद्द",
+    "notSent": "नहीं भेजा गया। सिग्नल नहीं।",
+    "retrying": "उसी अनुरोध से फिर कोशिश (कोशिश {n})",
+    "callSupervisor": "सुपरवाइज़र को कॉल करें",
+    "listen": "सुनें",
+    "soundBlocked": "आवाज़ बंद है, सुनें दबाएँ"
   }
 }
