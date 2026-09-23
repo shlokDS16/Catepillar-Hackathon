@@ -23,3 +23,17 @@
 5. Log D4 in `decisions.md`: web only until the first review (the open conflict in the thesis).
 6. Add a stub at `docs/design/ui-framework.md` listing what Shlok should paste in and where the design tokens go.
 7. The `phase-validator` description says "P0-P6". Add PW.
+
+## Re-check (2026-09-23): PASS-WITH-FIXES
+All 7 fixes were verified against the files. `git status` is clean at `6749386`.
+1. STATE.md: fixed. Nothing is in flight, the next action is runbook step 1 with a reason, and Key files is complete.
+2. `docs/specs/ps-arrival-runbook.md`: fixed. It sets the first 3 actions for T0 to T+15 min and a T+0 to 24 h timeline with gates G1 to G4, the Fable switch at T+2:45 and a feature freeze at T+22. The P1 heading links to the runbook. P2 is renamed to the review-1 pitch, so it no longer contradicts STATE.
+3. Committed: fixed.
+4. Status banner in `master-plan.md`: fixed.
+5. D4 is logged as PROPOSED. This is acceptable.
+6. `docs/design/ui-framework.md`: the placeholder is fixed and names the token destination.
+7. `phase-validator` description: fixed, now lists "P0, PW, P1-P6".
+
+Remaining (not blocking):
+- R1. Add "confirm D4" to runbook action 3, so the decision gets closed at T0.
+- R2. After this re-check, set the Gate PW line in CHECKLIST to [x] with the verdict.

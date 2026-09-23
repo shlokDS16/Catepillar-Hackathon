@@ -21,7 +21,7 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 - [x] PW.5 Pitch skeleton for first review (docs/pitch/review-1-outline.md)
 - [ ] PW.6 Accounts: gh auth login, vercel login, eas login (Shlok)
 - [x] PW.7 Gate fixes: runbook, STATE refresh, D4, ui-framework placeholder, master-plan status
-- [~] **Gate PW**: 1st pass FAIL (2 blockers, docs/gates/PW.md) → fixes applied → re-check
+- [x] **Gate PW**: 1st pass FAIL (2 blockers) → fixes applied → re-check PASS-WITH-FIXES (docs/gates/PW.md)
 
 ## P1 — Problem understanding (starts when problem statement arrives — follow docs/specs/ps-arrival-runbook.md)
 - [ ] P1.1 Ingest brief (markitdown → disk → slices); extract judging criteria, deliverables, deadlines

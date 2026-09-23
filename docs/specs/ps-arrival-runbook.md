@@ -9,7 +9,8 @@ Gates stay, but they run fast: one validator pass plus one message from Shlok (a
 2. Extract into `docs/brief/02-requirements.md`: deliverables, judging criteria, constraints,
    review times, what "done" means at review 1. List anything ambiguous for Shlok.
 3. Map the statement onto `docs/specs/thesis-draft.md`: keep, reshape or replace (the narrowing
-   rules are in that file). Update STATE.md.
+   rules are in that file). Get Shlok to confirm D4 (web only until review 1) if it is still
+   PROPOSED in decisions.md. Update STATE.md.
 
 ## Timeline
 | Window | Work | Who | Gate |
