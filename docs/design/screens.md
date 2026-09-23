@@ -1,6 +1,12 @@
 # P0 screens
 
-- Status: design plan **v2** (ui-ux-lead, 2026-09-23). v2 codes against api-contracts revision 3 and adds D10 training and the human-verified ledger witness.
+- Status: design plan **v3** (ui-ux-lead, 2026-09-23). v2 coded against api-contracts revision 3 and added D10 training and the human-verified ledger witness. v3 is the G2 fix round: the analytics chart, the anomaly explanation, the audio manifest, provenance chips and the "tamper-evident" wording.
+- **Provenance chips** (api-contracts §11, `FIELD_PROVENANCE`): one helper, `provenanceOf(table, field)`, labels every rendered value:
+  - `assumed_sensor` → an "assumed" chip;
+  - `synthetic` → a "simulated" chip;
+  - `real_open_data` → a source line ("Weather: Open-Meteo archive, CC BY 4.0");
+  - `organiser` and `derived` → no chip, except that a derived value inherits "assumed" when an input is assumed, e.g. ₹ "at ₹92/L (assumed)" from `FUEL_PRICE`.
+  - Chips use `--t-meta` in `--ink-3`, and are shown in Detailed mode and on FM screens. In Simple mode one "Some values are assumed ⓘ" line per screen replaces the per-field chips, which keeps the glance layer clean.
 - Actions (A- and T-numbers) and chrome are in interaction-map.md; tokens are in visual-language.md.
 - Hierarchy: **L1** immediate safety · **L2** current task · **L3** progress / ETA · **L4** recommendations and insights · **L5** history, training, analytics · **L6** settings.
 - Fields are **core** (Simple mode) or **detail** (Detailed mode). FM screens are Detailed.
@@ -8,7 +14,7 @@
   - **Loading:** outline plates at final size, no shimmer.
   - **Error:** ink ✕ + one line + Try again.
   - **Offline:** cached snapshot with an "as of HH:MM" stamp.
-  - **Honesty:** "assumed" tags from `ASSUMED_FIELDS` and "SIM" in the connectivity chip.
+  - **Honesty:** provenance chips from `FIELD_PROVENANCE` (see above) and "SIM" in the connectivity chip.
 
 ## 0. The signature: hero card
 
@@ -86,14 +92,29 @@ Empty alerts: a CLEAR plate "No active alerts". (My-incidents list: P1; the FM L
 ## S4 Map `/op/map` and Fleet Map `/fm/map`
 | Level | Content | Tag |
 |---|---|---|
-| L1 | Guardian protocol card (bottom sheet): `ProtocolCard.title`, 3 steps, "Move upwind: go north" when `upwind_hint`, wind arrow, distance, [Listen], Acknowledge when needed | core |
+| L1 | Guardian protocol card (bottom sheet): `ProtocolCard.title`, 3 steps, "Move upwind: go north" when `upwind_hint`, wind arrow, distance, [Listen] (`guardian.{card_id}.step{n}`), Acknowledge when needed | core |
+| L1 | **Why this machine** (`AnomalyExplain`, compact; joined via `GuardianHazard.anomaly_id` → `anomaly.detected`): the explanation sentence ("EXC-014 hydraulic oil is at 86 °C, rising above its normal 71 °C.") + "Severity 62 / 100 · WARNING" | core: sentence; detail: severity, method |
+| L6 | Meta line: "Informed by ISO 21815; not a certified collision-warning system." (G2 #13) | core |
 | L2 | Me (dot + 15 m / 50 m rings), my trail, machines by health (ok = outline, caution = yellow, fault = red + pictogram), anomaly positions (`AnomalyDetected.lat/lon`), zones | core |
 | L6 | Zoom +/-, "Centre on me" (80 px) | core |
 
-- FM variant: all operators and machines; a machine popover shows the anomaly explanation and cost.
+- FM variant: all operators and machines. Tapping a machine with an active anomaly opens the **anomaly detail** (`AnomalyExplain`, full; §S4a) as a side sheet. That is the "anomaly detail" of spec M4/M5.
 - Basemap: OpenFreeMap `positron`. Fallback: the paper site plan.
 - Offline: last positions with "as of"; Guardian card hidden.
 - P1: the nearby list. The radar is merged into the rings (Decision for Shlok, frontend-tasks top).
+
+### S4a Anomaly explanation (`AnomalyExplain`, one component, three placements)
+Placements: Guardian card (compact), the FM map side sheet (full) and the Inbox anomaly row (expanded, full). Data: the `anomaly.detected` payload (api-contracts §3, §12). The text is rendered in SQL from fixed templates, never by an LLM.
+
+| Level | Content | Source |
+|---|---|---|
+| L2 | **The sentence**, in the active language: "EXC-007 idled 58% of the last hour, 2.3× its normal. About 14 L of diesel (≈ ₹1,300)." | `explanation.en` / `explanation.hi`; Tamil → English with an "(English)" tag |
+| L3 | **Cost row** (only when not null): "≈ 14 L diesel · ≈ ₹1,300" as `--t-figure`, meta "at ₹92/L (assumed)" | `fuel_l`, `cost_inr`, `FUEL_PRICE`; rupees in Indian grouping via `Intl` |
+| L3 | **Severity:** "62 / 100" with a thin ink bar + the tier word on a state plate (colour only while the alert is live; ink outline once resolved) | `severity_score`, `severity_tier` |
+| L5 (full only) | Method ("rule" / "trend vs its own baseline (EWMA)"), detected time, the input values with provenance chips (e.g. hydraulic temp "assumed") | `method`, `features`, `FIELD_PROVENANCE` |
+| L6 (full only) | [Show on map] (A24) | |
+
+Empty: never shown without an anomaly. Offline: the last payload with "as of".
 
 ## S5 Training (D10)
 
@@ -173,13 +194,27 @@ States: "Reading manuals…" · refused (by `refusal_reason`, interaction-map A1
 ## S7 Inbox `/fm`
 | Level | Content |
 |---|---|
-| L1-L2 | Needs action: open alerts sorted by tier, then time. Row: tier plate · kind · operator · machine · age · ×occurrences · dispatch line · Acknowledge (A20) / Grant override (A21) / Show on map (A24). `alert_flood` and `ledger_tamper` appear here |
+| L1-L2 | Needs action: open alerts sorted by tier, then time. Row: tier plate · kind · operator · machine · age · ×occurrences · dispatch line · Acknowledge (A20) / Grant override (A21) / Show on map (A24). `alert_flood` and `ledger_tamper` appear here. **Anomaly rows** show the explanation sentence as their second line and expand to `AnomalyExplain` (full, §S4a) |
 | L3 | Acknowledged / escalated (collapsed) |
 | L5 | Resolved, Suppressed (n) (collapsed) |
 
 P1: filters, the row timeline, the global FM critical banner (Anita's out-of-band channel in P0 is Telegram).
 
-## S8 Analytics `/fm/analytics` (evidence card)
+## S8 Analytics `/fm/analytics` (one analytics chart + the evidence card)
+
+### S8a The P0 chart: estimate vs actual by task type × condition (`TaskAnalyticsRow`, `v_task_analytics`, test split)
+| Level | Content |
+|---|---|
+| L3 | Title "Task time: estimate vs actual" · meta "held-out test tasks · n = {Σn}" |
+| L6 | **Condition selector:** a segmented control over the `WeatherKind` values present in the rows (clear · hot · rain · windy · cold · fog · dust); default `hot`, the demo site. One condition at a time keeps the chart to 5 groups × 3 bars instead of 105 bars |
+| L3 | **Grouped bars** (hand-drawn SVG, shared with the evidence bars): one group per `task_type`, three bars each: **actual** (`mean_actual_min`, solid ink) · **organiser estimate** (`mean_organiser_estimate_min`, 2 px ink outline) · **our P50** (`mean_model_p50_min`, 45° ink hatch). Told apart by fill pattern, not colour, with the minute value printed on each bar. The legend sits inline above the chart. A group with n < 10 is drawn at 40 % ink with "few tasks (n = 6)" |
+| L4 | **One-line takeaway per group** (detail), from the bias fields: "Organiser estimate is 9 min short in heat; ours is 1 min over." (`bias_organiser_min`, `bias_model_min`; sign-aware ICU template) |
+| L5 | Table under the chart (detail): task type · n · MAE organiser · MAE ours |
+| L6 | Provenance: task type, condition and the estimates are organiser fields (no chip); a source line "Weather: Open-Meteo archive, CC BY 4.0"; a "simulated" chip on operators and sites |
+
+Empty (no rows for a condition): that segment is disabled with "no tasks". Screen reader: the table is the accessible equivalent.
+
+### S8b Evidence card
 Title: "Evidence · simulated data · synthetic cohort".
 | Block | `EvidenceKey` |
 |---|---|
@@ -198,9 +233,10 @@ Missing key → "Not computed yet". Hand-drawn SVG bars, no chart library.
 | L2 | [Verify ledger] (primary) |
 | L2 | **Compare with Telegram panel:** (1) "Open the SPOTTER-LEDGER message in your Telegram." (2) A paste field (monospace, 3 lines). (3) From / To number fields (auto-filled from the paste, editable). (4) [Compare] (secondary) |
 | L3 | **Side-by-side hashes** after Compare: for the root and for the head, two aligned rows, "From your Telegram" above "Recomputed from ledger rows now", 64 hex characters in 16 groups of 4, `ui-monospace`. The first differing group is boxed in ink and the first differing character is marked ▲. Leaf count: "n = 214 · 214" |
-| L5 | Entries table: # · time · type · operator · machine · hash (8 characters) · "for learning" tag. The broken row is highlighted after a failed Verify |
+| L5 | Entries table (**P1**; P0 names the broken entry in the Verify plate): # · time · type · operator · machine · hash prefix |
 
-- Footer: "Externally witnessed, human-verifiable. The Telegram side is only what you pasted." (the exact claim from event-pipeline §5).
+- **Screen title and subtitle:** "Incident ledger · **tamper-evident, human-verifiable**".
+- **Footer** (always visible): "Tamper-evident, not tamper-proof: any change after a checkpoint shows up here. Externally witnessed: the Telegram side is only what you pasted." These are the only claims used (spec §3 honesty rules, event-pipeline §5). Never "proves" or "tamper-proof".
 - Parse failure: "This is not a Spotter ledger line. Type the range from the message instead."
 - Empty: "No entries yet". Phone layout: hashes wrap as 4 groups per line, and the two rows interleave line by line, so they stay aligned.
 
@@ -213,4 +249,10 @@ The §4.9 buttons, grouped as Run (incl. rehearsal, purge) · Time · Inject · 
 - **Register:** spoken site Hindi; state words and phase names are one word each.
 - **Never:** concatenation, text in images, fixed-width text boxes, letter-spacing on Indic scripts. Design for 2× expansion and QA at 360 px.
 - **Backend `I18nText`** (briefs, evidence titles, prompts, `why`, rules, lesson cards): active language, else English with an "(English)" tag.
-- **Audio:** alert clips per kind × `hi`/`en`. Replay situation and prompt clips and lesson card clips per id × lang (⚠C UI-17, frontend-tasks §5). When a clip is missing, [Listen] is hidden and the text stays.
+- **Audio (api-contracts §13, B23, Sarvam TTS):** every clip is `/audio/{lang}/{phrase_id}.mp3` (files in `apps/web/public/audio/`, committed by the integrator; Track F never edits that folder). A clip plays only if `AUDIO_MANIFEST` lists `{phrase_id, lang}` with `status: "ok"`. Phrase ids:
+  - `alert.{kind}.{tier}` (takeovers, Caution is silent);
+  - `guardian.{card_id}.step{n}` (the protocol card);
+  - `sos.{state}` (the SOS sheet);
+  - `lesson.{code}.{card_id}` and `lesson.{code}.quiz.{q_id}` (lessons);
+  - `replay.{event_type}.brief`, `.step{n}`, `.rule` (via the `audio_id` fields).
+  Clips carry fixed phrases only, so **numbers stay on screen, never in audio**. Languages are `en` and `hi`: in the Tamil UI, **alerts fall back to the `en` clip** (safety audio beats silence), and every other [Listen] is hidden. A missing clip hides [Listen]; the text always stays.

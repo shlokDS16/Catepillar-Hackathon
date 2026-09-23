@@ -51,7 +51,8 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 
 ## P4 — Build (Fable 5.1; two tracks + integrator, docs/sessions/build-protocol.md)
 Only the integrator ticks this section, from docs/sessions/track-b.md and track-f.md at each merge.
-- [ ] H0 setup: vercel login OK, worktrees, .env copies, pnpm install, deploy smoke test on the Android phone
+- [x] H0 setup: vercel login OK (shlokds16), worktrees track-b/track-f, .env + apps/web/.env.local copies, pnpm install, web build green
+- [ ] H0 deploy smoke test on the Android phone (tasks B0b + F01's vibration/sound test page)
 ### Track B (docs/architecture/backend-tasks.md)
 - [ ] B0 → … (tick each task ID as merged; full list in backend-tasks.md)
 ### Track F (docs/design/frontend-tasks.md)
