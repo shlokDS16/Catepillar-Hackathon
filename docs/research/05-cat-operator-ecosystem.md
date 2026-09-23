@@ -1,5 +1,8 @@
 # Caterpillar Operator Training, Assistance & Safety Ecosystem — Research Brief
 
+> **CORRECTION (founder-validator, 2026-09-23, see 08-founder-review.md):** Cat AI Assistant is live off-board since 2026-03-02 (cat.com, VisionLink, VisionLink Mobile, Cat Central, parts.cat.com, SIS 2.0) and its in-cab version runs on-device (Jetson Thor, Qwen3 4B, Riva) with no cloud dependency. Offline + voice are therefore NOT white space. VisionLink Operator Coaching and Cat eLearning (40+ courses) already exist. Do not cite: 55 ms latency, 34→88 % completion, 91.7 % weather-incident reduction, 1:2 simulator ratio.
+
+
 Prepared for: Caterpillar campus hiring hackathon (India, 2026)
 Purpose: map every existing Cat/Cat-dealer product touching operator safety, training, skill development and in-field assistance, so a hackathon concept can be positioned in genuine white space rather than duplicating something Cat already ships.
 

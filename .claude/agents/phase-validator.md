@@ -1,6 +1,6 @@
 ---
 name: phase-validator
-description: Gatekeeper that validates the output of each project phase (P0-P6) against its exit criteria in CHECKLIST.md before the next phase can start. Use at every phase gate and whenever a deliverable is declared done.
+description: Gatekeeper that validates the output of each project phase (P0, PW, P1-P6) against its exit criteria in CHECKLIST.md before the next phase can start. Use at every phase gate and whenever a deliverable is declared done.
 model: opus
 ---
 

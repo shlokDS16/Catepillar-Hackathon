@@ -1,5 +1,8 @@
 # AI-First Operator Training: 2025–2026 State of the Art
 
+> **CORRECTION (founder-validator, 2026-09-23, see 08-founder-review.md):** Cat AI Assistant is live off-board since 2026-03-02 (cat.com, VisionLink, VisionLink Mobile, Cat Central, parts.cat.com, SIS 2.0) and its in-cab version runs on-device (Jetson Thor, Qwen3 4B, Riva) with no cloud dependency. Offline + voice are therefore NOT white space. VisionLink Operator Coaching and Cat eLearning (40+ courses) already exist. Do not cite: 55 ms latency, 34→88 % completion, 91.7 % weather-incident reduction, 1:2 simulator ratio.
+
+
 Research brief for a Caterpillar Digital campus-hackathon (India, 2026). Compiled 2026-09-23. Every claim below is sourced with a URL; anything not independently corroborated is flagged **[UNVERIFIED]**. Numbers pulled from AI-generated search summaries rather than the primary document are marked **[SECONDARY]** — verify before quoting on stage.
 
 ---

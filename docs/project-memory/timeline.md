@@ -35,3 +35,5 @@ in `claude/`. End-of-session routine runs before any session finishes.
 - Briefing theme: operator novice→skilled, e-learning library, operator assistant, safety, sector/environment factors, offline.
 - Defined project agents in .claude/agents: ui-ux-lead, backend-lead, backend-reviewer, code-reviewer, founder-validator, phase-validator, judge-simulator.
 - Research 05 (Cat operator ecosystem), 06 (AI training SOTA), 07 (offline/mobile feasibility) dispatched.
+- Research 05-07 done; founder-validator (08) corrected Cat AI Assistant facts (live, on-device, voice). Draft thesis written.
+- Starter workspace committed (web builds, Expo doctor 21/21). Pitch skeleton for review 1 written.

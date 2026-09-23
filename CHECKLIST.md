@@ -15,14 +15,15 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 
 ## PW — Pre-work (before problem statement)
 - [x] PW.1 Project agents defined (.claude/agents: ui-ux-lead, backend-lead, backend-reviewer, code-reviewer, founder-validator, phase-validator, judge-simulator)
-- [~] PW.2 Domain primer: 05 Cat operator ecosystem, 06 AI training SOTA, 07 offline/mobile feasibility
-- [ ] PW.3 Founder-validator pass on 05-07 → docs/research/08-founder-review.md
-- [ ] PW.4 Starter repo: pnpm workspace, apps/web (Next.js + Tailwind + shadcn, neutral tokens), shared package, offline-ready shell; builds green
-- [ ] PW.5 Pitch skeleton for first review (docs/pitch/review-1-outline.md)
+- [x] PW.2 Domain primer: 05 Cat operator ecosystem, 06 AI training SOTA, 07 offline/mobile feasibility
+- [x] PW.3 Founder-validator pass on 05-07 → docs/research/08-founder-review.md (PROMISING; corrections applied to 05/06; thesis → docs/specs/thesis-draft.md)
+- [x] PW.4 Starter repo: pnpm workspace, apps/web (Next.js 16 + Tailwind 4) builds green, apps/mobile (Expo SDK 57) expo-doctor 21/21 + Android bundle OK, packages/shared (zod). Deferred to build: shadcn, tokens, Serwist offline (verify Next 16 compat on day 0)
+- [x] PW.5 Pitch skeleton for first review (docs/pitch/review-1-outline.md)
 - [ ] PW.6 Accounts: gh auth login, vercel login, eas login (Shlok)
-- [ ] **Gate PW**: phase-validator PASS
+- [x] PW.7 Gate fixes: runbook, STATE refresh, D4, ui-framework placeholder, master-plan status
+- [~] **Gate PW**: 1st pass FAIL (2 blockers, docs/gates/PW.md) → fixes applied → re-check
 
-## P1 — Problem understanding (starts when problem statement arrives)
+## P1 — Problem understanding (starts when problem statement arrives — follow docs/specs/ps-arrival-runbook.md)
 - [ ] P1.1 Ingest brief (markitdown → disk → slices); extract judging criteria, deliverables, deadlines
 - [ ] P1.2 Multi-pass research fan-out (domain, users, Caterpillar products, competitors, data sources)
 - [ ] P1.3 Founder-validator challenges every finding
@@ -30,7 +31,7 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 - [ ] P1.5 Shlok adds modifications / improvements
 - [ ] **Gate P1**: idea frozen, written to docs/specs/idea.md
 
-## P2 — PPT round (format supplied by Shlok)
+## P2 — Review pitch (presentation round already done; this is the review-1 deck + demo script, runbook T+20–22)
 - [ ] P2.1 Storyline + slide outline against the supplied template
 - [ ] P2.2 Visuals (architecture diagram, mockups, charts)
 - [ ] P2.3 Build deck (Gamma / pptx / Canva — per Shlok's instructions)

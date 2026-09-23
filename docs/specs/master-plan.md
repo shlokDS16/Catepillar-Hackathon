@@ -1,4 +1,9 @@
-# Master plan (v1, 2026-09-23) — awaiting Shlok's approval
+# Master plan (v1, 2026-09-23) — APPROVED by Shlok 2026-09-23
+
+> Updates since approval: project agents in .claude/agents replace the generic roster below
+> (ui-ux-lead, backend-lead, backend-reviewer, code-reviewer, founder-validator, phase-validator,
+> judge-simulator). shadcn, design tokens and the Vercel deploy pipeline are deferred to the build
+> (T+1:45 in docs/specs/ps-arrival-runbook.md). Execution timeline: that runbook.
 
 ## Winning thesis (from validated research, docs/research/04)
 1. It's a hiring filter. Every slide and every line of code must be something Shlok can defend
