@@ -1,5 +1,14 @@
 # STATE (source of truth; only the integrator/orchestrator edits this file)
 
+> **PAUSED 2026-09-23 (Shlok).** The team did not proceed past review 1; Spotter continues later as a
+> side project. On resume: read the final lines of docs/sessions/track-b.md and track-f.md (each track
+> was asked to leave a WIP commit + "where I stopped" line), then merge in protocol order.
+> Resume points: Track B mid-B4 (migration 002 already applied to Supabase, reviews pending; realtime
+> partitions only through 26 Sep, re-run scripts/b0/realtime-wake.ts first). Track F mid-F06/F07
+> (fixture adapter, provenance, audio). Showable 1 still needs F06-F08 + F12.
+> Live site stays up (dry-run SOS). Vercel production still holds Twilio/Telegram secrets (unused in
+> dry-run); remove them if the project is abandoned.
+
 - **Updated:** 2026-09-23, session 2 (Opus 5.5, integrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)
 - **Phase:** P4, BUILD. Gate G2 = PASS-WITH-FIXES (docs/gates/G2.md, the re-run's H0 fixes applied

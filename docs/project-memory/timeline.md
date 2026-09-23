@@ -72,3 +72,8 @@ in `claude/`. End-of-session routine runs before any session finishes.
 - B2 merged (56d7139), migrations 001/001b-d live on Supabase. Docs debt: data-model §2.1 stale in three places (see B2 log) for the next docs pass. Supabase MCP cannot see the Spotter project (Vercel-managed org), so advisor checks go through Track B's Management API scripts.
 - Review 1 over (Shlok). SOS_LIVE and KIT_PUBLIC removed from Vercel production; main pushed (896ff53, includes B2); /api/sos-demo POST returns mode dry_run, /dev/kit 404.
 - Track B resumed after the usage limit: migrations local = remote (7), nothing partial. B4 in review (sqltest 5/5, vitest 125). Realtime partitions were missing (broadcasts silently dropped); realtime-wake created 22-26 Sep; asked Track B to make it survive to the demo date.
+
+## 2026-09-23 — Project paused (Shlok)
+- Team did not proceed past review 1. Build paused; Spotter to continue later as a side project.
+- Merged to main at pause: F01-F05, F05b (+cooldown), B0, B0b, B1 (contracts-v1.0.0), B2. Live: https://spotter-five-brown.vercel.app (SOS dry-run, /dev/kit 404).
+- Unmerged at pause: Track B B4 (migration 002/002b applied to Supabase; reviews pending), Track F F06/F07 in progress. Both tracks asked to leave a WIP commit + stop note and push.
