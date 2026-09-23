@@ -1,26 +1,68 @@
 @import "tailwindcss";
+@import "../styles/tokens.css";
+@import "../styles/base.css" layer(base);
+@import "../styles/components.css" layer(components);
 
-:root {
-  --background: #ffffff;
-  --foreground: #171717;
-}
-
+/*
+ * Tailwind 4 theme map. The default palette, type scale, radii and shadows are cleared so a
+ * component cannot reach for a colour or size that is not a Spotter token.
+ */
 @theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
-}
+  --color-*: initial;
+  --color-paper: var(--paper);
+  --color-surface: var(--surface);
+  --color-surface-sunk: var(--surface-sunk);
+  --color-ink: var(--ink);
+  --color-ink-2: var(--ink-2);
+  --color-ink-3: var(--ink-3);
+  --color-rule-soft: var(--rule-soft);
+  --color-state-clear: var(--state-clear);
+  --color-state-caution: var(--state-caution);
+  --color-state-warning: var(--state-warning);
+  --color-state-critical: var(--state-critical);
+  --color-state-mandatory: var(--state-mandatory);
+  --color-state-nosignal: var(--state-nosignal);
+  --color-on-ink: var(--on-ink);
+  --color-on-signal: var(--on-signal);
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
-}
+  --font-*: initial;
+  --font-body: var(--ff-body);
+  --font-display: var(--ff-display);
+  --font-mono: var(--ff-mono);
 
-body {
-  background: var(--background);
-  color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  --text-*: initial;
+  --text-state: var(--t-state);
+  --text-state--line-height: var(--lh-state);
+  --text-figure: var(--t-figure);
+  --text-figure--line-height: var(--lh-figure);
+  --text-title: var(--t-title);
+  --text-title--line-height: var(--lh-title);
+  --text-body: var(--t-body);
+  --text-body--line-height: var(--lh-body);
+  --text-label: var(--t-label);
+  --text-label--line-height: var(--lh-label);
+  --text-meta: var(--t-meta);
+  --text-meta--line-height: var(--lh-meta);
+
+  --radius-*: initial;
+  --radius-0: var(--r-0);
+  --radius-1: var(--r-1);
+
+  --shadow-*: initial;
+  --inset-shadow-*: initial;
+  --drop-shadow-*: initial;
+
+  --spacing-hit: var(--hit);
+  --spacing-hit-sos: var(--hit-sos);
+  --spacing-hit-dense: var(--hit-dense);
+  --spacing-hit-gap: var(--hit-gap);
+  --spacing-gutter: var(--gutter);
+  --spacing-content: var(--content-max);
+  --spacing-hero: var(--hero-max);
+  --spacing-strip: var(--strip-h);
+  --spacing-nav: var(--nav-h);
+  --spacing-rail: var(--rail-w);
+
+  --ease-*: initial;
+  --ease-std: var(--ease);
 }

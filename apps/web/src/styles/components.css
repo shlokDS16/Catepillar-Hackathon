@@ -1,0 +1,335 @@
+/*
+ * Component styles: Plate, Button, Chip (interaction-map §3, visual-language §3).
+ * Written as plain classes so the state rules live in one place and port to Expo one-to-one.
+ * No literals: every value is a token from tokens.css.
+ */
+
+/* ---------- Plate: a rectangular module with an ink rule, no radius, no shadow ---------- */
+.plate {
+  position: relative;
+  background: var(--surface);
+  color: var(--ink);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  padding: var(--s-4);
+}
+
+.plate[data-rule="heavy"] {
+  border-width: var(--bw-heavy);
+}
+.plate[data-rule="hair"] {
+  border-width: var(--bw-hair);
+  border-color: var(--rule-soft);
+}
+.plate[data-rule="none"] {
+  border-width: 0;
+}
+.plate[data-dashed="true"] {
+  border-style: dashed;
+}
+.plate[data-loading="true"] {
+  background: transparent;
+  color: var(--ink-3);
+}
+
+.plate[data-tone="sunk"] {
+  background: var(--surface-sunk);
+}
+.plate[data-tone="ink"] {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.plate[data-tone="clear"] {
+  background: var(--state-clear);
+  color: var(--on-ink);
+}
+.plate[data-tone="caution"] {
+  background: var(--state-caution);
+  color: var(--on-signal);
+}
+.plate[data-tone="warning"] {
+  background: var(--state-warning);
+  color: var(--on-signal);
+}
+.plate[data-tone="critical"] {
+  background: var(--state-critical);
+  color: var(--on-ink);
+}
+.plate[data-tone="mandatory"] {
+  background: var(--state-mandatory);
+  color: var(--on-ink);
+}
+.plate[data-tone="nosignal"] {
+  background: var(--state-nosignal);
+  color: var(--on-ink);
+}
+
+/* The stamp: when a tier rises the ink border swells 3 → 8 → 3 px, once, never loops. */
+@keyframes plate-stamp {
+  0% {
+    outline-width: 0;
+  }
+  50% {
+    outline-width: var(--stamp-grow);
+  }
+  100% {
+    outline-width: 0;
+  }
+}
+.plate[data-stamp="true"] {
+  outline: 0 solid var(--ink);
+  animation: plate-stamp var(--dur-stamp) var(--ease) 1;
+}
+
+/* ---------- Button ---------- */
+.btn {
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  box-sizing: border-box;
+  min-height: var(--hit);
+  min-width: var(--hit);
+  padding: var(--s-3) var(--s-5);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--ff-body);
+  font-size: var(--t-label);
+  font-weight: var(--fw-label);
+  line-height: var(--lh-label);
+  text-align: center;
+  text-decoration: none;
+  cursor: pointer;
+  touch-action: manipulation;
+  user-select: none;
+  -webkit-tap-highlight-color: transparent;
+  overflow: hidden;
+  transition:
+    background-color var(--dur-press) var(--ease),
+    box-shadow var(--dur-press) var(--ease);
+}
+
+.btn[data-variant="primary"] {
+  background: var(--ink);
+  color: var(--on-ink);
+  --mark-bg: var(--ink);
+}
+.btn[data-size="sos"] {
+  min-height: var(--hit-sos);
+  min-width: var(--hit-sos);
+  border-width: var(--bw-heavy);
+}
+.btn[data-size="dense"] {
+  min-height: var(--hit-dense);
+  min-width: var(--hit-dense);
+  padding: var(--s-2) var(--s-4);
+}
+.btn[data-block="true"] {
+  display: flex;
+  width: 100%;
+}
+
+.btn-row {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.btn-note {
+  font-size: var(--t-meta);
+  font-weight: var(--fw-meta);
+  line-height: var(--lh-meta);
+}
+
+/* Hover: desktop only, an underline. Never a colour change. */
+@media (hover: hover) {
+  .btn:not(:disabled):not([aria-disabled="true"]):hover .btn-label {
+    text-decoration: underline;
+    text-underline-offset: 0.15em;
+  }
+}
+
+/* Pressed: darkens, with a 2 px inset top rule. */
+.btn:not(:disabled):not([aria-disabled="true"]):active,
+.btn[data-pressed="true"] {
+  background: var(--surface-sunk);
+  box-shadow: inset 0 var(--bw) 0 0 var(--ink);
+}
+.btn[data-variant="primary"]:not(:disabled):active,
+.btn[data-variant="primary"][data-pressed="true"] {
+  background: var(--ink-2);
+  box-shadow: inset 0 var(--bw) 0 0 var(--on-ink);
+}
+
+/* Disabled and offline: dashed ink-3 border, and the caller always supplies a reason line. */
+.btn:disabled,
+.btn[aria-disabled="true"] {
+  background: transparent;
+  color: var(--ink-3);
+  border-style: dashed;
+  border-color: var(--ink-3);
+  cursor: not-allowed;
+}
+
+/* Loading: the label stays; a 3 px indeterminate bar appears after 300 ms. */
+@keyframes btn-bar-show {
+  to {
+    opacity: 1;
+  }
+}
+@keyframes btn-bar-slide {
+  from {
+    transform: translateX(-100%);
+  }
+  to {
+    transform: translateX(300%);
+  }
+}
+.btn-bar {
+  position: absolute;
+  inset-inline: 0;
+  bottom: 0;
+  height: var(--bar-thin);
+  width: 33%;
+  background: currentColor;
+  opacity: 0;
+  animation:
+    btn-bar-show var(--dur-0) linear var(--dur-wait) forwards,
+    btn-bar-slide var(--dur-bar) linear var(--dur-wait) infinite;
+}
+@media (prefers-reduced-motion: reduce) {
+  .btn-bar {
+    /* Still appears after the wait, but holds still. */
+    animation: btn-bar-show var(--dur-0) linear var(--dur-wait) forwards;
+    width: 100%;
+  }
+}
+
+/* ---------- Chip ---------- */
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  box-sizing: border-box;
+  padding: var(--s-1) var(--s-3);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--ff-body);
+  font-size: var(--t-label);
+  font-weight: var(--fw-label);
+  line-height: var(--lh-label);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+/* A tappable chip is a full operator target. */
+.chip[data-size="hit"] {
+  min-height: var(--hit);
+  padding: var(--s-2) var(--s-4);
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.chip[data-size="hit"]:not([data-tone]):active {
+  background: var(--surface-sunk);
+  box-shadow: inset 0 var(--bw) 0 0 var(--ink);
+}
+
+.chip[data-tone="clear"] {
+  background: var(--state-clear);
+  color: var(--on-ink);
+}
+.chip[data-tone="caution"] {
+  background: var(--state-caution);
+  color: var(--on-signal);
+}
+.chip[data-tone="warning"] {
+  background: var(--state-warning);
+  color: var(--on-signal);
+}
+.chip[data-tone="critical"] {
+  background: var(--state-critical);
+  color: var(--on-ink);
+}
+.chip[data-tone="mandatory"] {
+  background: var(--state-mandatory);
+  color: var(--on-ink);
+}
+.chip[data-tone="nosignal"] {
+  background: var(--state-nosignal);
+  color: var(--on-ink);
+}
+.chip[data-tone="ink"] {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.chip[data-tone="sunk"] {
+  background: var(--surface-sunk);
+}
+/* Provenance and other meta chips: quiet, hairline, never uppercase. */
+.chip[data-tone="meta"] {
+  border-width: var(--bw-hair);
+  border-color: var(--rule-soft);
+  background: transparent;
+  color: var(--ink-3);
+  font-size: var(--t-meta);
+  font-weight: var(--fw-meta);
+  line-height: var(--lh-meta);
+  padding: 0 var(--s-2);
+}
+.chip[data-dashed="true"] {
+  border-style: dashed;
+}
+.chip[data-size="hit"][data-tone]:active {
+  /* Toned chips keep their colour when pressed: colour is state, not feedback. */
+  box-shadow: inset 0 var(--bw) 0 0 currentColor;
+}
+
+/* ---------- Pictograms ---------- */
+.picto {
+  display: inline-block;
+  width: var(--picto);
+  height: var(--picto);
+  flex: none;
+  vertical-align: middle;
+}
+.picto[data-size="lg"] {
+  width: var(--picto-lg);
+  height: var(--picto-lg);
+}
+.icon {
+  width: var(--icon);
+  height: var(--icon);
+  flex: none;
+}
+
+/* ---------- Progress bar (hero, task): 12 px ink bar with ticks at 25/50/75 ---------- */
+.bar {
+  position: relative;
+  height: var(--bar);
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+  overflow: hidden;
+}
+.bar-fill {
+  height: 100%;
+  background: var(--ink);
+  transition: width var(--dur-value) var(--ease);
+}
+.bar-ticks {
+  position: absolute;
+  inset: 0;
+  background-image: repeating-linear-gradient(
+    to right,
+    transparent 0,
+    transparent calc(25% - var(--bw-hair)),
+    var(--ink-3) calc(25% - var(--bw-hair)),
+    var(--ink-3) 25%
+  );
+  pointer-events: none;
+}
