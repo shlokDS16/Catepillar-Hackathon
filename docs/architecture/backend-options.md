@@ -46,7 +46,8 @@ Being decided: where each of these eight workloads runs.
 | Pinecone hybrid search in one index needs `dotproduct`; `pinecone-sparse-english-v0` is **English-only**; Starter: 5 indexes in AWS `us-east-1`, 1 M read units, 2 M write units, 5 M embedding tokens per model per month, **500 rerank requests/month** for `bge-reranker-v2-m3` | [V] context7 /websites/pinecone_io |
 | Voyage `voyage-multimodal-3.5`: text + image (+ video) in one space, 32K context, dims 256/512/1024/2048; `rerank-2.5` and `rerank-2.5-lite` (multilingual, 32K), 200 M free rerank tokens | [V] context7 /websites/voyageai |
 | Local `supabase test db` (pgTAP) needs the local Docker stack (`supabase start`) | [V] supabase.com/docs/reference/cli/supabase-test-db |
-| On this laptop today: Docker 29.3.1 present; **Supabase CLI, psql and uv are not installed**; Python 3.14.3; git on `main` with commits, no extra worktrees | [V] local shell check |
+| On this laptop: Docker 29.3.1; **Supabase CLI 2.102.0 on PATH**; **uv 0.12.18 installed under WinGet but not on PATH** (B0 adds it); psql not installed; Python 3.14.3; git on `main`. (Revision 1 said the CLI and uv were missing: corrected per G2-20.) | [V] local check + G2 review |
+| `verify_jwt` is not an authentication control on its own: per the G2 review's reading of `functions/auth-headers`, it lets a publishable key through, so every function authenticates the caller in code (revision 2, G2-6) | G2 review |
 
 ## 2. The three options
 
@@ -118,13 +119,13 @@ supabase-js (RLS), RPCs and Realtime.
 
 | Workload | Runs in |
 |---|---|
-| W1 Scenario engine | Postgres: `scenario_runs` + pre-generated `scenario_frames`; pg_cron `heartbeat()` every 1 s releases due frames; director commands via the `director` Edge Function (secret check) → SQL |
+| W1 Scenario engine | Postgres: `scenario_runs` + pre-generated `scenario_frames`; pg_cron `scenario-tick` every 1 s releases due frames (own transaction); director commands via the `director` Edge Function (FM JWT + secret) → SQL |
 | W2 Detectors | Postgres: rules and EWMA in plpgsql, run as frames are applied; Guardian with PostGIS `ST_DWithin` |
 | W3 ETA | TypeScript pure library in `packages/shared` (client, what-if, seed script); coefficients fitted by `scripts/eta-fit.ts` |
 | W4 RAG | `ask` Edge Function with fetch-based adapters (Groq, fallback, Voyage, Pinecone); ingestion is an offline script |
 | W5 Dispatcher | Decision in SQL (`raise_alert`: dedupe, suppress, rate cap, motion lock); execution in the `dispatch` Edge Function via pg_net; webhooks `telegram-webhook`, `twilio-voice` |
-| W6 Timers | pg_cron `heartbeat()` → `escalations_due()` with a compare-and-set |
-| W7 Ledger | SQL: canonical serialisation, `ledger_append` under `pg_advisory_xact_lock`, `ledger_verify`, `ledger_merkle_root`; root published to Telegram by `dispatch` |
+| W6 Timers | separate pg_cron `sos-escalator` job → `escalations_due()` with a compare-and-set, independent of ticks and the ledger lock |
+| W7 Ledger | SQL: byte-exact canonical serialisation, `ledger_queue` drained by the `ledger-writer` job under `pg_advisory_xact_lock`, `ledger_verify` with a head anchor, Merkle checkpoints published to Telegram by `dispatch` and re-fetched by `ledger-witness` |
 | W8 Generator | Python (uv), offline; writes CSVs + scenario frames; loaded by `scripts/seed.ts` |
 
 Trade-offs. One backend deploy target (Supabase CLI), and every file lives in Track B's folders, so
@@ -137,14 +138,16 @@ assertion scripts run against the project inside a rolled-back transaction); str
 a 1-second pg_cron job writes one `cron.job_run_details` row per second (needs a cleanup job); Deno
 compatibility of npm SDKs is avoided by using plain `fetch` adapters.
 
-Risks. A slow `heartbeat()` could overlap itself (guarded by `pg_try_advisory_xact_lock`); DB size near
+Risks (revision 2 splits the single heartbeat into four independent jobs: `scenario-tick`,
+`sos-escalator`, `ledger-writer`, `dispatch-requeue`; see event-pipeline §0). A slow tick could overlap
+itself (guarded by `pg_try_advisory_xact_lock`); DB size near
 the 500 MB Free limit if the full 90-day history is loaded (so we load 30 days, see data-model §7);
 TwiML served from an Edge Function must come back as XML, not rewritten [U] (the rewrite rule applies
 to `GET text/html`; Twilio webhooks are `POST` with `application/xml`, so it should be safe; test in
 task B14).
 
-24 h feasibility: **feasible.** ≈ 19.5 h of Track B tasks (backend-tasks.md), with the critical path
-at ≈ 13 h and RAG off the critical path.
+24 h feasibility: **feasible after the G2 re-baseline**: ≈ 13.5 h on the main lane plus ≈ 7 h in a
+parallel subagent lane (`scripts/`, `supabase/functions/ask/`), with the cut list in backend-tasks §5.
 
 ## 3. Side-by-side
 

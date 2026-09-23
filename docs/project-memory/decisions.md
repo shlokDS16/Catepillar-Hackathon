@@ -38,3 +38,14 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 ## 2026-09-23 — D7: Providers finalised (Shlok)
 - LLM: Groq primary + Groq backup key; no Gemini (Shlok: add another Groq backup later if needed). TTS: Sarvam (2 keys, ₹100 each), alert audio pre-generated once.
 - Twilio budget guard: ~$5.90 trial balance ≈ 100 India-minutes; all rehearsals use a dry-run flag; live calls only in scheduled tests + demo.
+
+## 2026-09-23 — D8: No organiser dataset exists — fields only (Shlok)
+- Organisers gave FIELD LISTS only (telemetry: 9 fields; task-time: Task ID, Task type, Weather, Operator skill, Machine age, Estimated time, Actual time) and asked teams to go beyond: build an enterprise-level dataset or pick an open one that serves the requirements.
+- Decision: our own enterprise dataset. Organiser fields are an exact, named subset (exported as organiser-format CSVs); extended with ISO 15143-3 / AEMP 2.0 telematics fields, J1939/Cat-style fault codes, PostGIS sites/zones/GPS.
+- Realism anchors: REAL historical weather from Open-Meteo archive for the 3 real site coordinates (Nagpur, Jharkhand, Himachal) over the 90 days; productivity baselines from Cat Performance Handbook factors; human-factor effects from research 11 §5.3; hidden generator effects + held-out anomaly labels.
+- No open construction-telemetry dataset fits as-is (research 11 §2); Scania APS/Component X only as a structural reference, not ingested.
+- "Estimated time" semantics: the planner's naive estimate (what our ETA model must beat).
+
+## 2026-09-23 — D9: Groq keys are from two different accounts — compliance issue
+- Groq AUP (effective 2025-10-15): prohibits circumventing rate limits "including by registering multiple accounts or orchestrating usage between multiple organizations".
+- Therefore the app must NOT auto-fail-over from Shlok's account to Aryan's account on 429. Pending Shlok's choice: (a) app uses one account only; second account used only by its owner for local dev; (b) + Groq Developer (paid) tier on the app's account for demo headroom; (c) + a non-Groq fallback (Gemini free).

@@ -231,8 +231,8 @@ RLS: all select.
 
 #### 2.5.2 Evaluation sandbox (G2-2)
 
-Schema `eval`: `eval.telemetry` (copy of history days 21-30, loaded by `scripts/eval.ts` in day-sized
-chunks), `eval.findings`, `eval.detector_state`. `eval.run_day(date)` calls the same pure
+Schema `eval` is **created and dropped by `scripts/eval.ts`** (it is not part of the app migrations):
+`eval.telemetry` (copy of history days 21-30, loaded in day-sized chunks), `eval.findings`, `eval.detector_state`. `eval.run_day(date)` calls the same pure
 `private.detect_*` functions and writes **only** to `eval.*`. `eval.score()` joins `eval.findings` with
 `private.injected_labels` after all days ran, writes `evidence_metrics`, then `truncate eval.telemetry,
 eval.findings, eval.detector_state`. No trigger, no `emit_event`, no ledger, no Realtime, no dispatch

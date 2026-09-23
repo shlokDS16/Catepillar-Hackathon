@@ -1,97 +1,138 @@
-# Track B task list (to review 1)
+# Track B task list (to review 1): revision 2 after gate G2
 
-Status: Proposed with ADR-001. Owner: backend-lead (implementation subagents on model `fable`, lead
-reviews every diff before backend-reviewer). Worktree: Track B, folders `supabase/`, `scripts/`,
-`packages/shared` only. Each task is ≤ 1 h and ends with its tests green and a line in CHECKLIST.md.
+Status: Proposed with ADR-001, re-baselined after G2 (`G2-n` backend review, `PA-n` program review).
+Owner: backend-lead; implementation subagents on model `fable`; the lead reviews every diff before
+backend-reviewer. Budget: **≈ 13 feature hours on the main lane** (PA-3), plus a subagent lane.
 
-## 0. Test harness (set up in B0, used by every task)
+## 0. Working agreement (adopted from PA-4, PA-5, PA-6)
 
-- **SQL tests**: `supabase/tests/*.sql`, each wrapped in `begin; … rollback;` with `do $$ … assert …
-  $$` blocks, run by `scripts/sqltest.ts` (Node, `postgres` driver) against the Mumbai project through
-  the session pooler connection string. Rolled back, so tests never leave data. (Local pgTAP via
-  `supabase test db` needs `supabase start` + Docker [V]; Docker 29.3.1 is installed, so we can switch
-  if the laptop has the RAM; not assumed.)
-- **TypeScript tests**: vitest in `packages/shared` (contracts, ETA, ledger canonical mirror) and for
-  pure helpers in `supabase/functions/_shared/` (TwiML builder, Telegram payloads, signature check,
-  RAG gate), which are written as plain TS with no Deno-only APIs so Node can test them.
-- **Live checks**: `scripts/demo-check.ts` (B21) drives all six flows end to end against the project.
-- Installs needed at B0 (not done in this design phase): Supabase CLI (`npx supabase@<latest>`: the
-  npm registry offered 2.117.0 today [V]), uv (not installed [V]), vitest, `postgres`.
+**Lanes (runbook amendment, needs Shlok's OK; PA-4).** One task at a time on the **main lane**
+(`supabase/migrations`, `supabase/functions/*` except `ask`, `supabase/tests`, `packages/shared`).
+Subagents may run in parallel **only** in the **subagent lane**: `scripts/` and `supabase/functions/ask/`
+(disjoint folders). The lead reviews every subagent diff before merge. Without this amendment Track B
+is ≈ 20.5 h serial and misses the dry run.
 
-## 1. Tasks
+**Freeze and merge order (PA-5), verbatim intent:**
+1. H0 on `main`: one commit installs every known dependency for both tracks (root and workspace
+   `package.json`, `pnpm-lock.yaml`), before the worktrees are created.
+2. Each track logs in `docs/sessions/track-b.md` / `track-f.md`; only the orchestrator edits
+   `CHECKLIST.md` and `STATE.md`.
+3. Track B merges to `main` at each integration point (§3); Track F runs `git merge main` right after.
+4. Track F never edits `packages/shared`; contract requests go in its log (api-contracts §0).
+5. `.env` is copied into both worktrees; `apps/web` keeps its own `.env.local` (Track F).
+6. Destructive database operations (reseed, `purge_rehearsals`, schema resets) happen only at integration
+   points, announced in both logs, because both tracks share one Supabase project.
 
-| # | Task (≤ 1 h) | Acceptance criteria | Tests |
+**Deploy owner (PA-6): Track B (backend-lead)** owns every deploy: migrations, Edge Functions and
+secrets continuously; the web app from `main` at each IP merge **if** `vercel login` works by H10
+(Shlok fixes the login; Track B runs `vercel deploy`). If not, the orchestrator records at H10 that the
+demo runs from localhost (`pnpm build:web` + `next start` on the demo laptop). Twilio/Telegram webhooks
+do not depend on this (they are Edge Functions).
+
+**Tooling (G2-20, G2-21, PA-10).**
+- Supabase CLI **2.102.0 is on PATH**: use `supabase …`, not `npx supabase@latest`.
+- **uv 0.12.18** is installed at `%LOCALAPPDATA%\Microsoft\WinGet\Packages\astral-sh.uv_…\uv.exe` but is
+  **not on PATH**. B0 adds that folder to PATH for the session (PowerShell `$env:Path += ";<folder>"`,
+  bash `export PATH="$PATH:<folder>"`) and every new worktree session checks `uv --version` = 0.12.18.
+  Ignore the stale uv 0.5.0 inside the Strawberry sandbox.
+- psql is not installed; SQL tests use `scripts/sqltest.ts` (Node `postgres` driver) through the session
+  pooler, each file wrapped in `begin; … rollback;`.
+- TS tests: vitest for `packages/shared` and pure helpers in `supabase/functions/_shared/` (no Deno-only
+  APIs, so Node can test them).
+
+## 1. Main lane (serial, ≈ 13.5 h)
+
+| # | Task | Acceptance criteria | Tests |
 |---|---|---|---|
-| **B0** (45 m) | Tooling + project link: `supabase init`, `link` to the Mumbai ref, `config.toml` with `verify_jwt=false` for `dispatch`, `telegram-webhook`, `twilio-voice`; set Edge Function secrets from `.env`; store the secret key in Vault as `secret_key`; `scripts/sqltest.ts` skeleton | `select version()` ≥ 15.1.1.61 (needed for second-level pg_cron [V]); `supabase secrets list` shows every REQ key; sqltest runs one trivial assert | sqltest smoke |
-| **B1** (1 h) | Contracts v1.0.0 in `packages/shared/src/contracts/*` exactly as `api-contracts.md`; fixtures; `index.ts` exports; add missing event payloads; **freeze** | `pnpm -r typecheck` green; every fixture parses; `EVENT_TYPES` exported; tag `contracts-v1.0.0` | vitest: fixtures valid, one invalid fixture per schema rejected, `z.toJSONSchema(AskAnswer)` snapshot |
-| **B2** (1 h) | Migration 001: extensions (postgis, pg_cron, pg_net), enums, reference tables (§2.1), `profiles`, `private.app_role/my_operator_id/my_site_id`, RLS on every table; `supabase gen types` → `packages/shared/src/db.types.ts` | Security Advisor shows no "RLS disabled" on `public` tables; generated types compile | sqltest: operator JWT sees own profile only; FM sees all; anon sees nothing (`set local role` + `request.jwt.claims`) |
-| **B3** (1 h) | Migration 002: scenario tables, `telemetry_readings`, `machine_state`, `operator_state`, `operator_gps_trail`, `weather_snapshots`, `fault_codes`, `task_history`, `shifts`, `tasks` + indexes + RLS | `scenario_frames` not selectable by any client role; indexes present | sqltest: frames hidden from OP/FM; OP reads only own telemetry; unique (run_id, frame_seq) rejects a duplicate |
-| **B4** (1 h) | Migration 003: `event_types` (seeded from `EVENT_TYPES`), `events`, `private.emit_event`, fan-out trigger with `realtime.send` to `op:/site:/sup:` topics, `realtime.messages` select policies; `alerts`, `dispatches`, `alert_policies` seed; `my_snapshot` RPC (reads whatever exists) | emitting twice with one key yields one row; a private channel join as Ravi receives `op:{ravi}` and is refused `sup:{site}` | sqltest: idempotency, append-only (update raises), RLS per role; manual: two browser clients via a 20-line script |
-| **B5** (1 h) | Migration 004: ledger: `incidents`, grants/revokes, mutation triggers, `private.canon_jsonb`, `private.ledger_canonical`, `private.ledger_append` (advisory lock), `ledger_verify`, Merkle functions, `ledger_roots`, `ledger_root_check`, `private.demo_tamper` | 3 appends chain correctly; genesis = 64 zeros; verify ✓; edit → verify ✗ at that seq; rehash → verify ✓ and root check ✗ | sqltest: all of the above + idempotent append + 2 concurrent appends via two connections get seq n, n+1; vitest: TS canonical mirror = SQL output for 5 golden vectors (Hindi text, nested context, nulls) |
-| **B6** (1 h) | Generator v1 (`scripts/generator/`, Python + uv, numpy `default_rng(seed)`): 3 sites, zones, 20 real Cat models, 30 operators; **demo scenario frames** (Nagpur quarry, 8 h shift, EXC-007 seatbelt-off-on-slope at 00:40, EXC-014 hydraulic drift near on-foot Ravi at 01:30, PPE vest missing at 00:00, ~10 s frames for the 2 demo machines); organiser-format CSV writer | deterministic: same seed → identical files (hash printed); CSV headers exactly the organiser's 9 and 7 fields | pytest: determinism, header match, drift present in frames, no label columns in frames |
-| **B7** (1 h) | Generator v2: 30-day DB history + 90-day files; hidden effects (interactions, noise, outliers) not given to the detector; injected labelled anomalies → `injected_labels.csv`; `task_history` with train/calib/test split; Open-Meteo archive weather for the 3 sites [V endpoint `archive-api.open-meteo.com/v1/archive`] with synthetic fallback | anomaly rate 2-5 %; every anomaly type present ≥ 20 times in days 21-30 | pytest: label/type counts, split sizes, weather fallback path |
-| **B8** (1 h) | `scripts/seed.ts`: load reference data, history, scenario `review1`, labels into `private.injected_labels`, auth users (Ravi operator, Anita fleet_manager, a trainer) via the admin API, profiles, protocol cards (hydraulic_fault, fire, proximity) and lessons; organiser CSVs if present in `docs/brief/data/` | re-runnable (upserts); prints row counts and `pg_database_size` < 300 MB else fails; demo logins work | sqltest: counts; RLS smoke as each seeded user |
-| **B9** (1 h) | Scenario engine: `private.run_*` (new_run, play, pause, set_speed, jump_to, inject_frame), `private.scenario_tick`, `private.apply_frame`, `private.heartbeat` + pg_cron `'1 seconds'`, `clock` + `machines` broadcasts, cron log cleanup job | at 60× an 8 h shift plays in 8 min; pause freezes `sim_now`; new_run replays identically (same telemetry hash per frame); overlapping heartbeat is skipped | sqltest: tick applies exactly the due frames; double tick is a no-op; jump applies skipped frames with catch-up suppression |
-| **B10** (1 h) | Rule detectors in `private.detect_rules(frame)`: seatbelt off while moving (critical on slope), overspeed vs zone, slope exceeded, idle excess (≥ 40 % / ≥ 50 % [R]), cold over-rev, harsh operation, warning ignored, fault with continued operation, proximity zones; explanation features (numbers, ₹ cost) | the demo seatbelt frame produces exactly one `safety.seatbelt_breach` + one ledger entry | sqltest: one positive and one negative case per rule; re-applied frame emits nothing new |
-| **B11** (1 h) | EWMA detector (`private.detector_state`, λ 0.2, 3σ, warm-up 30, 2 consecutive) + fleet baseline from days 1-20; Guardian (`ST_DWithin`, 50 m / 15 m, bearing, wind) + protocol card id | the EXC-014 drift raises `anomaly.detected` then `guardian.hazard_near_operator` with distance ≈ scenario value ± 2 m | sqltest: drift detected within N samples; stable series never alarms; Guardian respects radius |
-| **B12** (1 h) | Alert engine: `private.raise_alert` (dedupe, lower-tier suppression, rate cap, catch-up), `alert_ack` RPC (CAS), `private.escalations_due` (CAS), `private.can_call_operator` (motion lock, cooldown), `private.requeue_stuck_dispatches` | duplicate breach → `occurrences = 2`, one dispatch; moving operator → dispatch `suppressed (motion_lock)`; SOS escalates once at 60-61 s (measure jitter) | sqltest: each budget rule; ack vs escalation race (two sessions) ends in exactly one state; motion-lock matrix (on foot / parked / moving) |
-| **B13** (1 h) | Edge Function `dispatch` (CAS `queued→sending`, templates hi/en, dry-run mode) + Telegram adapter (`sendMessage` with inline Acknowledge, `sendLocation`, `editMessageText`); `telegram-webhook` (secret header, `update_id` dedupe, `answerCallbackQuery`, `alert_ack`); `scripts/telegram-setup.ts` (`setWebhook` with `secret_token`, `getWebhookInfo`) | SOS in dry-run records `dry_run`; live: Anita's phone gets the message and the button acknowledges within 2 s; a replayed update is ignored | vitest: payload builders, callback parsing, secret check; live check script |
-| **B14** (1 h) | Twilio adapter: `calls.create` with inline `Twiml` (Hindi `<Say>` + `<Gather>`), `StatusCallback`; `twilio-voice` (signature validation, Digits=1 → `alert_ack`, status → `dispatch.*` events); re-check motion lock before calling | a real call reaches the verified demo phone; pressing 1 acknowledges; `no-answer` retries once after 60 s; XML response content type confirmed (the [U] in event-pipeline §9) | vitest: TwiML builder ≤ 4,000 chars [V], signature check against a known-good vector (from Twilio's docs if one is published [U], else captured from the first live callback); live call once (trial minutes) |
-| **B15** (1 h) | Operator/FM RPCs: `task_start` (PPE gate, override check, ETA store), `task_pause`, `task_complete`, `ppe_override` (ledger), `sos_raise`, `sos_cancel`, `incident_log`, `lesson_complete`, `replay_submit`, `lesson_assign`, `consent_set`; Edge Function `director` (FM JWT + secret, maps DirectorCommand → `private.run_*`, `ledger_checkpoint`, `demo_tamper`, `set_dry_run`) | every RPC idempotent on `p_request_id`; wrong role → `forbidden`; PPE flow and override flow match event-pipeline §4 | sqltest per RPC (happy, forbidden, repeat); vitest: director command parsing + constant-time compare |
-| **B16** (1 h) | ETA: `packages/shared/src/eta/model.ts` (pure) + `scripts/eta-fit.ts` (OLS on log time, split-conformal q90) → `model.v1.json`; evidence rows `eta.mae.model`, `eta.mae.organiser`, `eta.p90_coverage`; seed p50/p90 for scenario tasks | model MAE < organiser-estimate MAE on the test split, or we report honestly that it is not; P90 coverage on test within 0.85-0.95 | vitest: determinism, factor bars multiply to p50/base, monotonic in heat for the hot band |
-| **B17** (45 m) | Evidence + ledger jobs: `private.evaluate_detectors()` (replay days 21-30 through the SQL detectors into a scratch run, join labels afterwards) → precision/recall per anomaly type; `ledger-daily-root` cron + `ledger_publish_root` → Telegram dispatch | evidence card rows exist per anomaly type with n; a checkpoint message arrives in Telegram with root + head | sqltest: evaluator never reads labels before detection finishes (function order), metrics bounded 0-1 |
-| **B18** (1 h) | RAG ingest `scripts/rag-ingest.ts`: chunk by heading (200-500 tokens), images as separate records; Voyage `voyage-multimodal-3.5` dense (1024) [V], Pinecone inference `pinecone-sparse-english-v0` sparse [V]; create index (dotproduct, us-east-1 [V]); upsert with `audience`, `safety_critical`, `lang`; mirror to `kb_chunks` | index count = `kb_chunks` count; a sample hybrid query returns a known chunk top-3 | vitest: chunker; live: 3 known-answer queries |
-| **B19** (1 h) | Edge Function `ask`: the pipeline in event-pipeline §6, fetch adapters (Groq, Gemini, Voyage, Pinecone), fallback chain, citation gate, refusal, prompt-injection wrapping, `ask_logs`, rate cap | photo question returns 3 steps with a valid citation in ≤ 8 s p95 [A]; a question with no evidence is refused; forced Groq 429 falls back to Gemini | vitest: gate (invented citation id → refused), injection fixtures (instructions inside a chunk / inside image text are ignored) |
-| **B20** (30 m) | RAG eval: 20 questions × 3 roles subset, hit@5 and faithfulness (citation-supported steps), written to `evidence_metrics` | numbers on the evidence card with n = 20 | the eval script itself |
-| **B21** (45 m) | `scripts/demo-check.ts`: pre-flight (pg_cron alive, `getWebhookInfo`, Twilio balance/verified numbers, Pinecone/Voyage/Groq reachability, DB size) + the six flows headless in dry-run; defenso `guard_code` on auth/DB/env/request-body code; Supabase security + performance advisors | all six flows green in dry-run; advisors clean or waived in writing | the script |
+| **B0** (1 h) | Link the project; `config.toml` with `verify_jwt = false` for **every** function (auth in code, G2-6); Edge Function secrets from `.env` + `PUBLIC_FUNCTIONS_URL`; secret key and supervisor chat id into Vault; Realtime "Allow public access" off; uv PATH; sqltest skeleton; **provider smoke test** (Telegram sendMessage, one Twilio call to a verified phone, Groq/Pinecone/Voyage pings); check org usage (do the paused projects count toward 500 MB? G2-15) and whether `cron.log_statement` can be turned off (G2-21) | image version ≥ 15.1.1.61 read from the Management API (`database.version`, not `select version()`, G2-21), **and** a probe `cron.schedule('probe','1 seconds',…)` runs then is unscheduled; smoke test green | sqltest smoke; smoke script output in the track log |
+| **B1** (1 h) | Contracts v1.0.0 exactly as api-contracts (registry, replay, evidence keys); `scripts/gen-sql-seed.ts` (enums, `event_types`, `alert_policies`); fixtures; freeze | typecheck green; tag `contracts-v1.0.0`; merged → **IP0** | vitest: fixtures valid/invalid; registry → SQL seed snapshot; `z.toJSONSchema(AskAnswer)` snapshot |
+| **B2** (1.25 h) | Migration 001: extensions, generated enums, reference tables, profiles, `operator_pairings`, RLS helpers; stream tables (scenario, telemetry, state, GPS, weather, faults), tasks (+ progress columns), `ppe_overrides`, `task_history`, `v_task_analytics`; `supabase gen types` | Security Advisor: no RLS-disabled `public` table; frames invisible to every client role | sqltest per role (OP own, FM all, anon none); unique (run_id, frame_seq) |
+| **B4** (1 h) | Migration 002: generated seed; `events` with `audiences`, `emit_event`, fan-out one topic per audience; `realtime.messages` policies mirroring events RLS (G2-19); `alerts` (+ SOS-excluded dedupe index, G2-3); `dispatches` (unique by level, kick trigger on insert **or** update to `queued`, 20 s pg_net timeout; G2-10); `my_snapshot` | DB lists equal the registry; Ravi joins `op:{ravi}`, is refused `sup:`; trainer receives only trainer-audience events | sqltest: idempotency, append-only, registry parity, two SOS rows coexist |
+| **B5** (1 h) | Migration 003: ledger: `ledger_queue`, `ledger-writer` job, canonical v1 (data-model §4.3), `ledger_write_one` validator, `ledger_verify` + head anchor, Merkle, `ledger_roots` (message id + sent text), `ledger_checkpoint`, `demo_tamper` | golden vectors 1-3 reproduced **byte for byte** in SQL and TS; edit → hash_mismatch; rehash → anchor ✗ | sqltest + vitest (vectors incl. Devanagari, nested context, integer-like keys, control-char rejection) |
+| **B9** (1 h) | Scenario engine: `run_*`, `scenario-tick` job (own txn, 5 s statement timeout, try-lock, ≤ 200 frames, per-frame exception block → `tick_errors`), catch-up rule scaled by speed (G2-5), progress update from load cycles, `clock` + delta `machines` broadcasts, `tick_log`, `purge_run`, `housekeeping` job | 60× plays 8 h in 8 min with **zero** `catch_up` suppressions; `jump_to` suppresses only jumped frames; a raising detector frame is logged and skipped | sqltest: due-frame selection, double tick no-op, catch-up at 1×/10×/60×, poison frame |
+| **B10** (45 m) | Pure rule detectors (P0 six rules, data-model §2.5) + `apply_findings` (anomalies with location, events, alerts, ledger_enqueue) | demo seatbelt frame → exactly one event, alert, queue entry | sqltest: positive + negative per rule; `sd = 0` and nulls never raise |
+| **B10b** (45 m) | Loop builder (PA-1): `loop_on_event` → lesson assignment; `build_replay` (guardian template) → `ReplayScenario` JSON; `replay_submit` scoring | Guardian event yields one assignment + one replay whose JSON parses with `ReplayScenario` | sqltest + vitest (parse the stored JSON) |
+| **B11** (45 m) | Per-machine EWMA + Guardian (radius, bearing, wind, tier upgrade under 15 m); **tick cost measurement** (G2-16) | EXC-014 drift → anomaly → hazard ≈ scenario distance ± 2 m; **tick p95 ≤ 250 ms, max ≤ 800 ms at 60×** over a full run (`tick_log`); if exceeded: background machines drop to 5-min frames | sqltest; `tick_log` report in the track log → merge **IP2** |
+| **B12** (1 h) | Alert engine (event-pipeline §7): upgrade in place, grouped suppression by open alerts only, cap on info/caution, flood summary; `alert_ack`; **`sos-escalator` job** (own txn, skip locked); `can_call_operator` (deny by default, staleness); `dispatch-requeue` job | SOS escalates once at 60-61 s **while a poison frame is failing the tick** (G2-1 repro); warning→critical re-raises and dispatches | sqltest: each budget rule incl. the G2-8 repros; ack/escalation race; motion-lock matrix |
+| **B15** (1 h) | RPCs: `pair_machine`, `task_start/pause/complete` (PPE gate, ETA + factors), `ppe_override`, `sos_raise` (no lock wait), `sos_cancel`, `incident_log`, `alert_ack`, `lesson_complete`, `consent_set`, `near_miss_list`; `director` function (FM JWT + secret, rate limit) | every RPC idempotent; wrong role → `forbidden`; `sos_raise` returns < 300 ms while the ledger writer runs | sqltest per RPC; vitest director parsing + constant-time compare → merge **IP3** |
+| **B13** (1 h) | `dispatch` (CAS, attempts counter, provider_ref, re-check alert status before escalation calls, dry-run) + Telegram adapter (message, location, edit, checkpoint line) + `telegram-webhook` → `private.telegram_callback` (G2-11) + `scripts/telegram-setup.ts` | live: button acks within 2 s; a forced failure after dedupe is retried and processed; replayed update ignored | vitest payload builders, callback parsing; live check |
+| **B14** (1 h) | Twilio adapter (inline TwiML ≤ 4,000 chars [V], Hindi `<Say>`, `<Gather>` action = `PUBLIC_FUNCTIONS_URL/twilio-voice?d=…`) + `twilio-voice` (signature over the public URL, G2-7; Digits → ack; status → events; no-answer retry) | a real call reaches the verified phone; pressing 1 acknowledges; XML content type confirmed | vitest: signature against our own HMAC-SHA1 of Twilio's documented example string [V algorithm; the docs' sample digest looks truncated, so we compute it independently]; one live call |
+| **B13b** (30 m) | `ledger-witness` function (FM JWT): `forwardMessage` re-fetch, parse `SPOTTER-LEDGER` line, compare with recomputed root + head anchor (G2-4) | after `rehash` tamper: witness = mismatch; untampered: match | vitest parser; live check → merge **IP4** |
+| **B21** (30 m) | `scripts/demo-check.ts`: pre-flight (jobs alive, `tick_log` p95, webhook info, Twilio verified numbers/credit, providers, **DB size**) + six flows in dry-run; defenso `guard_code` on auth/DB/env/request-body code; Supabase security + performance advisors; STRIDE slide content handed to the pitch owner | all six flows green; advisors clean or waived in writing | the script |
 
-Total ≈ 20.5 task-hours. With implementation subagents running the parallel lane (below) the Track B
-wall-clock is ≈ 14 h. **Cut line if behind at H14:** B20 moves after review 1 (RAG eval shown as
-"in progress"), B17's daily cron (keep the checkpoint), the EWMA fleet-baseline half of B11 (keep the
-per-machine EWMA).
+Main lane total: **13.5 h**, about 0.5 h over the 13 h target, so the "next cuts" list in §5 applies
+from H10 if the lane is behind.
 
-## 2. Critical path
+## 2. Subagent lane (parallel, `scripts/` + `supabase/functions/ask/`, ≈ 7 h of subagent time)
+
+| # | Task | Acceptance | Tests |
+|---|---|---|---|
+| **B6** (1 h) | Generator v1 (Python, uv, `default_rng(seed)`): sites, zones, 20 Cat models, 30 operators; demo scenario frames (PPE vest missing at 00:00, EXC-007 seatbelt off on slope at 00:40, EXC-014 drift near on-foot Ravi at 01:30, 12 m approach at 01:34); `planned_cycles` per task; organiser-format CSVs | deterministic hash; headers exactly the organiser's 9 and 7 fields | pytest |
+| **B7** (1.25 h) | Generator v2: 30-day DB history + 90-day files; hidden effects; injected labels; task_history splits; Open-Meteo archive weather [V endpoint] with synthetic fallback; **synthetic Loop cohort** (assigned vs control operators, recurrence within 14 days) and idle % inputs (PA-2) | anomaly rate 2-5 %; ≥ 20 per type in days 21-30; cohort sizes printed | pytest |
+| **B8** (1 h) | `scripts/seed.ts`: reference, history, scenario `review1`, labels, auth users (Ravi, Anita, trainer), protocol cards, lessons, replay template; size gate < 300 MB | re-runnable; demo logins work → enables **IP1** | sqltest counts + RLS smoke |
+| **B16** (1 h) | ETA: `scripts/eta-fit.ts` → `packages/shared/src/eta/model.v1.json` (the lane hands the model file and `model.ts` to the main lane for commit); evidence `eta.*`; p50/p90 + factors seeded for scenario tasks | MAE vs organiser estimate reported honestly; P90 coverage 0.85-0.95 | vitest |
+| **B17** (45 m) | `scripts/eval.ts`: creates the **`eval` sandbox schema**, loads days 21-30 day by day, runs the pure `private.detect_*` functions, scores against `injected_labels`, writes `detector.*`, **`fleet.idle_pct`**, **`loop.repeat_rate.*`**, then drops the sandbox (G2-2) | zero rows added to `events`, `incidents`, `alerts`, `dispatches`, `realtime.messages` (asserted before/after) | the before/after count assertion |
+| **B18** (1 h) | RAG ingest: heading chunker; **LlamaParse** for PDFs with tables (key already in `.env`; PA-8) with plain-text fallback; Voyage multimodal dense (1024) + Pinecone sparse; `kb_chunks` mirror | index count = mirror count; 3 known-answer queries top-3 | vitest chunker; live queries |
+| **B19** (1 h) | `ask` function (event-pipeline §6): user-JWT auth + rate limits (G2-6), vision → enum only, verbatim-rule gate (G2-13), live tools next task + alerts, 120b → Gemini text fallback | forged publishable-key call → 401; injection fixtures refused or grounded; p95 ≤ 8 s [A] | vitest gate + injection fixtures → merge **IP6** |
+
+## 3. Critical path and integration points (re-baselined)
 
 ```
-Shlok provisions (§4) → B0 → B1 (freeze) → B2 → B3 → B4 → B9 → B10 → B11 → B12 → B13 → B14 → B15 → B21 → joint dry run
-                                   ≈ 0.75 + 11 + 0.75 = 12.5 h
-Parallel lane (subagents, disjoint files):
-  B6 → B7 → B8 (must land before B10's scenario assertions; B9 can start on a hand-made 20-frame fixture)
-  B5 (ledger) any time after B4 · B16 (ETA) any time after B1 · B17 after B8 + B11 · B18 → B19 → B20 after B1
+H0     B0 (+ smoke test)            H1    B1 → IP0 (contracts + fixtures)
+H2     B2 → B4 → B5                 lane: B6 → B7 → B8 (lands by ≈ H5)
+H5.5   IP1 (schema, RLS, seeded logins, my_snapshot, Realtime topics)
+H5.5   B9 → B10 → B11 → IP2 (≈ H8: live clock, machines, anomalies, Guardian)
+H8     B10b → B12 → B15 → IP3 (≈ H11: alerts, acks, tasks/PPE/SOS RPCs, ledger verify, Loop, Replay)
+H11    B13 → B14 → B13b → IP4 (≈ H14: real Telegram + Twilio + witness)
+       lane: B16 → IP5 (≈ H10: ETA + analytics view) · B17 (≈ H11: evidence) · B18 → B19 → IP6 (≈ H12)
+H14    B21 → H15 joint dry run #1 (dry-run on) → fixes → H17-18 dry run #2 (live calls)
 ```
-Longest dependency chain touching an external party: Telegram (B13) and Twilio (B14) need the
-supervisor to have pressed Start on the bot and both demo phones verified in Twilio **before H10**.
+Integration overhead (merge, review, announce) ≈ 15 min per IP is included in these hours.
+Track F's G3 at T+9 should test **screens on fixtures + seeded logins**, not live flows (PA-9: IP2 lands
+≈ H8).
 
-## 3. Where Track F integrates
+| IP | Track B delivers | Track F switches to |
+|---|---|---|
+| IP0 | frozen `@cat/shared` + fixtures | build every screen against fixtures |
+| IP1 | schema, RLS, logins, `my_snapshot`, Realtime topics | real reads, sign-in, channel joins, pairing |
+| IP2 | clock, machine deltas, anomalies, Guardian | hero card, map, anomaly table live; `/director` |
+| IP3 | alerts, ack, tasks/PPE/SOS, ledger verify, lessons + Replay JSON | tiers UI, SOS, PPE flow, inbox, Verify, Replay screen |
+| IP4 | Telegram, Twilio, witness | joint live test of flows 2, 3, 5 |
+| IP5 | `estimateEta`, `v_task_analytics`, evidence rows | "why this estimate", what-if, one analytics chart, evidence card |
+| IP6 | `ask` | Ask Spotter with photo |
 
-| IP | When (Track B hour) | Track B delivers | Track F switches to |
+## 4. Provisioning status (PA-10 refresh)
+
+Already in `.env` (per PA-10): Supabase, Twilio, Telegram, Groq × 4, Pinecone, Voyage.
+Still needed:
+| Item | Blocks |
+|---|---|
+| Both worktrees created from `main` after the H0 dependency commit; `.env` copied into each | H0 |
+| Realtime "Allow public access" off; org usage check (paused projects vs 500 MB) | B0 |
+| Both demo phones verified in Twilio; India geo permission; Anita pressed Start on the bot | B0 smoke test |
+| Organiser sample dataset in `docs/brief/data/` | B6 (≈ H2) |
+| RAG corpus in `docs/brief/data/kb/` | B18 (≈ H3) |
+| `GOOGLE_GENERATIVE_AI_API_KEY` (not in `.env`) | B19 |
+| TTS provider + key (ADR-002) | Hindi clips by ≈ H11, decision by H6 |
+| `vercel login` fixed | web deploy decision at H10 |
+| Approval of the lane amendment (§0) | H0 |
+
+## 5. Scope cuts (for Shlok)
+
+Applied now (program cut list PA-3 §3, all eight, plus Track B specifics):
+| # | Cut | Moves to | Owner |
 |---|---|---|---|
-| IP0 | ≈ H2 (after B1) | frozen `@cat/shared` contracts + fixtures | build every screen against fixtures |
-| IP1 | ≈ H6 (after B4 + B8) | real schema, RLS, seeded logins, `my_snapshot`, Realtime topics | supabase-js reads, sign-in for Ravi/Anita, channel joins |
-| IP2 | ≈ H9 (after B9-B11) | live clock, `machines` frames, anomalies, Guardian events | cockpit hero card, map, anomaly table live; `/director` page calls `director` |
-| IP3 | ≈ H11 (after B12, B15) | alerts, `alert_ack`, task/PPE/SOS RPCs, ledger verify | alert tiers UI, SOS hold-to-arm, PPE flow, supervisor inbox, Verify ledger |
-| IP4 | ≈ H13 (after B13-B14) | real Telegram + Twilio (dry-run toggle) | nothing new in UI; joint live test of flows 2, 3 |
-| IP5 | ≈ H15 (after B16-B17) | `estimateEta`, `evidence_metrics` | "why this estimate", what-if slider, evidence card |
-| IP6 | ≈ H17 (after B19) | `ask` function | Ask Spotter screen with photo |
-| Dry run | ≈ H18 | `demo-check.ts` green | full 5-minute script twice, once with dry-run off |
+| 1 | RAG eval (old B20) shown as "in progress" on the evidence card | after review 1 | B |
+| 2 | Daily Merkle cron (checkpoint on demand + every 30 min in demo mode kept) | P1 | B |
+| 3 | Fleet-baseline EWMA (per-machine EWMA kept) | P1 | B |
+| 4 | Tamil UI (the `ta` enum stays, so it is additive later) | P1 | F |
+| 5 | Static radar; machine↔machine proximity | P1 | F / B |
+| 6 | Analytics reduced to one chart (the view still has all columns) | P1 | F |
+| 7 | Replay for one event type: Guardian near-miss | P1 for others | B / F |
+| 8 | Ask tools limited to next task + active alerts | P1 | B |
+| 9 | Rules cold over-rev, harsh operation, warning ignored | P1 | B |
+| 10 | Gemini as a photo fallback (icon grid instead; privacy) | not planned | B |
 
-## 4. What Shlok must provision before Track B starts (blocking B0)
-
-1. **Supabase** project in Mumbai: fill `NEXT_PUBLIC_SUPABASE_URL`, `NEXT_PUBLIC_SUPABASE_PUBLISHABLE_KEY`,
-   `SUPABASE_SECRET_KEY`, `SUPABASE_PROJECT_REF`, `SUPABASE_ACCESS_TOKEN`, `SUPABASE_DB_PASSWORD`;
-   tell us the plan (Free assumed: 500 MB DB limit [V]); Realtime Settings → switch off "Allow public
-   access" (private channels only [V]).
-2. **Twilio**: SID, auth token, trial number; **both demo phones added as Verified Caller IDs**; India
-   enabled in Voice geo permissions [R]; note the remaining trial credit.
-3. **Telegram**: bot token; Anita's phone opens the bot and presses Start; chat id filled;
-   `TELEGRAM_WEBHOOK_SECRET` generated.
-4. **Groq** key(s) in one organisation [R]; **Google AI Studio key** for the Gemini fallback (new env var
-   `GOOGLE_GENERATIVE_AI_API_KEY`; add to `.env.example`); **Pinecone** and **Voyage** keys.
-5. `DEMO_DRIVER_SECRET`.
-6. **The organiser's sample dataset files** into `docs/brief/data/` (the folder is empty today; the
-   column mapping in data-model §1 is an assumption until then).
-7. **RAG corpus**: the safety/procedure documents (with licence notes) into `docs/brief/data/kb/`.
-8. **TTS decision** for pre-generated Hindi clips (ADR-002; Sarvam was dropped; Azure Speech F0 is
-   the researched option [R]). Not blocking B0; blocking the alert audio by ≈ H11.
-9. Approve two build-time installs: Supabase CLI and uv (neither is on the laptop today [V]).
-10. Create the Track B worktree from `main` (the repo has commits and only the main worktree today [V]).
+Next cuts if the main lane is behind at H10 (in order): PPE override path (the demo uses the vest-on
+path) → `sos_cancel` → 30-min auto checkpoint → `inject_frame` → sparse half of hybrid retrieval
+(dense only).
