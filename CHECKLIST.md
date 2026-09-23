@@ -58,6 +58,8 @@ Only the integrator ticks this section, from docs/sessions/track-b.md and track-
 - [ ] B0 → … (tick each task ID as merged; full list in backend-tasks.md)
 ### Track F (docs/design/frontend-tasks.md)
 - [ ] F01 → … (tick each task ID as merged; full list in frontend-tasks.md)
+- [x] F01 tokens, fonts, Plate/Button/Chip, pictograms, /dev/kit, haptics-test page: merged 4393f2c (favicon fix 73c6e58), web build green
+- [x] F02 cookie locale en/hi/ta, LanguageSheet, dialog Sheet: merged a4324ba, web build green (routes now dynamic: locale cookie)
 ### Showable milestones (build-protocol.md)
 - [ ] Showable 1 (≈ H3-4): fixture-driven cockpit, alerts, SOS, map, EN/HI deployed
 - [ ] Showable 2 (≈ H8-9): + Replay 4 phases, FM inbox + ledger UI

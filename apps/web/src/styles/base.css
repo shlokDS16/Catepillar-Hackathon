@@ -1,0 +1,95 @@
+/* Base: document defaults and the six type styles. Values come from tokens.css only. */
+
+html {
+  background: var(--paper);
+  color: var(--ink);
+  font-family: var(--ff-body);
+  font-size: var(--t-body);
+  font-weight: var(--fw-body);
+  line-height: var(--lh-body);
+  -webkit-text-size-adjust: 100%;
+  text-size-adjust: 100%;
+}
+
+body {
+  min-height: 100dvh;
+  margin: 0;
+  overflow-x: clip;
+}
+
+/* Tracking breaks the Devanagari headstroke and Tamil conjuncts. */
+:lang(hi),
+:lang(ta),
+:lang(hi) :is(.t-state, .t-chip),
+:lang(ta) :is(.t-state, .t-chip) {
+  letter-spacing: 0;
+}
+
+/* Focus: 3 px ink outline with a 3 px paper offset, everywhere. */
+:focus-visible {
+  outline: var(--focus-w) solid var(--ink);
+  outline-offset: var(--focus-offset);
+}
+
+/* Type styles (visual-language §2.2). One class per role; no ad-hoc sizes in components. */
+.t-state {
+  font-family: var(--ff-display);
+  font-size: var(--t-state);
+  font-weight: var(--fw-state);
+  line-height: var(--lh-state);
+  letter-spacing: 0.01em;
+  text-transform: uppercase;
+  font-variant-numeric: tabular-nums;
+  overflow-wrap: anywhere;
+}
+
+.t-figure {
+  font-family: var(--ff-display);
+  font-size: var(--t-figure);
+  font-weight: var(--fw-figure);
+  line-height: var(--lh-figure);
+  font-variant-numeric: tabular-nums;
+}
+
+.t-title {
+  font-size: var(--t-title);
+  font-weight: var(--fw-title);
+  line-height: var(--lh-title);
+}
+
+.t-body {
+  font-size: var(--t-body);
+  font-weight: var(--fw-body);
+  line-height: var(--lh-body);
+}
+
+.t-label {
+  font-size: var(--t-label);
+  font-weight: var(--fw-label);
+  line-height: var(--lh-label);
+}
+
+.t-meta {
+  font-size: var(--t-meta);
+  font-weight: var(--fw-meta);
+  line-height: var(--lh-meta);
+}
+
+/* Chip words: condensed, uppercase for Latin only (Indic scripts have no case). */
+.t-chip {
+  font-family: var(--ff-display);
+  font-size: var(--t-title);
+  font-weight: var(--fw-title);
+  line-height: var(--lh-label);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.tnum {
+  font-variant-numeric: tabular-nums;
+}
+
+.t-mono {
+  font-family: var(--ff-mono);
+  font-variant-numeric: tabular-nums;
+}

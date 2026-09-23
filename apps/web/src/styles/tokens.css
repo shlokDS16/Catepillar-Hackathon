@@ -1,0 +1,168 @@
+/*
+ * Spotter design tokens (docs/design/visual-language.md, Direction A "Site Signage").
+ * This is the ONLY file allowed to contain hex colours and px literals.
+ * Everything else reads these custom properties, directly or through the Tailwind @theme map.
+ * The Expo app (P2) is generated from this file.
+ */
+
+:root {
+  color-scheme: light;
+
+  /* 1. Colour: safety colour means live state and nothing else */
+  --paper: #f2f0ea;
+  --surface: #fbfaf6;
+  --surface-sunk: #e6e3da;
+  --ink: #16150f;
+  --ink-2: #4b483f;
+  --ink-3: #6b675d;
+  --rule-soft: #cfcbc0;
+  --state-clear: #0b6b37;
+  --state-caution: #ffc700;
+  --state-warning: #ff6a00;
+  --state-critical: #b3102a;
+  --state-mandatory: #1b4f9c;
+  --state-nosignal: #5e5a50;
+  --on-ink: #ffffff;
+  --on-signal: #16150f;
+
+  /* 2. Type. Families arrive as next/font variables on <html>. */
+  --ff-body: var(--font-barlow), var(--font-devanagari), var(--font-tamil), system-ui, sans-serif;
+  --ff-display: var(--font-barlow-condensed), var(--font-devanagari), var(--font-tamil), system-ui,
+    sans-serif;
+  --ff-mono: ui-monospace, "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace;
+
+  --t-state: clamp(56px, 14vw, 96px);
+  --t-figure: 48px;
+  --t-title: 26px;
+  --t-body: 18px;
+  --t-label: 18px;
+  --t-meta: 15px;
+
+  --lh-state: 0.95;
+  --lh-figure: 1;
+  --lh-title: 1.2;
+  --lh-body: 1.45;
+  --lh-label: 1.2;
+  --lh-meta: 1.35;
+
+  --fw-state: 800;
+  --fw-figure: 700;
+  --fw-title: 700;
+  --fw-body: 500;
+  --fw-label: 600;
+  --fw-meta: 500;
+
+  /* 3. Space, shape, size (4 px base) */
+  --s-1: 4px;
+  --s-2: 8px;
+  --s-3: 12px;
+  --s-4: 16px;
+  --s-5: 24px;
+  --s-6: 32px;
+  --s-7: 48px;
+  --s-8: 64px;
+
+  --gutter: 16px;
+  --content-max: 1200px;
+  --hero-max: 480px;
+
+  --r-0: 0px;
+  --r-1: 2px;
+
+  --bw-heavy: 3px;
+  --bw: 2px;
+  --bw-hair: 1px;
+  --stamp-grow: 5px; /* border 3 px + outline 5 px = the 8 px peak of the stamp */
+  --stripe: 8px; /* the hazard-stripe band, motion lock only */
+  --bar: 12px; /* progress bar */
+  --bar-thin: 3px; /* loading and countdown bars */
+
+  --hit: 80px;
+  --hit-sos: 108px;
+  --hit-dense: 48px;
+  --hit-gap: 24px;
+  --hit-lang: 96px; /* the three language plates on first launch */
+
+  --focus-w: 3px;
+  --focus-offset: 3px;
+
+  --icon: 28px; /* lucide UI icons in the nav */
+  --icon-stroke: 2px;
+  --picto: 24px; /* our six safety pictograms */
+  --picto-lg: 48px;
+
+  /* 5. Motion: feedback, never decoration */
+  --dur-0: 0ms;
+  --dur-press: 80ms;
+  --dur-stamp: 480ms;
+  --dur-value: 320ms;
+  --dur-view: 160ms;
+  --dur-sheet: 200ms;
+  --dur-phase: 240ms; /* replay carve-out */
+  --dur-count: 1200ms; /* debrief score count-up, max */
+  --dur-wait: 300ms; /* loading bar appears only after this */
+  --dur-bar: 1000ms; /* one sweep of the indeterminate bar */
+  --ease: cubic-bezier(0.2, 0, 0, 1);
+
+  /* Z-order: content 0 · chrome 10 · sheets 20 · motion lock 25 · takeover 30 · SOS 40 · SOS status 45 */
+  --z-chrome: 10;
+  --z-sheet: 20;
+  --z-lock: 25;
+  --z-takeover: 30;
+  --z-sos: 40;
+  --z-sos-status: 45;
+
+  /* Chrome */
+  --strip-h: 80px;
+  --nav-h: 80px;
+  --rail-w: 120px;
+}
+
+@media (min-width: 640px) {
+  :root {
+    --gutter: 24px;
+  }
+}
+
+@media (min-width: 1024px) {
+  :root {
+    --gutter: 32px;
+  }
+}
+
+/* Detailed mode (supervisor, or the operator's toggle): the state word keeps its size. */
+[data-mode="detailed"] {
+  --t-figure: 40px;
+  --t-title: 22px;
+  --t-body: 16px;
+  --t-label: 16px;
+  --t-meta: 13px;
+}
+
+/* Indic scripts: 0.85× state word, taller lines, lighter weights, no tracking. */
+:lang(hi),
+:lang(ta) {
+  --t-state: clamp(48px, 12vw, 82px);
+  --lh-state: 1.25;
+  --lh-title: 1.45;
+  --lh-body: 1.6;
+  --lh-label: 1.45;
+  --lh-meta: 1.5;
+  --fw-title: 600;
+  --fw-body: 400;
+  --fw-meta: 400;
+}
+
+/* Reduced motion: every duration is zero. Hold fills and countdowns step instead (their components). */
+@media (prefers-reduced-motion: reduce) {
+  :root {
+    --dur-press: 0ms;
+    --dur-stamp: 0ms;
+    --dur-value: 0ms;
+    --dur-view: 0ms;
+    --dur-sheet: 0ms;
+    --dur-phase: 0ms;
+    --dur-count: 0ms;
+    --dur-bar: 0ms;
+  }
+}

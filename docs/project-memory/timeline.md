@@ -49,3 +49,16 @@ in `claude/`. End-of-session routine runs before any session finishes.
 - G1 (spec v3 + D10 simulation-first training) and G2 (backend rev 3+, frontend plan v2, build protocol) passed after 5 red-team/validator rounds; all findings dispositioned in ADR-001.
 - H0: worktrees track-b/track-f, shared dependency commit (vitest, tsx, postgres, supabase-js, next-intl, maplibre-gl, @supabase/ssr), env copies incl. regenerated webhook + director secrets.
 - Next: three sessions (A integrator Opus; B and F on Fable 5.1). Showable 1 at ≈ H3-4.
+
+## 2026-09-23 — Session 2 (integrator) start
+- D4 approved; D12 integrator location. Nothing to merge yet: track-b and track-f still at 1473244, both logs empty.
+- Track B session started in an app-made worktree (claude/spotter-backend-track-b-a0d0a3, no .env); redirected to ../spotter-track-b via handoff message. No Track F session running yet.
+- Open questions triaged against docs/brief and decisions (session 2):
+  - Team: two people, one laptop (G1 answer 6, D6). Resolved.
+  - Department-gated statements: moot; one problem statement received ("Smart Operator Assistant for CAT Machinery"). Resolved.
+  - Time box: about 24 h to the first review; website complete by then (D2). Resolved.
+  - First review format: the presentation round is done; review 1 = deck + demo script (CHECKLIST P2). Partly resolved: the exact judging rubric was never supplied.
+  - Still open: event portal / exact dates, the judging rubric per round, and the Expo account + Apple ID (needed only after review 1, D4).
+- F01 merged (4393f2c). Track F's LF-normalisation commit corrupted favicon.ico (one CR byte stripped) and broke next build; restored on main (73c6e58), build green, Track F told.
+- F02 merged (a4324ba). Root typescript devDependency added (1522870) for Track B finding 6.
+- Track B B0 done, commit pending its review: COMMIT probe PASS, Pinecone spotter-kb (1024-d, dotproduct) Ready, Vault + function secrets set (DRY_RUN=true), smoke 11/11. Open for Shlok: B0b Vercel link/deploy (Track B's CLI was blocked by the auto-mode classifier), .env CONNECTION_STRING is the IPv6 direct host (scripts rewrite to the session pooler), legacy service_role key in SUPABASE_SECRET_KEY, defenso guard_code down, Docker not running.

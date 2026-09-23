@@ -12,3 +12,5 @@ Format: **[date]** - the question, why it matters, what would answer it.
 **[2026-09-23]** - Solo or team; if team, members' skills and who presents. Decides task split and pitch roles.
 **[2026-09-23]** - Is the "first review" (≈24 h) a demo, a code review, or a pitch? Decides whether we polish the demo path or breadth.
 **[2026-09-23]** - Does Shlok have an Expo account, and which Apple ID/team is used for TestFlight? Needed before the first EAS build.
+
+**[2026-09-23, session 2 triage]** - Resolved and logged in the timeline: team, department gating, time box, first-review format (partly). Still open: event portal and exact dates; the judging rubric per round (review 1 = deck + demo, rubric unknown); Expo account + Apple ID for TestFlight (after review 1 per D4).

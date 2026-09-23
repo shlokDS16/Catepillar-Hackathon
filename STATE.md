@@ -1,16 +1,21 @@
 # STATE (source of truth; only the integrator/orchestrator edits this file)
 
-- **Updated:** 2026-09-23, session 1 (Opus 5.5, orchestrator)
+- **Updated:** 2026-09-23, session 2 (Opus 5.5, integrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)
 - **Phase:** P4, BUILD. Gate G2 = PASS-WITH-FIXES (docs/gates/G2.md, the re-run's H0 fixes applied
-  2026-09-23). Decisions D1-D11 are final.
-- **Sessions:** A = integrator (Opus, main folder), B = Track B (Fable 5.1, ../spotter-track-b),
+  2026-09-23). Decisions D1-D12 are final (D4 approved in session 2).
+- **Sessions:** A = integrator (Opus, worktree `.claude/worktrees/caterpillar-spotter-resume-c02a8b`,
+  merges via `git -C <main folder>`, D12), B = Track B (Fable 5.1, ../spotter-track-b),
   F = Track F (Fable 5.1, ../spotter-track-f). Prompts in RESUME.md; rules in docs/sessions/build-protocol.md.
-- **In flight:** Track B from B0 (includes the COMMIT probe, Pinecone index creation, and B0b Vercel
-  deploy); Track F from F01 toward **Showable 1** (fixture-driven demo, ≈ H3-4).
+- **In flight:** Track B on B0 in ../spotter-track-b (uncommitted supabase/ + scripts/ work, nothing
+  merged yet). Track F: F01-F02 merged to main (latest a4324ba); F03 (shells, nav, SOS/Ask slots) in progress toward
+  **Showable 1** (fixtures, ≈ H3-4). Track F commits on `claude/spotter-track-f-a12198` and
+  fast-forwards `track-f` (the app's worktree guard blocks edits in ../spotter-track-f); accepted.
 - **Next action (integrator):** watch the track logs → merge contracts → merge Track F → deploy
   Showable 1 preview and send Shlok the URL. Reason: Shlok needs a showable demo early (other teams
   show hard-coded dashboards).
+- **Mobile (after review 1, D4):** load Shlok's skills ios-app-development + iosui (iOS/TestFlight) and
+  Andriod_app + Andriod_APPUI (Android APK), adapted to Spotter. Credentials: .env.example "Mobile" section.
 - **Shlok actions during build:** B24c SOP review (~20 min, when Track B asks); OK before any live Twilio call.
 - **Verified env (2026-09-23):** Supabase (Mumbai, active), Groq A+B, Gemini, Pinecone, Voyage,
   LlamaCloud, Twilio (trial, $5.90, both demo phones verified), Telegram (@Spotter125Bot, chat
