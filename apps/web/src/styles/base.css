@@ -19,7 +19,9 @@ body {
 
 /* Tracking breaks the Devanagari headstroke and Tamil conjuncts. */
 :lang(hi),
-:lang(ta) {
+:lang(ta),
+:lang(hi) :is(.t-state, .t-chip),
+:lang(ta) :is(.t-state, .t-chip) {
   letter-spacing: 0;
 }
 

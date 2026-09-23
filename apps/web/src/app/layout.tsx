@@ -1,11 +1,14 @@
 import type { Metadata, Viewport } from "next";
 import type { ReactNode } from "react";
+import { NextIntlClientProvider } from "next-intl";
+import { getLocale } from "next-intl/server";
 import { Barlow, Barlow_Condensed, Noto_Sans_Devanagari, Noto_Sans_Tamil } from "next/font/google";
 import "./globals.css";
 
 /*
  * Four families (visual-language §2.1). Latin digits and words inside Hindi or Tamil sentences
- * render in Barlow, so numerals look the same in every language. Per-locale preload lands in F02.
+ * render in Barlow, so numerals look the same in every language. The Noto files are not preloaded:
+ * next/font emits unicode-range, so a script downloads only when a page actually uses it.
  */
 const barlow = Barlow({
   weight: ["400", "500", "600", "700"],
@@ -44,13 +47,16 @@ export const viewport: Viewport = {
   initialScale: 1,
 };
 
-export default function RootLayout({ children }: { children: ReactNode }) {
+export default async function RootLayout({ children }: { children: ReactNode }) {
+  const locale = await getLocale();
   return (
     <html
-      lang="en"
+      lang={locale}
       className={`${barlow.variable} ${barlowCondensed.variable} ${devanagari.variable} ${tamil.variable}`}
     >
-      <body>{children}</body>
+      <body>
+        <NextIntlClientProvider>{children}</NextIntlClientProvider>
+      </body>
     </html>
   );
 }

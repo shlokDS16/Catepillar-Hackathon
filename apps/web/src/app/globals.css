@@ -56,6 +56,7 @@
   --spacing-hit-sos: var(--hit-sos);
   --spacing-hit-dense: var(--hit-dense);
   --spacing-hit-gap: var(--hit-gap);
+  --spacing-hit-lang: var(--hit-lang);
   --spacing-gutter: var(--gutter);
   --spacing-content: var(--content-max);
   --spacing-hero: var(--hero-max);
