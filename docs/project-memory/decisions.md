@@ -57,3 +57,9 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 ## 2026-09-23 — D10: Training = feedback-based simulation first (Shlok: "take example of McKinsey Solve")
 - Replay has 4 phases: Brief → Investigate (Solve-style evidence cards, relevance + order scored) → Decide (timed sequence) → Debrief (scores, process trace vs ideal, rule, animated re-enactment of his own event).
 - Micro-lessons = interactive cards + quiz with instant feedback. Google Flow videos demoted to P1 optional (fallback: public-domain OSHA/NIOSH clip). PS "e-learning videos" answered by the auto-generated re-enactment + optional clips.
+
+## 2026-09-23 — D11: G2 decisions approved (Shlok)
+- Subagent lane amendment approved (Track B: scripts/ generator + corpus + ask function run by subagents in parallel with the main lane).
+- Both tracks' cut lists approved as written in backend-tasks.md / frontend-tasks.md.
+- Proximity radar folded into the map rings (departure from spec M2 cockpit mini-radar) approved.
+- H0 setup authorised; vercel login done (account shlokds16).
