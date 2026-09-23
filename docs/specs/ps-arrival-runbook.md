@@ -28,5 +28,5 @@ Gates stay, but they run fast: one validator pass plus one message from Shlok (a
 | T+23 – 24 | Buffer. No new features after T+22. | — | — |
 
 Session switches: at T+2:45 (model change) and at any gate if context is above ~60 %.
-Rules: never build features in parallel; the demo path works before breadth; every AI output has a
+Rules (amended by G1 review): parallel build ONLY as two tracks in separate git worktrees over disjoint folders — Track B (backend-lead: supabase/, scripts/, packages/shared) and Track F (ui-ux-lead: apps/web); contracts in packages/shared are frozen first. Within a track, one task at a time; the demo path works before breadth; every AI output has a
 fallback; commit after each reviewed task.

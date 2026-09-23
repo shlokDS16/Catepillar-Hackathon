@@ -37,3 +37,9 @@ The final status is set in docs/specs/idea.md after Shlok approves.
 | R29 | UI: minimal, industrial, anti-AI-look, action contracts, interaction map, restrained motion | UI | 14 | ADAPT (guidance, not law) |
 | R30 | Sellable to Caterpillar: complements Cat AI Assistant / VisionLink / Detect | S, 08 | 05, 08 | IN |
 | R31 | Plan reviewed by a big-program planning expert | S | — | IN |
+
+## Status after spec v2 (2026-09-23)
+- P0 (review-1 demo): R1, R3, R4, R5, R6 (heat + cold end-to-end, vibration), R8, R9, R10, R11, R12 (2 lessons), R14 (Replay), R15, R16, R17, R18, R19, R20 (connectivity chip + cached snapshot), R21, R22 (EN + HI + Tamil switch), R25, R26 (.env.example), R27, R28 (Spotter), R29, R30, R31.
+- P1: R2 reminders, R6 fatigue/other conditions, R13 instructor booking, R14 Spot the Hazard, R20 full offline queue, R22 remaining 3 languages, R23 Ask Spotter (Shlok may promote to P0).
+- P2 (mobile phase): R24 Expo app, TestFlight, Android build.
+- Nothing dropped silently; deferrals and their reasons are in docs/specs/idea.md §4-§8.
