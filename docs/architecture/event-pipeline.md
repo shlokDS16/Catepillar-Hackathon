@@ -1,26 +1,34 @@
 # Event pipeline: the six demo flows, alert budget, idempotency, failure modes, STRIDE
 
-Status: Proposed with ADR-001, **revision 2 after gate G2** (`G2-n` = backend review finding,
-`PA-n` = program review issue). Tables and functions: `data-model.md`. Payloads: `api-contracts.md`.
+Status: Proposed with ADR-001, **revision 3** (reconciliation after the G2 re-check: `G2-n` backend
+review, `PA-n` program review, `N1-N5` re-check findings, `UI-n` UI contract gaps, D8/D9 decisions). Tables and functions: `data-model.md`. Payloads: `api-contracts.md`.
 Markers: **[V]** verified, **[R]** research 10-15, **[A]** assumption, **[U]** unverified.
 
-## 0. The spine: four independent jobs (G2-1)
+## 0. The spine: two pg_cron jobs (G2-1, N2, N4, N5)
 
 ```
-pg_cron 'scenario-tick'  1 s ─► private.scenario_tick()     own txn, statement_timeout 5 s, try-lock or skip
-      frames with seq > cursor and sim_offset ≤ sim_now, at most max_frames_per_tick (200)
-      per frame:  begin … exception → tick_errors (frame skipped, tick continues)
-                  apply_frame → telemetry / operator_state / gps / weather / faults → machine_state
-                  pure detectors → apply_findings → anomalies, emit_event, raise_alert, ledger_enqueue
-      cursor_seq := last applied; tick_log row; realtime 'clock' + delta 'machines'
-pg_cron 'sos-escalator'  1 s ─► private.escalations_due()    own txn; alerts + dispatches only; no ledger, no frames
-pg_cron 'ledger-writer'  1 s ─► private.ledger_drain(50)     own txn; the only holder of the ledger lock
-pg_cron 'dispatch-requeue' 5 s ─► requeue stuck dispatches
-events (after insert)  ─► realtime.send to one topic per audience (op:/site:/sup:/train:)
-                       ─► private.loop_on_event (lesson assignment, replay build)
-dispatches (after insert or update of status, when status = 'queued') ─► net.http_post(timeout 20 s) → `dispatch`
-Telegram / Twilio      ─► `telegram-webhook`, `twilio-voice` → private.telegram_callback / private.alert_ack
+pg_cron 'sos-escalator' 1 s ─► call private.escalate_step()      own connection and transaction; no advisory lock;
+                                 due alerts FOR UPDATE SKIP LOCKED → CAS → escalation dispatches
+pg_cron 'worker'        1 s ─► call private.worker_step()        a procedure that COMMITs between steps:
+      step 1 ledger drain   ≤ 50 queue rows under lock 4210001 → incidents → incident.logged      COMMIT
+      step 2 Loop queue     ≤ 20 items: lesson assignment, build_replay                          COMMIT
+      step 3 scenario tick  try-lock 4210002 or skip; ≤ 200 due frames; per frame:
+                              begin … exception → tick_errors (frame skipped, tick continues)
+                              apply_frame → telemetry / operator_state (motion_locked, nearest) / gps /
+                              weather / faults → machine_state → pure detectors → apply_findings
+                              (anomalies, emit_event, raise_alert); cursor; tick_log; 'clock' + delta 'machines'  COMMIT
+      step 4 (every 5th s)  dispatch requeue, housekeeping                                       COMMIT
+      each step sits in its own exception block, so one failing step cannot stop the next
+events (after insert) ─► realtime.send, one topic per audience (op:/site:/sup:/train:)
+                      ─► if ledger = true: ledger_enqueue(key 'ledger:' || idempotency_key)   (single write path, N3)
+                      ─► if lesson/replay: insert into private.loop_queue                     (no other work, N2)
+dispatches (after insert or update of status to 'queued') ─► net.http_post(timeout 20 s) → `dispatch`
+Telegram / Twilio  ─► `telegram-webhook`, `twilio-voice` → private.telegram_callback / private.alert_ack
 ```
+The SOS path (`sos_raise` → `sos-escalator` → `dispatch`) shares no lock and no job with the worker, so a
+slow or failing tick, Loop build or ledger drain cannot delay it. Bounded work per step is the guarantee;
+per-role statement timeouts are the backstop (data-model §6).
+
 Rules that hold in every flow:
 - **Sim time** drives frames and detectors. **Wall time** drives ack timeouts, escalations, dedupe
   windows and rate caps (G2-8c), so a 60 s SOS is 60 real seconds at any speed.
@@ -38,7 +46,7 @@ Rules that hold in every flow:
 
 ```mermaid
 sequenceDiagram
-  participant T as scenario-tick
+  participant T as worker (tick step)
   participant DB as Postgres
   participant RT as Realtime
   participant OP as Ravi (cockpit, motion-locked)
@@ -49,27 +57,27 @@ sequenceDiagram
   T->>DB: apply frame #1812 {seatbelt:false, speed:6.2, pitch:17.4}
   DB->>DB: detect_rules → seatbelt_off_moving, tier critical (pitch 17.4 > zone max 15)
   DB->>DB: emit safety.seatbelt_breach (det:{run}:EXC-007:seatbelt_off_moving:1812)
-  DB->>DB: ledger_enqueue(seatbelt_breach, context snapshot as strings)
+  Note over DB: event trigger enqueues the ledger entry (ledger:det:…) and a loop_queue row
   DB->>DB: raise_alert(hazard_key seatbelt:ravi:EXC-007) → open, escalate_at = now()+20 s
-  DB->>DB: loop_on_event → lesson_assignments(seatbelt_slopes) + training.lesson_assigned
   DB-->>RT: op:{ravi}, sup:{site}
   RT-->>OP: full-screen, vibration, pre-generated Hindi clip (no touch needed)
-  RT-->>FM: inbox row; ledger row ≤ 1-2 s later (ledger-writer)
+  RT-->>FM: inbox row; ledger row 1-3 s later (worker step 1)
   alt belt fastened (frame seatbelt:true) or big-button ack
     DB->>DB: alert resolved (ack_via sensor/app), safety.seatbelt_resolved
   else no ack in 20 s wall
     E->>DB: CAS open→escalating, dispatch(telegram, supervisor, level 1)
     D->>TG: "EXC-007 Ravi: seatbelt off on 17° slope, not acknowledged"  (no operator call: moving)
   end
+  Note over DB: worker step 2 (after commit): lesson seatbelt_slopes + build_replay (P0 replay type) → training.replay_ready
 ```
-Acceptance: one breach → exactly one event, one alert, one ledger entry, one lesson assignment, visible
-on cockpit, inbox, ledger, map and Loop within 2 s of release [A].
+Acceptance: one breach → exactly one event, one alert, one ledger entry, one lesson assignment and one
+replay. Event and alert visible within 2 s of release; ledger entry within 3 s; Loop card within 3 s [A].
 
 ## 2. Guardian: anomalous machine near the operator, with motion lock (demo step 3)
 
 ```mermaid
 sequenceDiagram
-  participant T as scenario-tick
+  participant T as worker (tick step)
   participant DB as Postgres
   participant RT as Realtime
   participant OP as Ravi (on foot)
@@ -81,7 +89,7 @@ sequenceDiagram
   DB->>DB: detect_ewma: > UCL (3σ) twice → anomaly hydraulic_temp_drift (with location)
   DB->>DB: Guardian: ST_DWithin(ravi, EXC-014, 50 m) → 38 m → guardian.hazard_near_operator
   DB->>DB: raise_alert(hazard_key guardian:ravi:EXC-014, warning, escalate_at = now()+15 s)
-  DB->>DB: loop_on_event → build_replay (template guardian.hazard_near_operator) + faulty_machine_nearby lesson
+  Note over DB: loop_queue row → worker step 2 assigns the faulty_machine_nearby lesson (no replay in P0)
   DB-->>RT: map lights EXC-014; Warning card with the fixed protocol card
   T->>DB: later frame: distance 12 m (< 15 m) → same hazard_key, tier upgrade warning→critical (G2-8a)
   DB->>DB: alert tier := critical, tier_history += upgrade, emit alert.raised {upgraded_from:'warning'}
@@ -105,7 +113,9 @@ If Ravi does not reach 15 m, the warning escalates at its 15 s ack timeout with 
 | in a cab, machine moving | **deny** (`motion_lock`) |
 | `on_foot` null/false and no cab | **deny** (`state_unknown`) |
 | a call to this person in the last 60 s | deny (`call_cooldown`) |
-Default is **deny** (fail-safe: never ring a phone that might be in a moving cab). A denied operator call
+Default is **deny** (fail-safe: never ring a phone that might be in a moving cab). The same function
+writes `operator_state.motion_locked` and `call_allowed` on every frame, so the cockpit's glance mode and
+the dispatcher always agree (UI-5). A denied operator call
 is stored as `dispatch suppressed(reason)`; the cockpit shows the full-screen TTS alert; the supervisor's
 Telegram is never blocked. Evaluated when the dispatch is created and again inside `dispatch`.
 
@@ -120,8 +130,8 @@ sequenceDiagram
   participant W as telegram-webhook
   participant E as sos-escalator
   participant TW as Twilio
-  OP->>DB: hold 1.5 s → rpc sos_raise(request_id, lat, lon)   [lock_timeout 2 s; takes no ledger lock]
-  DB->>DB: one short txn: new alert kind sos (never deduplicated) + emit sos.raised + ledger_enqueue(sos)
+  OP->>DB: hold 1.5 s → rpc sos_raise(request_id, lat?, lon?)   [lat/lon may be null → machine, then site centre; UI-14]
+  DB->>DB: one short txn: new alert kind sos (never deduplicated) + emit sos.raised (its trigger enqueues the ledger entry)
   DB->>D: dispatch(telegram, supervisor, level 0)
   D->>TG: sendMessage + inline [Acknowledge] callback_data "ack:{alert_id}" + sendLocation
   alt Anita taps Acknowledge within 60 s
@@ -135,9 +145,10 @@ sequenceDiagram
     D->>DB: status escalated, alert.escalated
   end
 ```
-- `sos-escalator` is its own pg_cron job and transaction; it reads only `alerts` and writes `alerts`,
-  `dispatches`, `events`. A failing or slow tick cannot delay it, and it never waits on the ledger lock.
-- `sos_raise` never waits on a job's lock: the ledger entry is enqueued; `ledger-writer` appends it.
+- `sos-escalator` is its own pg_cron job, connection and transaction; it reads only `alerts` and writes
+  `alerts`, `dispatches`, `events`. A failing or slow tick cannot delay it, and it never waits on the ledger lock.
+- `sos_raise` takes no advisory lock: the ledger entry is enqueued by the event trigger and written by
+  worker step 1.
 - Each SOS is its own alert (the dedupe index excludes `kind = 'sos'`), with its own Telegram message.
 - Abuse control (PA-7): hold-to-arm, audit trail, `sos_cancel` within 10 s, and more than 3 SOS per
   operator in 10 min sets `abuse_suspected` on the alert (still delivered). The spec's "rate limit"
@@ -160,38 +171,52 @@ sequenceDiagram
     OP->>DB: task_start → started; cycles_at_start stored; progress now follows load cycles
   else override path
     FM->>DB: rpc ppe_override(task_id, reason ≥ 10 chars, request_id)  [fleet_manager]
-    DB->>DB: ppe_overrides row + ledger_enqueue(ppe_override {who, why, when, missing}) + ppe.override_granted
+    DB->>DB: ppe_overrides row + emit ppe.override_granted {who, why, when, missing} (ledger via the event)
     OP->>DB: task_start → valid override (same task, ≤ 15 min) → started
   end
 ```
+Specified for the UI (UI-12): `task_start` is also the **resume** call (valid from `planned`, `paused`
+and `blocked_ppe`; it re-checks PPE every time). An expired override returns `blocked` with
+`override_expired` and emits `ppe.missing` again, which re-appears in Anita's inbox; there is no separate
+re-notification.
 
-## 5. Ledger tamper and verify (demo step 5; G2-4)
+## 5. Ledger tamper and verify (demo step 5; G2-4, N1, #4)
 
-1. **Publish checkpoint** → Telegram message `SPOTTER-LEDGER v1 seq=1..214 n=214 root=<64 hex>
-   head=<64 hex>`; `ledger_roots` stores chat id, message id, the exact sent text, sent_at.
-2. **Verify** → `ledger_verify()` ✓ (chain + head anchor), then **witness check** (`ledger-witness`
-   function): Telegram `forwardMessage` returns Telegram's copy of the message [V] → parse the root from
-   it → compare with `ledger_recompute_root(1, 214)` ✓.
-3. Naive tamper (SQL editor as owner, or `demo_tamper(seq,'edit')`) → Verify ✗ "chain breaks at #187
+Claim on stage: **"externally witnessed, human-verifiable"**, and nothing stronger.
+1. **Publish checkpoint** (director) → Anita's Telegram shows
+   `SPOTTER-LEDGER v1 seq=1..214 n=214 root=<64 hex> head=<64 hex> at=14:02 IST`.
+2. **Verify** → internal chain check ✓ ("the database agrees with itself").
+3. **Witness compare:** Anita reads the range and root **from her own Telegram chat** and types the range
+   (`1..214`) into the console; the console recomputes the root and head **from the ledger rows only** and
+   shows them beside the line she pastes. Match ✓.
+4. Naive tamper (SQL editor as owner, or `demo_tamper(seq,'edit')`) → Verify ✗ "chain breaks at #187
    (hash_mismatch)" → `ledger.tamper_detected` + Telegram alert.
-4. Sophisticated tamper (`demo_tamper(seq,'rehash')` also rewrites later hashes **and**
-   `ledger_roots.root_hex`) → chain ✓, **head anchor ✗** and **witness ✗**: the root Telegram holds is not
-   the root the database now produces.
+5. Consistent tamper (`demo_tamper(seq,'rehash')` rewrites later hashes, `root_hex` and `head_hash`, under
+   lock 4210001) → internal Verify ✓, **but the recomputed root for 1..214 no longer equals the root in
+   Anita's Telegram message**. The console shows the two side by side with the first differing
+   character highlighted.
+Nothing in this check takes a message id, root or range from the database; the human supplies the
+external value (N1). A database owner who also holds the bot token could post a forged line, which is
+why the witness is the chat history as Anita saw it at 14:02, and why an owner-independent anchor
+(OpenTimestamps / RFC 3161) is on the roadmap (data-model §4.5).
 
-## 6. Ask Spotter with a photo (G2-6, G2-13, G2-18)
+## 6. Ask Spotter with a photo (G2-6, G2-13, G2-18, D9)
 
 ```mermaid
 sequenceDiagram
   participant OP as Ravi
   participant ST as Storage (ask-photos)
   participant A as ask fn
+  participant PG as Groq prompt guard
   participant V as Vision (Groq qwen3.8-27b)
   participant G as Groq gpt-oss (20b rewrite, 120b answer)
+  participant SG as Groq gpt-oss-safeguard-20b
   participant VY as Voyage
   participant PC as Pinecone
   OP->>ST: upload ask-photos/{uid}/{uuid}.jpg (owner-only policy, ≤ 4 MB)
   OP->>A: invoke ask {request_id, question, lang, photo_path}  (Authorization: user JWT + apikey)
   A->>A: authenticate the USER in code (anon/publishable-only → 401); per-user 6/min, 30/h; org breaker 20/min
+  A->>PG: meta-llama/llama-prompt-guard-2-86m on the question (+ history) → injection/jailbreak score
   A->>V: signed URL (60 s) → strict JSON {category ∈ enum, confidence}; nothing else is kept
   A->>G: rewrite (20b): English query from the question + category label only
   A->>VY: voyage-multimodal-3.5 query embedding (text + image), 1024 dims
@@ -199,33 +224,47 @@ sequenceDiagram
   A->>VY: rerank-2.5-lite → top 5
   A->>A: live tools (P0: next task, active alerts) → ids live:*
   A->>G: 120b, strict JSON AskAnswer; chunks wrapped as <doc id=…> data, never instructions
-  A->>A: gate (below)
+  A->>A: deterministic gate (below)
+  A->>SG: safety-critical answers only: policy check of the final answer
   A-->>OP: ≤ 3 steps + citations (+ proposed log_incident, needs a tap)
 ```
-**Photo / prompt-injection defence (G2-13):**
-- Vision output is **untrusted and never citable**. It is reduced to one enum `category`
-  (hydraulic_leak, fuel_leak, coolant_leak, tyre_damage, structural_crack, fire_smoke, ppe_issue, unknown)
-  plus a confidence. No free text from the image (including text written in the photo) reaches either
-  LLM call. The category is shown to the operator as "Spotter thinks: hydraulic leak (72 %)".
-- Citable sources are only `kb_chunks` ids retrieved in this request, and `live:*` ids for live facts.
-  `rule` may cite **only** a doc chunk, and the gate checks that `rule` appears **verbatim** (after
-  whitespace normalisation) in the text of one of its cited chunks; otherwise `rule` is dropped and, if
-  the question is safety-critical, the answer is refused ("ask your supervisor").
-- Every step must carry at least one valid citation; `cited_ids ⊆ retrieved ∪ live`; safety-critical ⇒
-  rule + doc citation + `handover_to_supervisor = true`.
-- Injection fixtures in B19: instructions inside a chunk, inside a photo's printed text, inside the
-  question; all must yield either a grounded answer or a refusal.
+**Photo / prompt-injection defence (G2-13), layered:**
+1. **Prompt guard (new, D-item 6):** `meta-llama/llama-prompt-guard-2-86m` (Groq, available on the
+   account per the coordinator's live check) scores the question and history. Above the threshold
+   (0.8 [A], tuned on the B19 fixtures) → refusal `injection_suspected`, logged. It also runs **once at
+   ingestion** over every chunk (B18) and quarantines flagged chunks, so a poisoned document never enters
+   the index. It is a classifier, not a guarantee; the layers below still apply.
+2. Vision output is **untrusted and never citable**: reduced to one enum `category` plus a confidence.
+   No free text from the image (including text printed in the photo) reaches any LLM call.
+3. Citable sources are only `kb_chunks` ids retrieved in this request and `live:*` ids for live facts.
+   `rule` may cite only a doc chunk and must appear **verbatim** (whitespace-normalised) in it; every step
+   carries a valid citation; safety-critical ⇒ rule + doc citation + `handover_to_supervisor = true`.
+   Failing any check → refusal.
+4. **Safeguard (new):** for answers the rewrite flagged safety-critical, `openai/gpt-oss-safeguard-20b`
+   (available on the account per the coordinator) evaluates the final answer against a short written
+   policy ("never permit approaching a faulty machine, bypassing PPE, or operating after a fault; always
+   hand over to the supervisor"). A violation → refusal `policy_violation`. Non-safety answers skip it
+   (latency and TPM). [U] its output format and rate limits are confirmed in B19.
+5. Injection fixtures in B19: instructions inside a chunk, inside a photo's printed text, inside the
+   question; each must end grounded or refused, and the log says which layer stopped it.
 
-**Budgets and privacy (G2-18):**
-- Prompt ≤ 3,500 tokens on 120b; the rewrite ≈ 600 tokens on 20b. Groq limits are per model per org
-  [R]: the 120b answer falls back **directly to Gemini Flash (text only)**; 20b is not used as the
-  answer fallback because the rewrite already spends that pool.
-- Photos are **never** sent to Gemini (its free tier uses content to improve products [V]); the vision
-  fallback is the deterministic icon grid ("what do you see?").
-- B20 (eval) is cut to after review 1; when it runs, it runs outside rehearsal windows and
-  `evidence_metrics` records the model per row; only primary-model rows are reported.
-- Voyage limits without a payment method are [U]; one query embedding + one rerank per ask.
-- Latency target p95 ≤ 8 s [A].
+**Providers: one Groq account, env-selected fallback (D9).**
+- The app uses **one** Groq account (`GROQ_API_KEY`, plus optional per-task keys of the **same**
+  organisation for observability). The second person's key/account is never read by the app, and there
+  is **no automatic cross-account failover** (the Groq AUP forbids orchestrating usage across
+  organisations to get around limits [R research 15]).
+- Code talks to a provider-agnostic `ChatProvider` interface (`complete(json-schema, messages)`,
+  `classify(text)`), with adapters `groq` and `gemini`. Selection is by environment:
+  `LLM_PRIMARY=groq` and `LLM_FALLBACK=none|gemini` (default `none`). A paid Groq Developer tier on the
+  same account needs no code change (only higher limits). With `LLM_FALLBACK=none`, a Groq 429 yields the
+  deterministic refusal + top chunk titles. Shlok chooses (D9).
+- Budgets: answer ≤ 3,500 prompt tokens on 120b; rewrite ≈ 600 tokens on 20b; safeguard ≈ 800 tokens,
+  safety-critical answers only; prompt guard on short inputs. Each model has its own per-org limits [R].
+- Photos never go to Gemini (free-tier content is used to improve products [V]); the vision fallback is
+  the deterministic icon grid.
+- B20 (eval) is cut to after review 1; when it runs, it runs outside rehearsal windows and records the
+  model per row. Voyage limits without a payment method are [U]. Latency p95 ≤ 8 s [A]
+  (≈ +0.3 s prompt guard, +1 s safeguard on safety-critical answers).
 
 ## 7. Alert budget (EEMUA 191 / ISA-18.2 informed; G2-8)
 
@@ -259,10 +298,11 @@ Seed (`ALERT_POLICIES`, generated into `alert_policies`) [A: tunable]:
 
 | Boundary | Duplicate source | Guard |
 |---|---|---|
-| Frame apply | job retry | try-lock; `unique (run_id, frame_seq)`; `cursor_seq` advanced in the same txn |
+| Frame apply | job retry, director `manual_tick` | try-lock 4210002 (also taken by `manual_tick`, N5); `unique (run_id, frame_seq)`; `cursor_seq` advanced in the same txn |
 | Detector events | re-applied frame | `det:` key, `on conflict do nothing` |
 | Client RPCs | double tap, retry | `rpc:{fn}:{request_id}`; the RPC returns the original result |
-| Ledger | retried enqueue / drain | `ledger_queue.idempotency_key unique`; `incidents.idempotency_key unique`; drain marks written in the same subtransaction |
+| Ledger | retried enqueue / drain; RPC + event both writing (N3) | one write path: only the event trigger enqueues, key `ledger:{event key}`; `ledger_queue.idempotency_key unique`; `incidents.idempotency_key unique`; drain marks written in the same subtransaction |
+| Loop | re-queued event | `loop_queue.event_id` primary key; `lesson_assignments` unique (operator, lesson, event); `replay_scenarios.source_event_id` unique |
 | Dispatch kick | pg_net retry, requeue | CAS `queued → sending` inside `dispatch`; attempts counter on one row; unique (subject, purpose, channel, role, level) |
 | Twilio call | function retried after the call exists | `provider_ref` saved right after `calls.create`; rows with a `provider_ref` are polled, never re-called |
 | Escalation call after ack | ack during `escalating` | `dispatch` re-checks alert status before calling (G2-10) |
@@ -277,12 +317,13 @@ Seed (`ALERT_POLICIES`, generated into `alert_policies`) [A: tunable]:
 |---|---|---|
 | Telegram send | 429 `retry_after`, 403 (bot not started) | retry once honouring `retry_after`; FM console inbox always has the alert; pre-flight test message |
 | Telegram webhook | not set, wrong secret, cold start | FM acknowledges in the console (same CAS) |
-| Telegram `forwardMessage` (witness) | message deleted, 4xx | witness check shows "witness unavailable" (not ✓); screenshot of the original message as backup |
+| Telegram checkpoint message | not delivered | checkpoint shows "not published" and cannot be used as a witness; re-publish before the tamper step; screenshot backup |
 | Twilio `calls.create` | 32100 unverified number [R], geo permission, credit | Telegram still sent; UI shows the reason; backup video of the call step |
 | Twilio no answer | StatusCallback `no-answer`/`busy` | one retry after 60 s, then Telegram only |
 | Twilio signature | URL mismatch | signed URL is `PUBLIC_FUNCTIONS_URL + '/twilio-voice' + exact query we sent` (G2-7), never `req.url`; tested against Twilio's documented algorithm [V twilio.com/docs/usage/security] |
-| Groq chat | 429, 5xx | 120b → Gemini Flash text → refusal + top chunk titles |
+| Groq chat | 429, 5xx | `LLM_FALLBACK` adapter if set (Gemini text) → else refusal + top chunk titles; never a second Groq account (D9) |
 | Groq vision | Preview model gone | icon grid (no Gemini for photos) |
+| Groq prompt guard / safeguard | 429, 5xx | fail closed for safety-critical answers (refusal); fail open for the prompt guard on non-safety questions, logged |
 | Voyage embed / rerank | 429/5xx | sparse-only retrieval / Pinecone order |
 | Pinecone | monthly quota 429 [V], 5xx | refusal with "ask your supervisor" |
 | Realtime | drop, JWT expiry | connectivity chip; Broadcast replay (≤ 25, supabase-js ≥ 2.74 [V]) + `my_snapshot` |
@@ -297,15 +338,15 @@ Seed (`ALERT_POLICIES`, generated into `alert_policies`) [A: tunable]:
 | **S**poofing | Edge Functions `ask`, `director` | user JWT authenticated in code (not `verify_jwt` + publishable key, G2-6); `director` also needs role FM + `DEMO_DRIVER_SECRET` (constant-time) | stolen session until expiry |
 | S | Telegram / Twilio webhooks | secret header (constant-time) / HMAC-SHA1 signature over the public URL; Telegram chat id bound to the supervisor | bot token or auth token leak |
 | S | Device login | Supabase Auth sessions: JWT expiry 1 h (default [A]), refresh tokens; demo accounts with strong passwords; "time-box sessions" is a paid Auth setting [U] | shared demo laptop |
-| **T**ampering | Ledger | canonical hash chain + head anchor + Telegram witness re-fetched with `forwardMessage`; append-only grants + triggers | bot-token holder can edit the witness; entries after the last checkpoint |
+| **T**ampering | Ledger | canonical hash chain; append-only grants + triggers; Merkle checkpoint sent to the fleet manager's Telegram and compared by a human against a root recomputed from the rows ("externally witnessed, human-verifiable") | a party holding both DB ownership and the bot token; entries after the last checkpoint; OpenTimestamps/RFC 3161 on the roadmap |
 | T | Events, alerts | writes only via security-definer RPCs; append-only events | DB owner |
 | **R**epudiation | SOS, PPE override, acks | who/why/when in the ledger; `ack_via`, `ack_by`; dispatch log with provider ids | — |
 | **I**nformation disclosure | Phone numbers, GPS trail, photos | numbers only in Edge Function secrets; RLS per role; photos owner-only, never sent to Gemini; near-miss rows pseudonymised for FM | Groq processes photos (vendor terms) |
 | I | Realtime | private topics, one topic per audience, RLS on `realtime.messages`; public access off | policies cached per connection [V] |
-| **D**enial of service | Groq TPM (org-wide), Twilio credit | per-user and org-wide ask limits; dry-run for rehearsals; SOS abuse flag | a judge hammering Ask |
+| **D**enial of service | Groq TPM (one account, D9), Twilio credit | per-user and org-wide ask limits; dry-run for rehearsals; SOS abuse flag | a judge hammering Ask |
 | D | Database | size budget §7 of data-model; statement timeouts on the tick | Free-plan compute |
 | **E**levation of privilege | RPCs | role check in every RPC; `search_path = ''`; secret key only in Edge Functions | — |
 | E | AI-initiated writes | the model only proposes `log_incident`; a human tap calls the RPC | — |
-| E | Prompt injection (docs, photos) | chunks wrapped as data; vision reduced to an enum; verbatim-rule check; refusal | novel jailbreaks |
+| E | Prompt injection (docs, photos) | prompt guard on questions and at ingestion; chunks wrapped as data; vision reduced to an enum; verbatim-rule check; safeguard policy check; refusal | novel jailbreaks |
 
 Owner of the STRIDE slide: backend-lead (content from this table), assigned in backend-tasks.

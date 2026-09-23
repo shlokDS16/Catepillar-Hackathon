@@ -1,6 +1,7 @@
 # ADR-001: Backend architecture: the database owns time and truth
 
-- **Status:** Proposed, **revision 2** (2026-09-23, backend-lead) after gate G2 (backend-reviewer FAIL,
+- **Status:** Proposed, **revision 3** (2026-09-23, backend-lead): reconciliation after the G2 re-check
+  (PASS-WITH-FIXES), the UI contract gaps and decisions D8/D9. Revision 2 followed gate G2 (backend-reviewer FAIL,
   program-architect READY-WITH-CHANGES). Every finding is dispositioned in the last section.
 - **Deciders:** Shlok (approver), backend-lead (author), backend-reviewer.
 - **Related:** `backend-options.md` (full comparison), `data-model.md`, `event-pipeline.md`,
@@ -38,13 +39,16 @@ Adopt **Option C, "the database owns time and truth"**:
    the incident ledger (byte-exact canonical serialisation, a queue drained by one writer job under
    `pg_advisory_xact_lock`, verify with a head anchor, Merkle checkpoints witnessed in Telegram), and
    the fan-out to clients (`realtime.send`, one private topic per audience).
-   **Four independent pg_cron jobs, each its own transaction:** `scenario-tick`, `sos-escalator`,
-   `ledger-writer`, `dispatch-requeue`. A failing tick cannot delay an SOS escalation, and no user RPC
-   or tick waits on the ledger lock (revision 2, G2-1).
+   **Two 1-second pg_cron jobs** (revision 3, N5): `sos-escalator` (own connection and transaction,
+   no advisory lock) and `worker` (a procedure that commits between its steps: ledger drain, Loop
+   queue, scenario tick, requeue/housekeeping). A failing or slow tick, Loop build or ledger drain cannot
+   delay an SOS escalation, and no user RPC waits on the ledger lock (G2-1, N2, N3).
 2. **Supabase Edge Functions** are thin adapters, each ≤ 1 responsibility: `dispatch` (Telegram and
    Twilio calls, fired by pg_net after commit), `telegram-webhook`, `twilio-voice` (keypress ack +
-   call status), `ask` (RAG), `director` (demo control: FM JWT + `DEMO_DRIVER_SECRET`), `ledger-witness`
-   (re-fetches the published root from Telegram). All run with `verify_jwt = false` and authenticate
+   call status), `ask` (RAG), `director` (demo control: FM JWT + `DEMO_DRIVER_SECRET`), `demo-login` (persona
+   sign-in without shipping passwords). The automated `ledger-witness` was dropped in revision 3 (N1):
+   the ledger's external witness is a **human comparison** of the Telegram checkpoint line with a root
+   recomputed from the rows ("externally witnessed, human-verifiable"). All run with `verify_jwt = false` and authenticate
    the caller in code (user JWT, secret header, HMAC signature or secret key). They call providers
    with plain `fetch`, not npm SDKs, to avoid Deno compatibility surprises.
 3. **`packages/shared` (TypeScript)** holds the frozen zod contracts, the ETA model (pure function
@@ -53,9 +57,17 @@ Adopt **Option C, "the database owns time and truth"**:
    labelled anomalies and the organiser-format CSVs.
 5. **Next.js (`apps/web`)** is UI only: supabase-js with the publishable key and the user's session
    (RLS), RPCs for every write, `functions.invoke` for `ask`, Realtime private channels for live state.
-6. **LLM chain:** Groq `openai/gpt-oss-120b` → **Google Gemini Flash (free tier, text only)** as the
-   non-Groq fallback (Groq `gpt-oss-20b` does the query rewrite, so it is not the answer fallback);
-   vision: Groq `qwen/qwen3.8-27b` (Preview) → deterministic icon grid (photos never go to Gemini).
+6. **LLM layer (D9):** **one Groq account** (no cross-account failover; the Groq AUP forbids
+   orchestrating usage across organisations). Groq `openai/gpt-oss-120b` answers, `gpt-oss-20b` rewrites,
+   `meta-llama/llama-prompt-guard-2-86m` screens questions and ingested chunks,
+   `openai/gpt-oss-safeguard-20b` policy-checks safety-critical answers. A provider-agnostic
+   `ChatProvider` takes an env-selected fallback: `LLM_FALLBACK=none` (deterministic refusal) or
+   `gemini` (text only); Shlok chooses. Vision: Groq `qwen/qwen3.8-27b` (Preview) → icon grid.
+7. **Deploy is P0, owned by Track B:** Supabase continuously; the web app on Vercel over HTTPS from H0
+   (the Android demo phone needs a secure context for vibration and audio).
+8. **Dataset (D8):** our own; the organiser's 9 + 7 fields are an exact subset exported as
+   organiser-format CSVs; real Open-Meteo archive weather; handbook-style productivity baselines;
+   hidden effects and held-out labels.
    Every AI path has a deterministic fallback (section "Consequences").
 
 ## Options that lost, and why
@@ -78,7 +90,7 @@ Positive
 - The demo survives closed tabs, cold functions and duplicate webhook deliveries (constraints and
   compare-and-set, not code discipline).
 - "Generator ≠ detector" is structural (Python vs SQL), which strengthens the evidence card.
-- Webhooks are testable from hour ~10 without Vercel.
+- Webhooks do not depend on Vercel (they are Edge Functions).
 
 Negative / costs
 - plpgsql for the EWMA and rules: less pleasant than TypeScript, and SQL tests run as assertion
@@ -86,8 +98,8 @@ Negative / costs
   Docker; Docker 29.3.1 and Supabase CLI 2.102.0 are installed, but the local stack is not assumed).
 - Supabase lock-in (acceptable for a hackathon; the SQL is portable Postgres except pg_cron, pg_net,
   Vault and `realtime.send`).
-- Three 1-second pg_cron jobs write ~260,000 `cron.job_run_details` rows a day; the `housekeeping`
-  job deletes rows older than 1 h every 10 min.
+- Two 1-second pg_cron jobs open ~173,000 connections and write as many `cron.job_run_details` rows a
+  day; housekeeping deletes rows older than 1 h; B11 measures the connection cost (N5).
 - Detectors cannot be imported by the TypeScript evidence script; evaluation runs the same **pure** SQL
   detector functions inside a throw-away `eval` schema, never through events, alerts, Realtime or the
   ledger (data-model §2.5.2).
@@ -95,7 +107,7 @@ Negative / costs
 AI fallbacks and budgets (principle: every AI feature has a deterministic fallback)
 | Feature | Primary | Fallback | Deterministic floor | Budget |
 |---|---|---|---|---|
-| Ask Spotter answer | Groq gpt-oss-120b | Gemini Flash (text) | "Ask your supervisor" refusal + top 3 retrieved chunk titles | ≤ 3,500 prompt tokens, p95 ≤ 8 s |
+| Ask Spotter answer | Groq gpt-oss-120b (one account) | `LLM_FALLBACK`: none or Gemini text (D9) | "Ask your supervisor" refusal + top 3 retrieved chunk titles | ≤ 3,500 prompt tokens, p95 ≤ 8 s |
 | Photo understanding | Groq qwen3.8-27b → enum category only | none | Ask the operator to pick a category (icon grid) | 1 image, ≤ 4 MB |
 | Protocol cards (Guardian) | none: fixed, reviewed cards | — | the card itself | 0 LLM calls |
 | Alert audio | pre-generated Hindi clips | Twilio `<Say>` Hindi voice | text + vibration | 0 live TTS on the demo path |
@@ -145,3 +157,26 @@ BO = backend-options.md.
 | PA-8 gaps inside tasks | **Fixed:** `v_task_analytics` (B2 view, B16 data), LlamaParse in B18, `pair_machine`, and near-miss pseudonymisation enforced by RLS + `near_miss_list`. Machine↔machine proximity is **cut to P1** (cut #5) | DM §2.2, §2.10 · BT B2, B16, B18, §5 |
 | PA-9 G3 cannot test live flows | **Adopted as a recommendation:** G3 tests screens on fixtures + seeded logins (the gate definition belongs to the orchestrator) | BT §3 |
 | PA-10 provisioning section out of date | **Fixed** | BT §4 |
+
+### Revision 3 additions (G2 re-check, UI gaps, D8, D9)
+
+Source: the "Re-check" section of `docs/gates/G2-backend-review.md` (N1-N5 and residuals), the UI lead's
+`docs/design/frontend-tasks.md` §5 (UI-1 … UI-16, dispositioned in AC §10), and decisions D8/D9.
+
+| Finding # | Action | Where fixed |
+|---|---|---|
+| N1 witness trusts a DB-supplied message id | **Fixed by removing the automated check.** `ledger-witness` is dropped. The fleet manager reads the range and root from her own Telegram chat; the console recomputes the root from the ledger rows for that range (`ledger_recompute`) and shows both side by side. The claim is "externally witnessed, human-verifiable". **Second anchor rejected for P0:** OpenTimestamps attestation arrives hours later [U] and a public git commit is force-pushable with our own token; both go to the roadmap with RFC 3161 | DM §4.5-4.6 · EP §5 · AC §4, §6 · BT B5, B13, §5 cut 11 |
+| G2-4 (re-check: PARTIAL) | **Fixed.** `ledger_verify` is labelled internal consistency only; `demo_tamper(rehash)` rewrites `root_hex` **and** `head_hash`, so the demo no longer stages an anchor failure; the only external evidence is the human compare | DM §4.4, §4.6 · EP §5 |
+| N2 Loop builder inside the frame subtransaction | **Fixed.** The event trigger only inserts into `private.loop_queue`; the worker's step 2 builds lessons and replays in its own transaction; a failing build marks the queue row and never touches the event, alert or ledger. B10b re-runs the reviewer's repro | DM §2.8 · EP §0 · BT B10b, B12 |
+| N3 lag, ordering, lock scope, double enqueue | **Fixed.** A single ledger write path (event trigger, key `ledger:{event key}`); RPCs no longer enqueue; `incident_log` emits `incident.reported`. Checkpoint, tamper and verify take lock 4210001. Lock duration and `seq` ≠ `occurred_at` ordering are stated. Lag bound 3 s with a `demo-check` alarm at 5 s | DM §4.2 · EP §0, §1, §8 · AC §3, §4 · BT B4, B5, B21 |
+| N4 `set local statement_timeout` does not bound the running statement | **Accepted and redesigned.** Bounded work per step is the guarantee; a role-level `statement_timeout` via `cron.schedule_in_database(…, username)` is the backstop, if Supabase allows it [U, checked in B0]; B9 runs a sleep probe | DM §6 · BT B0, B9 |
+| N5 connection churn; `manual_tick` lock | **Fixed.** Two jobs instead of four (≈ 2 connections/s); B11 measures job duration and queued runs; B0 reads `cron.use_background_workers` [U]; `manual_tick` takes try-lock 4210002 | DM §6 · EP §8 · BT B0, B11 |
+| #15 residual (purge vs FKs) | **Fixed.** `incidents.source_event_id` has no FK; `purge_run` deletion order specified; the ledger is never purged | DM §4.1, §7 |
+| #19 residual (events with null site) | **Fixed.** `events.site_id not null`; system events are emitted per site | DM §3.1 |
+| #8 note (wall-clock windows merge sim-distinct breaches at 60×) | **Accepted by design** (reviewer agreed) | EP §7 |
+| UI-1 … UI-16 | **15 closed, 1 partly (language RPC → P1)**; Replay adopts the UI's shape and its P0 event (seatbelt) | AC §10 |
+| Deploy P0 (coordinator item 3) | **Adopted.** Vercel HTTPS deploy in B0b, Shlok fixes `vercel login` at H0; redeploy at every IP | BT §0, B0b |
+| D8 dataset | **Adopted.** Exact organiser headers; real Open-Meteo archive weather (endpoint, parameters, 5-day delay, limits and CC BY 4.0 verified); handbook-style baselines; hidden effects; held-out labels; Estimated time = naive planner estimate | DM §1 · BT B6, B7 |
+| D9 one Groq account | **Adopted.** No cross-account failover; `ChatProvider` + `LLM_FALLBACK=none\|gemini`; the second account's keys are never in the app's secrets | ADR decision 6 · EP §6 · AC §6 · BT B0, B19, §4 |
+| Prompt guard + safeguard (coordinator item 6) | **Adopted.** Prompt guard on questions and at ingestion (quarantine); safeguard on safety-critical answers; both fail closed for safety answers | EP §6, §9, §10 · BT B18, B19 |
+

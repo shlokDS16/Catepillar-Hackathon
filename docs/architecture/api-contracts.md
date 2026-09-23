@@ -1,6 +1,7 @@
 # API contracts (`@cat/shared`): freeze these first
 
-Status: Proposed v1.0.0, **revision 2 after gate G2** (`G2-n`, `PA-n`). Owner: Track B. Consumer:
+Status: Proposed v1.0.0, **revision 3** (G2 re-check `N1-N5`, UI contract gaps `UI-1…16` from
+`docs/design/frontend-tasks.md` §5, decisions D8/D9; gap dispositions in §10). Owner: Track B. Consumer:
 Track F (`apps/web`), later `apps/mobile`. Task B1 turns this into code under
 `packages/shared/src/contracts/` and freezes it. Markers: **[V]** verified, **[A]** assumption,
 **[U]** unverified.
@@ -128,6 +129,10 @@ export const LessonCompleted = z.object({ assignment_id: Id, quiz_score: z.numbe
 export const ReplayReady = z.object({ replay_id: Id, source_event_id: Id });
 export const ReplayCompleted = z.object({ replay_id: Id, outcome_score: z.number(), process_score: z.number() });
 export const ScenarioChange = z.object({ status: RunStatus, speed: Speed, sim_now: Ts });
+export const IncidentReported = z.object({ incident_type: IncidentType, severity: z.number().int().min(1).max(5),
+  description: z.string(), non_punitive: z.boolean(), lat: z.number().nullable(), lon: z.number().nullable() });
+export const MotionLockChanged = z.object({ motion_locked: z.boolean(), call_allowed: z.boolean(),
+  reason: z.enum(["moving", "parked", "on_foot", "state_unknown"]) });
 export const SystemWarning = z.object({ code: z.enum(["db_size_warning", "tick_overrun"]), value: z.number() });
 
 type Meta = { tier: z.infer<typeof AlertTier> | null; ledger: boolean; alert_kind: z.infer<typeof AlertKind> | null;
@@ -138,7 +143,7 @@ const OP_SUP = ["operator", "supervisor"] as const, SITE_SUP = ["site", "supervi
 
 export const EVENT_REGISTRY = {
   "safety.seatbelt_breach":   r(SeatbeltBreach, { tier: "warning", ledger: true, alert_kind: "seatbelt_off_moving",
-                                 audiences: [...OP_SUP, "trainer"], lesson_code: "seatbelt_slopes" }),
+                                 audiences: [...OP_SUP, "trainer"], lesson_code: "seatbelt_slopes", replay: true }),  // P0 replay (UI demo beat 4)
   "safety.seatbelt_resolved": r(z.object({ frame_seq: z.number().int() }), { audiences: [...OP_SUP] }),
   "safety.overspeed":         r(Overspeed, { tier: "caution", audiences: [...OP_SUP] }),   // event only in P0, no alert
   "safety.slope_exceeded":    r(SlopeExceeded, { tier: "warning", audiences: [...OP_SUP, "trainer"] }),
@@ -147,18 +152,18 @@ export const EVENT_REGISTRY = {
   "anomaly.detected":         r(AnomalyDetected, { tier: "caution", alert_kind: "anomaly_machine", audiences: [...SITE_SUP] }),
   "anomaly.cleared":          r(z.object({ anomaly_id: Id }), { audiences: [...SITE_SUP] }),
   "guardian.hazard_near_operator": r(GuardianHazard, { tier: "warning", ledger: true, alert_kind: "guardian_hazard",
-                                 audiences: [...OP_SUP, "trainer"], lesson_code: "faulty_machine_nearby", replay: true }),
+                                 audiences: [...OP_SUP, "trainer"], lesson_code: "faulty_machine_nearby" }),  // replay P1
   "guardian.hazard_cleared":  r(z.object({ anomaly_id: Id }), { audiences: [...OP_SUP] }),
   "alert.raised":             r(AlertRaised, { audiences: [...OP_SUP] }),
   "alert.acknowledged":       r(AlertAcknowledged, { audiences: [...OP_SUP] }),
   "alert.escalated":          r(AlertEscalated, { audiences: [...OP_SUP] }),
   "alert.resolved":           r(z.object({ alert_id: Id, via: AckVia.nullable() }), { audiences: [...OP_SUP] }),
   "alert.suppressed":         r(AlertSuppressed, { audiences: ["supervisor"] }),
-  "dispatch.sent":            r(DispatchUpdate, { audiences: ["supervisor"] }),
-  "dispatch.delivered":       r(DispatchUpdate, { audiences: ["supervisor"] }),
+  "dispatch.sent":        r(DispatchUpdate, { audiences: [...OP_SUP] }),   // operator = alert owner (UI-10)
+  "dispatch.delivered":   r(DispatchUpdate, { audiences: [...OP_SUP] }),   // operator = alert owner (UI-10)
   "dispatch.answered":        r(DispatchUpdate, { audiences: [...OP_SUP] }),
-  "dispatch.failed":          r(DispatchUpdate, { audiences: ["supervisor"] }),
-  "dispatch.suppressed":      r(DispatchUpdate, { audiences: ["supervisor"] }),
+  "dispatch.failed":      r(DispatchUpdate, { audiences: [...OP_SUP] }),   // operator = alert owner (UI-10)
+  "dispatch.suppressed":  r(DispatchUpdate, { audiences: [...OP_SUP] }),   // operator = alert owner (UI-10)
   "sos.raised":               r(SosRaised, { tier: "critical", ledger: true, alert_kind: "sos", audiences: [...OP_SUP] }),
   "sos.cancelled":            r(z.object({ alert_id: Id }), { audiences: [...OP_SUP] }),
   "ppe.missing":              r(PpeMissing, { tier: "caution", alert_kind: "ppe_missing", audiences: [...OP_SUP] }),
@@ -169,7 +174,9 @@ export const EVENT_REGISTRY = {
   "task.completed":           r(TaskChange, { audiences: [...OP_SUP] }),
   "task.progress":            r(TaskChange, { audiences: [...OP_SUP] }),
   "task.start_blocked":       r(PpeMissing, { audiences: [...OP_SUP] }),
+  "incident.reported":        r(IncidentReported, { ledger: true, audiences: [...OP_SUP] }),   // incident_log RPC (N3 single path)
   "incident.logged":          r(IncidentLogged, { audiences: [...OP_SUP] }),
+  "operator.motion_lock_changed": r(MotionLockChanged, { audiences: ["operator"] }),                   // UI-5
   "ledger.verified":          r(LedgerCheckResult, { audiences: ["supervisor"] }),
   "ledger.tamper_detected":   r(LedgerCheckResult, { tier: "critical", alert_kind: "ledger_tamper", audiences: ["supervisor"] }),
   "ledger.checkpoint_published": r(LedgerCheckpoint, { audiences: ["supervisor"] }),
@@ -213,26 +220,32 @@ export const TaskStartOut = z.discriminatedUnion("status", [
 ]);
 export const TaskPauseIn = z.object({ p_task_id: Id, p_request_id: RequestId });
 export const TaskCompleteIn = z.object({ p_task_id: Id, p_request_id: RequestId });
-export const SosRaiseIn = z.object({ p_request_id: RequestId, p_lat: z.number(), p_lon: z.number(),
-  p_note: z.string().max(280).nullable() });
-export const SosRaiseOut = z.object({ alert_id: Id, ledger_queue_id: z.number().int(), escalate_at: Ts });
+export const SosRaiseIn = z.object({ p_request_id: RequestId, p_lat: z.number().nullable(), p_lon: z.number().nullable(),
+  p_note: z.string().max(280).nullable() });   // null location → paired machine, then site centre (UI-14)
+export const SosRaiseOut = z.object({ alert_id: Id, escalate_at: Ts, server_now: Ts,
+  location_source: z.enum(["device", "machine", "site"]) });   // ledger entry arrives via incident.logged
 export const SosCancelIn = z.object({ p_alert_id: Id, p_request_id: RequestId });
 export const IncidentLogIn = z.object({ p_request_id: RequestId, p_incident_type: IncidentType,
   p_severity: z.number().int().min(1).max(5),
-  p_description: z.string().min(1).max(2000).regex(/^[^\u0000-\u001f]*$/),   // canonical rule 4
+  p_description: z.string().max(2000).regex(/^[^\u0000-\u001f]*$/).nullable(),   // canonical rule 4; null → type label (UI-15)
   p_lat: z.number().nullable(), p_lon: z.number().nullable(), p_non_punitive: z.boolean(),
   p_source_event_id: Id.nullable() });
-export const IncidentLogOut = z.object({ ledger_queue_id: z.number().int() });   // incident arrives via incident.logged
+export const IncidentLogOut = z.object({ event_id: Id });   // the incident.reported event; the entry arrives via incident.logged (N3)
 export const AlertAckIn = z.object({ p_alert_id: Id, p_request_id: RequestId });
 export const AlertAckOut = z.object({ alert_id: Id, status: AlertStatus });
 
 // Fleet manager
 export const PpeOverrideIn = z.object({ p_task_id: Id, p_reason: z.string().min(10).max(500).regex(/^[^\u0000-\u001f]*$/),
   p_request_id: RequestId });
-export const PpeOverrideOut = z.object({ override_id: Id, valid_until: Ts, ledger_queue_id: z.number().int() });
+export const PpeOverrideOut = z.object({ override_id: Id, valid_until: Ts });
 export const LedgerVerifyIn = z.object({ p_from: z.number().int().min(1).default(1), p_to: z.number().int().nullable().default(null) });
 export const LedgerVerifyOut = LedgerCheckResult.extend({ expected: Hash64.nullable(), stored: Hash64.nullable(),
-  head_seq: z.number().int(), head_hash: Hash64 });
+  head_seq: z.number().int(), head_hash: Hash64 });        // internal consistency only
+// Witness compare (N1): the range comes from the fleet manager's Telegram message, typed by her
+export const LedgerRecomputeIn = z.object({ p_first_seq: z.number().int().min(1), p_last_seq: z.number().int().min(1) });
+export const LedgerRecomputeOut = z.object({ first_seq: z.number().int(), last_seq: z.number().int(),
+  leaf_count: z.number().int(), root_hex: Hash64, head_hash: Hash64 });   // computed from ledger rows only
+export const WITNESS_LINE = /^SPOTTER-LEDGER v1 seq=(\d+)\.\.(\d+) n=(\d+) root=([0-9a-f]{64}) head=([0-9a-f]{64})/;
 export const NearMissListOut = z.array(z.object({ incident_id: Id, seq: z.number().int(), occurred_at: Ts,
   operator_pseudonym: z.string(), description: z.string(), severity: z.number().int() }));
 
@@ -240,29 +253,44 @@ export const NearMissListOut = z.array(z.object({ incident_id: Id, seq: z.number
 export const LessonCompleteIn = z.object({ p_assignment_id: Id, p_quiz_score: z.number().min(0).max(100), p_request_id: RequestId });
 export const ReplaySubmitIn = z.object({ p_replay_id: Id, p_request_id: RequestId,
   p_choices: z.array(z.object({ step: z.number().int(), option_id: z.string(), ms: z.number().int().min(0) })) });
-export const ReplaySubmitOut = z.object({ outcome_score: z.number(), process_score: z.number() });
+export const ReplaySubmitOut = z.object({ outcome_score: z.number(), process_score: z.number(),
+  review: z.array(z.object({ step: z.number().int(), chosen: z.string(), best: z.string(), why: I18nText })) });   // UI-3
+export const ReplayGetIn = z.object({ p_replay_id: Id });   // rpc replay_get → ReplayScenario (UI-3)
 export const LessonAssignIn = z.object({ p_operator_id: Id, p_lesson_code: z.string(),
   p_because_event_id: Id.nullable(), p_request_id: RequestId });      // trainer
 
 // Privacy
 export const ConsentSetIn = z.object({ p_version: z.string(), p_granted: z.boolean(), p_request_id: RequestId });
+export const PRIVACY = { retention_days: 90, consent_version: "1" } as const;   // UI-15
+
+// Protocol cards (UI-8): read with select on protocol_cards (all roles)
+export const ProtocolCard = z.object({ id: z.string(), title: I18nText, steps: z.array(I18nText).min(1).max(6),
+  pictogram: z.string(), upwind_hint: z.boolean(), version: z.number().int() });
 
 // Bootstrap
 export const MySnapshotOut = z.object({
   contracts_version: z.string(),
   profile: z.object({ user_id: Id, role: AppRole, operator_id: Id.nullable(), site_id: Id, language: Lang }),
+  server_now: Ts,                                                                                 // UI-4
   run: z.object({ id: Id, status: RunStatus, speed: Speed, sim_now: Ts }).nullable(),
+  site: z.object({ id: Id, name: z.string(), emergency_tel: z.string().nullable() }),            // UI-11 (from Vault, not a table)
   paired_machine_id: Id.nullable(),
   tasks: z.array(z.object({ id: Id, task_type: TaskType, status: TaskStatus, planned_start: Ts,
     progress_pct: z.number(), eta_p50_min: z.number().nullable(), eta_p90_min: z.number().nullable(),
     eta_factors: z.array(EtaFactor).nullable() })),                                               // G2-9: array everywhere
   active_alerts: z.array(AlertRaised.extend({ status: AlertStatus, first_seen: Ts })),
   machine: z.object({ id: Id, code: z.string(), model_name: z.string().nullable(), moving: z.boolean(),
-    speed_kmh: z.number(), health: z.enum(["ok", "caution", "fault"]), location: LatLon }).nullable(),
+    speed_kmh: z.number(), health: z.enum(["ok", "caution", "fault"]), location: LatLon,
+    seatbelt_fastened: z.boolean().nullable(), parking_brake: z.boolean().nullable() }).nullable(),   // UI-6
   operator_state: z.object({ on_foot: z.boolean().nullable(), ppe: z.partialRecord(PpeItem, z.boolean()),
-    location: LatLon.nullable(), ts: Ts }).nullable(),
+    location: LatLon.nullable(), ts: Ts,
+    motion_locked: z.boolean(), call_allowed: z.boolean(),                                         // UI-5 (server-computed)
+    nearest: z.object({ kind: z.enum(["person", "machine"]), id: Id, distance_m: z.number(),
+      zone: ProximityZone }).nullable() }).nullable(),                                             // UI-6
   weather: z.object({ ts: Ts, temperature_c: z.number(), wbgt_c: z.number().nullable(),
-    wind_chill_c: z.number().nullable(), wind_kmh: z.number() }).nullable(),
+    wind_chill_c: z.number().nullable(), wind_kmh: z.number(),
+    forecast_peak_c: z.number().nullable(), forecast_peak_at: Ts.nullable(),                       // UI-7 (scenario forecast)
+    source_label: z.string() }).nullable(),                                                        // e.g. Open-Meteo archive, CC BY 4.0
   assignments: z.array(z.object({ id: Id, lesson_code: z.string(), because_event_id: Id.nullable(),
     replay_id: Id.nullable() })),
   recent_events: z.array(EventEnvelopeBase.extend({ payload: z.record(z.string(), z.unknown()) })).max(50),
@@ -271,27 +299,30 @@ export const MySnapshotOut = z.object({
 FM reads (inbox, ledger list, fleet map, evidence, analytics) are `select`s on RLS-protected tables and
 `v_task_analytics`; row types come from `supabase gen types` (B2), not hand-written.
 
-## 5. Replay (`contracts/replay.ts`; PA-1, G2-14)
+## 5. Replay (`contracts/replay.ts`; PA-1, G2-14, UI-3)
 
+Revision 3 adopts the **UI lead's requested shape** (frontend-tasks §5 #3; the fixture adapter already
+implements it). P0 event type: `safety.seatbelt_breach` (demo beat 4 in screens.md); the Guardian replay
+is P1 (the enum is additive).
 ```ts
-export const ReplayStep = z.object({ step: z.number().int(), prompt: I18nText,
-  options: z.array(z.object({ id: z.string(), label: I18nText, icon: z.string() })).min(2).max(4),
-  time_limit_ms: z.number().int().positive() });          // correct option + weight stay server-side
 export const ReplayScenario = z.object({
-  replay_id: Id, source_event_id: Id, event_type: z.literal("guardian.hazard_near_operator"),   // P0: one type
-  sim_ts: Ts,
-  map: z.object({ center: LatLon, zones: z.array(z.object({ id: Id, name: z.string(), zone_type: z.string(),
-    polygon: z.array(LatLon) })) }),
-  trail: z.array(LatLon.extend({ ts: Ts })).max(600),     // 10 sim-minutes before the event
-  machines: z.array(z.object({ code: z.string(), location: LatLon, health: z.enum(["ok", "caution", "fault"]) })),
-  hazard_machine_code: z.string(),
-  wind: z.object({ from_deg: z.number(), kmh: z.number() }).nullable(),
-  real_response_ms: z.number().int().nullable(),          // event → ack in the real shift
-  steps: z.array(ReplayStep).min(3).max(4),
-});
+  id: Id, event_id: Id, event_type: z.enum(["safety.seatbelt_breach"]),
+  occurred_sim_ts: Ts, machine_code: z.string(), summary: I18nText,
+  map: z.object({ center: LatLon, zoom: z.number(), zones: z.array(z.object({ id: Id, name: z.string(),
+    zone_type: z.string(), polygon: z.array(LatLon) })) }),
+  trail: z.array(z.object({ t_ms: z.number().int(), lat: z.number(), lon: z.number() })).max(600),   // 10 sim-min before
+  machine_track: z.array(z.object({ t_ms: z.number().int(), lat: z.number(), lon: z.number(),
+    speed_kmh: z.number(), pitch_deg: z.number() })).max(600),
+  wind_from_deg: z.number().nullable(),
+  real_response_ms: z.number().int().nullable(),
+  steps: z.array(z.object({ step: z.number().int(), at_ms: z.number().int(), prompt: I18nText,
+    time_limit_s: z.number().int().positive(),
+    choices: z.array(z.object({ id: z.string(), label: I18nText, pictogram: z.string() })).min(2).max(4) })).min(3).max(4),
+});   // correct choice, weight and "why" stay server-side until replay_submit returns `review`
 ```
-Scoring (server-side, `replay_submit`): outcome = Σ weights of correct options ÷ Σ weights × 100;
-process = 100 × share of steps answered within `time_limit_ms`, minus 25 if answered out of order.
+Reads: `replay_get(p_replay_id)` RPC (own replays only) and `assignments[].replay_id` in `my_snapshot`.
+Scoring (server-side, `replay_submit`): outcome = Σ weights of correct choices ÷ Σ weights × 100;
+process = 100 × share of steps answered within `time_limit_s`, minus 25 if out of order.
 
 ## 6. Edge Functions (`contracts/functions.ts`)
 
@@ -301,12 +332,16 @@ a publishable key through, per the review's reading of `functions/auth-headers`)
 |---|---|---|---|
 | `ask` | web | **user JWT required**: `auth.getUser(jwt)` (or `@supabase/server` `withSupabase({auth:'user'})` [V migration guide]); anon or key-only → 401 | per user 6/min and 30/h; org-wide 20/min (`private.ask_rate`) |
 | `director` | web `/director` | user JWT with role FM **and** `x-director-secret` (constant-time compare of SHA-256 digests) | 30 commands/min |
-| `ledger-witness` | web (FM) | user JWT with role FM | 6/min |
+| `demo-login` | web persona picker | `x-director-secret` (constant-time); only the three seeded demo emails | 10/min |
 | `dispatch` | pg_net | `apikey` = secret key from Vault, compared in code | — |
 | `telegram-webhook` | Telegram | `X-Telegram-Bot-Api-Secret-Token` [V], constant-time; `chat.id` must equal the supervisor chat | — |
 | `twilio-voice` | Twilio | `X-Twilio-Signature` = base64(HMAC-SHA1(authToken, **`PUBLIC_FUNCTIONS_URL + "/twilio-voice" + "?" + exact query we sent`** + sorted POST params as name+value)) [V twilio.com/docs/usage/security]; never computed from `req.url` (G2-7) | — |
 
-New Edge Function secret: `PUBLIC_FUNCTIONS_URL = https://<ref>.supabase.co/functions/v1`.
+New Edge Function secrets: `PUBLIC_FUNCTIONS_URL = https://<ref>.supabase.co/functions/v1`;
+`LLM_PRIMARY=groq`, `LLM_FALLBACK=none|gemini` (D9: one Groq account; no cross-account failover);
+`GOOGLE_GENERATIVE_AI_API_KEY` only when `LLM_FALLBACK=gemini`. Model ids live in
+`contracts/models.ts` (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.8-27b`,
+`meta-llama/llama-prompt-guard-2-86m`, `openai/gpt-oss-safeguard-20b`), so a model change is one line.
 
 ```ts
 export const AskRequest = z.object({ request_id: RequestId, question: z.string().min(1).max(500), lang: Lang,
@@ -323,7 +358,8 @@ export const AskAnswer = z.object({                     // model output, strict 
     description: z.string().max(500) }).nullable() });
 export const AskResponse = z.object({ request_id: RequestId,
   status: z.enum(["answered", "refused", "degraded"]),
-  refusal_reason: z.enum(["no_evidence", "rule_not_verbatim", "citation_invalid", "rate_limited", "provider_down"]).nullable(),
+  refusal_reason: z.enum(["no_evidence", "rule_not_verbatim", "citation_invalid", "rate_limited", "provider_down",
+    "injection_suspected", "policy_violation"]).nullable(),   // prompt guard / safeguard (EP §6)
   answer: AskAnswer.nullable(), citations: z.array(Citation), photo: VisionResult.nullable(),
   model: z.string(), fallback_used: z.string().nullable(), latency_ms: z.number().int() });
 
@@ -344,10 +380,12 @@ export const DirectorCommand = z.discriminatedUnion("cmd", [
 export const DirectorRequest = z.object({ request_id: RequestId, command: DirectorCommand });
 export const DirectorResponse = z.object({ ok: z.boolean(), run_id: Id.nullable(), message: z.string().nullable() });
 
-export const LedgerWitnessRequest = z.object({ root_id: Id });
-export const LedgerWitnessResponse = z.object({ root_id: Id, telegram_root: Hash64.nullable(),
-  telegram_head: Hash64.nullable(), recomputed_root: Hash64, head_ok: z.boolean(), match: z.boolean(),
-  published_at: Ts.nullable(), status: z.enum(["match", "mismatch", "witness_unavailable"]) });
+// demo-login (UI-9): no demo password ever reaches the browser. The function calls
+// auth.admin.generateLink({ type: 'magiclink', email }) and returns its hashed token [A: field name
+// `properties.hashed_token` confirmed in B15]; the client calls
+// supabase.auth.verifyOtp({ token_hash, type: 'email' }) [V supabase.com/docs/guides/auth/auth-email-passwordless].
+export const DemoLoginRequest = z.object({ persona: z.enum(["ravi", "anita", "trainer"]) });
+export const DemoLoginResponse = z.object({ token_hash: z.string(), type: z.literal("email") });
 
 export const DispatchRequest = z.object({ dispatch_id: Id });
 ```
@@ -361,7 +399,7 @@ export const topicFor = {
   supervisor: (siteId: string) => `sup:${siteId}`,
   trainer: (siteId: string) => `train:${siteId}`,
 } satisfies Record<z.infer<typeof Audience>, (id: string) => string>;
-export const ClockTick = z.object({ run_id: Id, status: RunStatus, speed: Speed, sim_now: Ts });   // "clock", 1 Hz
+export const ClockTick = z.object({ run_id: Id, status: RunStatus, speed: Speed, sim_now: Ts, server_now: Ts });   // "clock", 1 Hz (UI-4)
 export const MachineDelta = z.object({ run_id: Id, sim_ts: Ts, machines: z.array(z.object({     // "machines", delta only
   machine_id: Id, code: z.string(), lat: z.number(), lon: z.number(), moving: z.boolean(),
   health: z.enum(["ok", "caution", "fault"]) })) });
@@ -395,3 +433,26 @@ the `train` split; P90 = P50 · exp(q), q = split-conformal 90 % quantile of log
   registry (count, flags, audiences).
 - `z.toJSONSchema(AskAnswer)` snapshot; accepted by Groq with `strict: true` (checked live in B19).
 - `ledger/canonical.ts` reproduces golden vectors 1-3 of data-model §4.3.
+
+## 10. UI gap disposition (`docs/design/frontend-tasks.md` §5, UI-1 … UI-16)
+
+| # | Gap | Disposition | Where |
+|---|---|---|---|
+| UI-1 | `progress_pct` has no writer | **Closed.** `apply_frame` computes it from load cycles for the running task; `task.progress` event every 10 % | DM §2.2 · §3 `task.progress` |
+| UI-2 | ETA factors array vs record | **Closed.** `EtaFactor[]` everywhere (snapshot, `task_start`, events) | §4 |
+| UI-3 | `ReplayScenario`, replay reads, per-step review | **Closed with the UI's shape**; `replay_get` RPC; `ReplaySubmitOut.review`; assignments with `replay_id` in `my_snapshot`. P0 replay = seatbelt on a slope (aligned with screens.md) | §5 · §4 |
+| UI-4 | server time for countdowns | **Closed.** `server_now` in `MySnapshotOut`, `ClockTick`, `SosRaiseOut` | §4 · §7 |
+| UI-5 | client motion-lock predicate may disagree | **Closed.** `operator_state.motion_locked` + `call_allowed`, computed by the same SQL function as `can_call_operator`; `operator.motion_lock_changed` event | §3 · §4 · EP §2 |
+| UI-6 | seatbelt and nearest proximity not in the snapshot; `safety.proximity` missing | **Closed.** `machine.seatbelt_fastened`, `parking_brake`; `operator_state.nearest`; `safety.proximity` is in the registry | §3 · §4 |
+| UI-7 | no forecast | **Closed.** `forecast_peak_c`, `forecast_peak_at` from the real archived hours later in the scenario day, labelled "scenario forecast" | §4 · DM §1.1 |
+| UI-8 | no protocol card schema | **Closed.** `ProtocolCard` + select on `protocol_cards` | §4 |
+| UI-9 | persona sign-in without shipping passwords | **Closed.** `demo-login` Edge Function (director secret) → `token_hash` → `verifyOtp` | §6 |
+| UI-10 | dispatch events only on `sup:` | **Closed.** `dispatch.*` carry the alert's operator and the operator audience | §3 · DM §3.1 |
+| UI-11 | no supervisor phone for offline `tel:` | **Closed.** `site.emergency_tel` in `my_snapshot`, read from Vault (no phone number in a table) | §4 |
+| UI-12 | `task_start` from `paused`? expired override? | **Specified.** `task_start` is also resume (from planned/paused/blocked_ppe, re-checks PPE); an expired override returns `blocked` + `override_expired` and re-emits `ppe.missing` (no separate notification) | EP §4 · §4 `RpcErrorCode` |
+| UI-13 | evidence keys not final | **Closed.** `EvidenceKey` enum published; per-type rows carry `details.type` | §8 |
+| UI-14 | `sos_raise` needs lat/lon | **Closed.** Nullable; server falls back to machine, then site centre, and returns `location_source` | §4 |
+| UI-15 | `retention_days`; `p_description` min 1 | **Closed.** `PRIVACY.retention_days = 90`; `p_description` nullable (server uses the type label) | §4 |
+| UI-16 | language and pairing RPC | **Partly closed.** `pair_machine` exists (§4). **Language RPC rejected for P0**: the UI keeps the cookie locale, which is enough for the demo and avoids a profile write path; P1 | §4 |
+| (row 14 of UI §4) | Vercel deploy → localhost | **Overridden:** deploy is P0, owned by Track B; the Android demo phone needs HTTPS for vibration/audio (BT §0, B0b) | BT |
+

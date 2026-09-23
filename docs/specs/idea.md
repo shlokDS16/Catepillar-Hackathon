@@ -116,18 +116,30 @@ anomaly detection precision/recall, ETA error vs the organiser's "Estimated time
 - P1 A gradient-boosting residual model, trained offline in Python and exported as coefficients or a
   lookup, only if it beats the TS model on held-out MAE.
 
-### M7. Training hub and the Loop (PS-3; R12-R14, R27)
-- P0 **Replay simulation** (the leap): generated from a real event record. It renders the site map
-  snapshot, trail, machine and wind, then gives a 3-4 step decision under time pressure, scored on
-  outcome + process (McKinsey-Solve style). Built as a React state machine driven by a scenario JSON
-  generated from the event, so any event type can drive it.
-- P0 **The Loop**: event → Replay + a micro-lesson assigned on Home ("because yesterday…") →
-  repeat-event rate tracked (synthetic cohort chart on the evidence card).
-- P0 **Two micro-lessons** (60-90 s, Veo/Flow video in English + Hindi voice-over via the TTS provider chosen in research 15 + a 3-question icon
-  quiz): "Seatbelt on slopes" and "Faulty machine nearby". Prompts in docs/research/13 §7, which Shlok
-  refines and generates.
-- P1 **Instructor booking** (slot picker → confirm → Telegram reminder). P1 **Skill Passport**.
-  P1 "Spot the Hazard". R: Cold Start, Load the Truck, Open Badges.
+### M7. Training hub: feedback-based simulation first (PS-3; R12-R14, R27; decision D10)
+Training is built like McKinsey Solve: a scenario, more data than you need, decisions under time
+pressure, scored on the **outcome and the process**. Unlike Solve (which gives no feedback), every run
+ends in a **coached debrief**. The simulations are the learning; video is optional.
+- P0 **Replay**, generated from the operator's own event record. It has four phases:
+  1. **Brief** (10 s): what happened, where, and when.
+  2. **Investigate** (Solve-style, against a timer): a panel of cards (telemetry trend, wind, map with
+     trail and machine, fault code, protocol card, weather, time on shift). Only some are relevant.
+     Which cards the operator opens, and in what order, is scored as *process*.
+  3. **Decide**: 3-4 sequenced choices (stop / move upwind / radio / approach / SOS), each against a
+     countdown.
+  4. **Debrief**: scores for safety, procedure and efficiency. It shows the operator's process trace
+     next to the ideal one, the one rule to remember (quoted from the fixed protocol card), and an
+     **animated re-enactment** (map playback of his real trail, the machine and the wind at 10×).
+     That playback is a personalised, auto-generated "video" of his own event.
+- P0 **The Loop**: event → Replay + a micro-lesson assigned on Home ("because today…") → the
+  repeat-event rate is tracked (evidence card, labelled "how we would measure impact").
+- P0 **Micro-lessons** are interactive, not passive: 3-5 illustrated cards (a site-signage graphic, one
+  rule each, Hindi TTS audio) plus a 3-question icon quiz with instant feedback.
+- P1 **Video clips** (Google Flow, docs/media/video-brief.md) slot into the micro-lesson card 1 **if**
+  generated. They are nice-to-have and don't block anything. Fallback: embed one public-domain
+  OSHA/NIOSH safety clip, with attribution.
+- P1 Instructor booking. P1 Skill Passport. P1 "Spot the Hazard" (same four-phase engine, walk-around
+  scene). R: Cold Start, Load the Truck, Open Badges.
 
 ### M8. Ask Spotter: shift-aware, multimodal, role-based assistant (R23; Shlok decision: P0)
 - Positioning: **complements** Cat AI Assistant. Cat's answers questions about the machine; Spotter's
@@ -146,7 +158,7 @@ anomaly detection precision/recall, ETA error vs the organiser's "Estimated time
   evidence it refuses ("ask your supervisor").
 - P0 Prompt-injection defence for uploaded documents and images; a 20-question eval (hit@k,
   faithfulness) on the evidence card.
-- Models on **Groq** (multiple keys per task, with a fallback chain). Details in docs/research/15-16.
+- Models: Groq primary; fallback chain per decision D9 (Groq account A → Gemini → Groq account B), selected by env. Details in docs/research/15-16.
 
 ### M9. Offline (R20)
 - P0 A persistent connectivity chip + "last synced" + a cached last snapshot (the cockpit renders

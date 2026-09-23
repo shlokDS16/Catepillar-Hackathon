@@ -49,3 +49,11 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 ## 2026-09-23 — D9: Groq keys are from two different accounts — compliance issue
 - Groq AUP (effective 2025-10-15): prohibits circumventing rate limits "including by registering multiple accounts or orchestrating usage between multiple organizations".
 - Therefore the app must NOT auto-fail-over from Shlok's account to Aryan's account on 429. Pending Shlok's choice: (a) app uses one account only; second account used only by its owner for local dev; (b) + Groq Developer (paid) tier on the app's account for demo headroom; (c) + a non-Groq fallback (Gemini free).
+
+## 2026-09-23 — D9 (resolved): Groq both accounts + Gemini (Shlok's decision)
+- Shlok chose to use both Groq accounts and provided a Gemini free key (verified). Chain: Groq A → Gemini → Groq B on 429/5xx, env-configurable, provider logged per request.
+- Risk acknowledged: Groq AUP prohibits orchestrating multiple accounts to circumvent rate limits; Gemini placed before account B to minimise cross-account use.
+
+## 2026-09-23 — D10: Training = feedback-based simulation first (Shlok: "take example of McKinsey Solve")
+- Replay has 4 phases: Brief → Investigate (Solve-style evidence cards, relevance + order scored) → Decide (timed sequence) → Debrief (scores, process trace vs ideal, rule, animated re-enactment of his own event).
+- Micro-lessons = interactive cards + quiz with instant feedback. Google Flow videos demoted to P1 optional (fallback: public-domain OSHA/NIOSH clip). PS "e-learning videos" answered by the auto-generated re-enactment + optional clips.

@@ -125,7 +125,7 @@ supabase-js (RLS), RPCs and Realtime.
 | W4 RAG | `ask` Edge Function with fetch-based adapters (Groq, fallback, Voyage, Pinecone); ingestion is an offline script |
 | W5 Dispatcher | Decision in SQL (`raise_alert`: dedupe, suppress, rate cap, motion lock); execution in the `dispatch` Edge Function via pg_net; webhooks `telegram-webhook`, `twilio-voice` |
 | W6 Timers | separate pg_cron `sos-escalator` job → `escalations_due()` with a compare-and-set, independent of ticks and the ledger lock |
-| W7 Ledger | SQL: byte-exact canonical serialisation, `ledger_queue` drained by the `ledger-writer` job under `pg_advisory_xact_lock`, `ledger_verify` with a head anchor, Merkle checkpoints published to Telegram by `dispatch` and re-fetched by `ledger-witness` |
+| W7 Ledger | SQL: byte-exact canonical serialisation, `ledger_queue` drained by the `worker` job under `pg_advisory_xact_lock`, `ledger_verify` (internal consistency), Merkle checkpoints published to the fleet manager's Telegram and compared by a human (revision 3, N1) |
 | W8 Generator | Python (uv), offline; writes CSVs + scenario frames; loaded by `scripts/seed.ts` |
 
 Trade-offs. One backend deploy target (Supabase CLI), and every file lives in Track B's folders, so
@@ -184,12 +184,12 @@ Option C accepts that and moves the stateless compute next to the state.
   estimate client-side (what-if slider, offline) and the fitting script uses the same code.
 - From B: the generator is Python (uv) and stays outside the runtime entirely.
 
-Non-Groq LLM fallback: **Google Gemini through the Gemini API free tier** (`@ai-sdk/google` reads
-`GOOGLE_GENERATIVE_AI_API_KEY` [V] context7 /vercel/ai). It is the only free option that also accepts
-images, so it covers both the Groq rate-limit risk and the "vision is pinned to one Preview model"
-risk. Caveat [V] ai.google.dev/gemini-api/docs/pricing: free-tier content is "used to improve our
-products", so only synthetic data and non-personal questions go to it; the exact current Flash model
-ID is re-checked when the key is created (the page lists `gemini-2.5-flash` among others [V]; newer IDs
-on that page were read through a summariser and are [U]).
+Non-Groq LLM fallback (revised by decision D9): the app uses **one** Groq account; the Groq AUP
+forbids orchestrating usage across organisations to get around limits, so there is **no automatic
+failover to the second person's Groq account**. The LLM layer is provider-agnostic (`ChatProvider`
+adapters) and the fallback is chosen by environment: `LLM_FALLBACK=none` (deterministic refusal) or
+`gemini` (Google Gemini free tier, `@ai-sdk/google` reads `GOOGLE_GENERATIVE_AI_API_KEY` [V], text only:
+its free tier uses content to improve products [V], so photos never go to it). A paid Groq Developer
+tier on the same account only raises limits and needs no code change. Shlok picks the option.
 
 Decision record: `ADR-001-backend-architecture.md`.

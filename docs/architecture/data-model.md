@@ -1,7 +1,8 @@
 # Data model (Postgres 17 on Supabase, Mumbai)
 
 Status: Proposed with ADR-001, **revision 2 after gate G2** (findings are cited as `G2-n` for the
-backend review and `PA-n` for the program review; dispositions are in ADR-001). Owner: Track B.
+backend review, `PA-n` for the program review, `N1-N5` for the G2 re-check, `UI-n` for the UI
+contract gaps; revision 3 = reconciliation pass; dispositions are in ADR-001). Owner: Track B.
 Migrations land in `supabase/migrations/` in the order of `backend-tasks.md`. Markers: **[V]** verified,
 **[R]** from research 10-15, **[A]** assumption, **[U]** unverified.
 
@@ -44,32 +45,65 @@ Roles in the RLS matrices: **OP** operator, **FM** fleet_manager, **TR** trainer
 (Edge Functions with the secret key → `service_role`, bypasses RLS [V], still obeys grants).
 "RPC" = write only via a named security-definer function. "—" = no access.
 
-## 1. Organiser dataset mapping
+## 1. Dataset: our own, with the organiser fields as an exact subset (decision D8)
 
-The files are not in the repo yet (`docs/brief/data/` holds only `.gitkeep`). **[A]: this mapping uses
-the column names in the problem statement; units, vocabularies and the meaning of "Idling time" are
-confirmed against the sample in task B6.**
+The organisers supplied **field lists only, no data** (D8, `docs/project-memory/decisions.md`). We
+generate an enterprise dataset whose organiser fields are an exact, named subset and export them as
+organiser-format CSVs (`data/organiser/telemetry.csv`, `data/organiser/task_time.csv`) with the column
+headers **exactly** as in the problem statement. Units and vocabularies are **defined by us** and
+documented in `data/organiser/README.md`.
 
-Telemetry dataset (9 fields) → `telemetry_readings`:
-| Organiser field | Column | Notes |
+Telemetry (9 fields) → `telemetry_readings`:
+| Organiser header | Column | Our definition |
 |---|---|---|
-| Timestamp | `ts` | IST if no offset [A] |
-| Machine ID | `machines.code` → `machine_id` | unknown codes upserted with `assumed = true` |
-| Operator ID | `operators.employee_code` → `operator_id` | same rule |
-| Engine hours | `engine_hours numeric(10,2)` | cumulative hour meter [A] |
-| Fuel used | `fuel_used_l numeric(10,2)` | litres, cumulative per shift [A] |
-| Load cycles | `load_cycles int` | cumulative per shift [A]; also the **progress source** (§2.2) |
-| Idling time | `idle_hours numeric(10,2)` | **[A] cumulative hours; may be minutes per interval** |
-| Seatbelt status | `seatbelt_fastened boolean` | maps "Fastened/Unfastened", "Yes/No", 1/0 [A] |
-| Safety alerts | `organiser_safety_alert text` (raw) | loader also emits `safety.organiser_alert` per non-empty value |
+| Timestamp | `ts` | ISO 8601 with `+05:30` |
+| Machine ID | `machines.code` → `machine_id` | e.g. `EXC-014` |
+| Operator ID | `operators.employee_code` → `operator_id` | e.g. `OP-0007` |
+| Engine hours | `engine_hours numeric(10,2)` | cumulative hour meter |
+| Fuel used | `fuel_used_l numeric(10,2)` | litres since shift start |
+| Load cycles | `load_cycles int` | cycles since shift start; also the **task progress source** (§2.2) |
+| Idling time | `idle_hours numeric(10,2)` | idle hours since shift start (idle % = idle_hours ÷ engine hours in shift) |
+| Seatbelt status | `seatbelt_fastened boolean` | exported as `Fastened` / `Unfastened` |
+| Safety alerts | `organiser_safety_alert text` | empty, or a code such as `SEATBELT_UNFASTENED_MOVING`, `OVERSPEED`, `SLOPE_LIMIT` |
 
-Task-time dataset (7 fields) → `task_history`: Task ID → `external_ref`; Task type → `task_type`;
-Weather → `weather` (+ `weather_raw`); Operator skill → `operator_skill`; Machine age →
-`machine_age_years` [A years]; Estimated time → `organiser_estimate_min` [A minutes]; Actual time →
-`actual_min` [A minutes].
+Task time (7 fields) → `task_history`: Task ID → `external_ref`; Task type → `task_type`; Weather →
+`weather` (derived from the real archive hour, §1.1); Operator skill → `operator_skill`; Machine age →
+`machine_age_years`; **Estimated time → `organiser_estimate_min` = the planner's naive estimate** (the
+handbook baseline for the task with no condition adjustment, plus planner noise; D8: this is what our ETA
+model must beat); Actual time → `actual_min`.
 
-Every other column is an **assumed sensor** or **synthetic** field; `packages/shared` exports
-`ASSUMED_FIELDS` per table for the UI's "assumed" chip.
+### 1.1 Realism anchors (generator tasks B6/B7)
+
+- **Real historical weather.** Open-Meteo Historical Weather API [V open-meteo.com/en/docs/historical-weather-api]:
+  `GET https://archive-api.open-meteo.com/v1/archive?latitude=<3 comma-separated>&longitude=<3>&start_date=…&end_date=…&hourly=temperature_2m,relative_humidity_2m,apparent_temperature,precipitation,wind_speed_10m,wind_direction_10m,wind_gusts_10m,weather_code,shortwave_radiation&timezone=Asia/Kolkata`.
+  One request covers all three sites (multiple coordinates are comma-separated [V]). ERA5 data arrive
+  with a **5-day delay** [V], so the 90-day window ends at least 6 days before generation. Free
+  non-commercial limits are 600/min, 5,000/h, 10,000/day [V open-meteo.com/en/terms]; we need 1-3 calls.
+  The raw JSON is cached in `data/weather/` and committed, so the dataset is reproducible offline.
+  Licence **CC BY 4.0** [V]: attribution appears in the README, the evidence card and the deck.
+  Sites: a Nagpur quarry, a Jharkhand coal mine and a Himachal highway; exact coordinates are fixed in
+  the generator config [A: chosen by us, public places].
+- **Performance-Handbook-style productivity baselines** [R research 11 §5.1-5.2]: production (m³/h) =
+  bucket capacity × fill factor × job efficiency × 3600 ÷ cycle time; job efficiency 0.83 ("50-minute
+  hour"); fill factors by material (sand/gravel 0.95-1.10, common earth 0.80-1.00, hard clay 0.65-0.85,
+  blasted rock 0.60-0.75, ranges not individually verified [R]); task time = quantity ÷ production.
+  Bucket capacities and cycle times per model come from public Cat spec sheets [A: values entered in the
+  generator config with their source URL]. Skill multipliers novice 0.75 / intermediate 0.90 / expert
+  1.00 are labelled "estimated" [R].
+- **Condition effects on the actual time** [R research 11 §5.3]: WBGT above 28 °C: 0.33-0.57 % productivity
+  loss per °C (meta-analysis); rain: flat 15-30 % derate; cold dexterity band; circadian flags
+  (14:00-16:00, 02:00-06:00). WBGT is approximated from temperature, humidity, wind and radiation and
+  labelled as an approximation.
+- **Hidden effects the model is not told about:** novice × heat interaction; rain × clay; a per-operator
+  random effect; machine age × hydraulic-temperature drift; 2 % heavy-tailed outliers; sensor noise.
+- **Held-out labels:** injected anomalies (idle excess, seatbelt off while moving, overspeed, slope,
+  fault with continued operation, hydraulic/coolant drift) at 2-5 %, written only to
+  `private.injected_labels`; the Loop cohort (assigned vs control, recurrence within 14 days) for the
+  repeat-event metric.
+- **Scenario-day forecast (UI-7):** for the demo scenario the "forecast" line is computed from the
+  **real archived hours later that same day** (e.g. peak 44 °C at 14:00) and is labelled
+  "scenario forecast from archived weather" (honesty rule: it reads as a forecast inside the scenario,
+  not a claim about today).
 
 ## 2. Tables
 
@@ -185,12 +219,20 @@ RLS: OP where `operator_id = me`; FM all; TR —.
 `active_anomaly_ids uuid[]`, `updated_at`. RLS: all select.
 
 **operator_state**: PK (run_id, operator_id), `ts`, `location`, `on_foot boolean null`,
-`in_cab_machine_id null`, `ppe jsonb`, `updated_at`. RLS: OP own; FM all.
+`in_cab_machine_id null`, `ppe jsonb`, **`motion_locked boolean`** and **`call_allowed boolean`**
+(both computed in `apply_frame` by the same function as `can_call_operator`, so the UI and the
+dispatcher cannot disagree; a change emits `operator.motion_lock_changed`; UI-5),
+**`nearest jsonb null`** (`{kind, id, distance_m, zone}` of the closest person/machine hazard; UI-6),
+`updated_at`. RLS: OP own; FM all.
 
 **operator_gps_trail**: `id bigint identity`, `run_id null`, `operator_id`, `ts`, `location`,
 `speed_kmh`, `accuracy_m`. RLS: OP own; FM all (DPDP s.7 workplace safety [R]); TR —. Retention 90 days.
 
-**weather_snapshots**, **fault_codes**: as in revision 1 (site/machine keyed, all roles select).
+**weather_snapshots**: `id`, `site_id`, `run_id null`, `ts`, `temperature_c`, `apparent_temperature_c`,
+`humidity_pct`, `wind_kmh`, `wind_from_deg`, `wind_gust_kmh`, `precipitation_mm`, `weather_code`,
+`shortwave_wm2`, `wbgt_c` (approximation), `wind_chill_c`, `forecast_peak_c null`,
+`forecast_peak_at null` (scenario forecast, §1.1), `source` (open_meteo_archive). All roles select.
+**fault_codes**: as in revision 1 (machine keyed, all roles select).
 
 ### 2.5 Detection
 
@@ -249,7 +291,8 @@ so each statement stays under the 2-min `postgres` cap [V per G2 review].
 **lesson_assignments**: `id`, `operator_id`, `lesson_id`, `because_event_id null`, `assigned_at`,
 `completed_at`, `quiz_score`. Unique (operator_id, lesson_id, because_event_id).
 
-**replay_templates**: `event_type text pk` (P0: **`guardian.hazard_near_operator` only**, cut list #7),
+**replay_templates**: `event_type text pk` (P0: **`safety.seatbelt_breach` only**, cut list #7; changed
+in revision 3 to match the UI lead's demo beat 4, screens.md),
 `steps jsonb` (3-4 steps; each: prompt i18n, options with `id`, `correct_option`, `weight`,
 `time_limit_ms`), `version`.
 
@@ -263,12 +306,14 @@ steps from the template.
 `outcome_score` (Σ weight of correct choices / Σ weights × 100), `process_score` (100 × share of steps
 answered within `time_limit_ms`, minus 25 if steps were answered out of order), `choices jsonb`.
 
-**Loop builder (task B10b):** `private.loop_on_event(event)`, called by `apply_findings` and the RPCs
-after an event commits (via the events insert trigger, **not** inside the tick's detector subtransaction):
-if `event_types.lesson_code` is set → insert `lesson_assignments` (idempotent unique) + emit
-`training.lesson_assigned`; if `event_types.replay` → `private.build_replay(event_id)` → insert
-`replay_scenarios` + emit `training.replay_ready`. Demo beat 4 replays **Ravi's Guardian near-miss with
-EXC-014** (step 3 of the demo); the seatbelt breach assigns the `seatbelt_slopes` lesson only.
+**Loop builder (task B10b), after commit (N2):** the events insert trigger only inserts the event id into
+**`private.loop_queue`** (`event_id pk`, `enqueued_at`, `done_at`, `error`) when the event type has a
+`lesson_code` or `replay = true`. Nothing else runs inside the inserting transaction. The `worker` job
+(§6) drains the queue in its **own step and transaction**: lesson assignment (idempotent unique) +
+`training.lesson_assigned`; `private.build_replay(event_id)` → `replay_scenarios` +
+`training.replay_ready`. A failing build marks `error` on the queue row and never touches the event,
+the alert or the ledger. Demo beat 4 replays **Ravi's seatbelt breach on the 17° slope** (screens.md);
+the Guardian near-miss assigns the `faulty_machine_nearby` lesson.
 
 RLS: OP own (writes via `lesson_complete`, `replay_submit`); TR all + `lesson_assign`; FM select
 aggregates via `evidence_metrics` only (training records are non-punitive).
@@ -317,6 +362,10 @@ FM: `site_id = my site`; TR: `'trainer' = any(audiences)`.
 `operator` → `op:{operator_id}`, `site` → `site:{site_id}`, `supervisor` → `sup:{site_id}`,
 `trainer` → `train:{site_id}`. `realtime.messages` select policies grant each topic prefix to exactly the
 same roles as the RLS above, so table and broadcast cannot disagree.
+`site_id` is **not null** on every event (system events such as `ledger.checkpoint_published` and
+`system.warning` are emitted per site), so no event falls outside both the RLS and the topics (re-check
+#19 residual). `dispatch.*` events carry the alert's `operator_id` and the `operator` audience, so
+Ravi sees the per-channel ticks for his own SOS or Guardian call (UI-10).
 
 Idempotency keys: detector `det:{run_id}:{machine_code}:{rule}:{frame_seq}` · client RPC
 `rpc:{function}:{request_id}` · Telegram `tg:{update_id}` · Twilio `tw:{CallSid}:{CallStatus}` /
@@ -348,7 +397,7 @@ Attempts are a counter on the same row, never a new row (G2-10).
 Kick: `after insert or update of status on dispatches for each row when (new.status = 'queued')` →
 `net.http_post(url, body {dispatch_id}, headers {apikey from Vault}, timeout_milliseconds := 20000)` [V
 pg_net signature; default 2000 ms is too short, G2-10].
-Requeue: the `dispatch-requeue` job sets `status = 'queued', attempts = attempts + 1` for rows in
+Requeue: the `worker` job (every 5th second) sets `status = 'queued', attempts = attempts + 1` for rows in
 `sending` for > 30 s with `provider_ref is null` and `attempts < 2` (the update fires the kick).
 Rows with a `provider_ref` are never re-sent; `dispatch` polls the provider instead.
 RLS: FM select; others —.
@@ -369,19 +418,32 @@ Columns as revision 1 (`id`, `seq`, `idempotency_key`, `run_id`, `occurred_at`, 
 `supersedes_seq`, `non_punitive`, `prev_hash char(64)`, `entry_hash char(64)`, `canon_version`).
 Append-only: revokes + mutation triggers + insert only via `private.ledger_write_one`.
 RLS: OP own; FM all except `non_punitive` rows (§2.10); TR `incident_type = 'near_miss'` (pseudonymised
-via the same RPC).
+via the same RPC). `source_event_id` is a plain uuid **without a foreign key**: the ledger never depends
+on rows that `purge_run` may delete (re-check #15 residual).
 
-### 4.2 Ledger queue and writer (G2-1)
+### 4.2 Ledger queue and writer (G2-1, N3)
 
-Nothing user-facing or tick-facing waits on the ledger lock:
-- `private.ledger_enqueue(idempotency_key, entry jsonb) returns bigint` inserts into
-  **`private.ledger_queue`** (`id bigint identity`, `idempotency_key unique`, `entry jsonb`,
-  `enqueued_at`, `written_incident_id null`, `error text null`). No lock. Used by the tick, `sos_raise`,
-  `ppe_override`, `incident_log`.
-- pg_cron **`ledger-writer`** `'1 seconds'` → `private.ledger_drain(max 50)`: for each unwritten queue
-  row, in its own subtransaction: `pg_advisory_xact_lock(4210001)` → `ledger_write_one` → mark written.
-  The lock is held for microseconds per job run and never inside a user RPC or the tick.
-- RPCs return `ledger_queue_id`; the UI shows the incident when `incident.logged` arrives (≤ 1-2 s).
+- **One write path (N3 double enqueue):** a ledger entry is created **only** by `private.emit_event`
+  for event types with `ledger = true` in `EVENT_REGISTRY`, with idempotency key
+  `ledger:{event.idempotency_key}`. RPCs never call `ledger_enqueue` themselves: `sos_raise` emits
+  `sos.raised`, `ppe_override` emits `ppe.override_granted`, `incident_log` emits `incident.reported`
+  (all `ledger = true`). One event → at most one entry.
+- `private.ledger_queue` (`id bigint identity`, `idempotency_key unique`, `entry jsonb`, `enqueued_at`,
+  `written_incident_id null`, `error null`). Enqueue takes no lock.
+- The `worker` job's ledger step (§6) drains ≤ 50 rows ordered by `id`, each in its own subtransaction,
+  after `pg_advisory_xact_lock(4210001)`. **The lock is held until that step's transaction commits**
+  (not microseconds, N3): at most one drain of 50 rows.
+- **Every other ledger mutator or snapshot takes the same lock first:** `ledger_checkpoint()`,
+  `demo_tamper()`, and `ledger_verify` (which holds it only for its own short transaction to read a
+  consistent head). So a checkpoint can never compute the root over `1..N` and the head as `N+1`, and a
+  tamper cannot race the writer (N3).
+- **Ordering, stated:** `seq` is assigned in drain order, which is commit-visibility order, not
+  `occurred_at` order and not enqueue order. Integrity is unaffected; the console sorts by `seq` and
+  shows `occurred_at`.
+- **Lag bound:** an entry normally exists 1-3 s after its event commits. `demo-check` fails if the oldest
+  unwritten queue row is older than 5 s; the UI shows "recording…" until `incident.logged` arrives.
+  The seatbelt acceptance is "ledger entry within 3 s" (EP §1).
+- RPCs return `ledger_queue_id` (null when the event type has no ledger entry).
 
 ### 4.3 Canonical serialisation v1: exact, byte-identical in SQL and TS (G2-12)
 
@@ -430,44 +492,50 @@ entry_hash: b04bf3cbe21a368128e2f5eb4d7d0d8a3b3a8491f84998aa2869e3cb88b51181
 [A] PostgreSQL's `to_json(text)` produces the same escaping as rule 4 for this domain; B5 proves it
 against the vectors, and if it does not, the SQL canonicaliser implements rule 4 with `replace()`.
 
-### 4.4 `public.ledger_verify(p_from, p_to)`
+### 4.4 `public.ledger_verify(p_from, p_to)`: internal consistency only
 
-Walks by `seq`: continuity (`seq_gap`), link (`link_broken`), recomputed hash (`hash_mismatch`); plus
-**head anchor** (G2-4): for the latest published checkpoint, the entry at `last_seq` must exist and have
-`entry_hash = head_hash` (`anchor_mismatch`, which catches truncation or rewriting before the checkpoint).
-Returns the first failure.
+Walks by `seq`: continuity (`seq_gap`), link (`link_broken`), recomputed hash (`hash_mismatch`), and
+consistency with the latest `ledger_roots` row (`anchor_mismatch`). **This proves only that the database
+agrees with itself.** A database owner who rewrites every later hash *and* `ledger_roots` passes it
+(re-check #4 PARTIAL). The external check is §4.5.
 
-### 4.5 Merkle root and the external witness (G2-4)
+### 4.5 Merkle checkpoint and the external witness: human-verifiable (N1)
 
-- Leaf node `sha256(0x00 ‖ entry_hash bytes)`, parent `sha256(0x01 ‖ left ‖ right)`, odd node carried up,
-  empty = `sha256('')`; ordered by `seq`.
-- **Checkpoint** (demo and every `checkpoint_every_min` while `demo_mode`; the daily job is cut to P1):
-  `private.ledger_checkpoint()` computes `(first_seq, last_seq, leaf_count, root_hex, head_hash)` and
-  queues a Telegram dispatch whose text carries the **full 64-hex root and full head hash** in a fixed,
-  parseable line: `SPOTTER-LEDGER v1 seq=1..214 n=214 root=<64 hex> head=<64 hex>`.
-- `ledger_roots`: `id`, `kind`, `first_seq`, `last_seq`, `leaf_count`, `root_hex`, `head_hash`,
-  `computed_at`, **`telegram_chat_id`, `telegram_message_id`, `sent_text`, `sent_at`** (filled by
-  `dispatch` from Telegram's response). Insert-only.
-- **Witness check** = Edge Function **`ledger-witness`** (FM JWT): Telegram `forwardMessage(chat_id =
-  supervisor chat, from_chat_id = supervisor chat, message_id = telegram_message_id)`, which returns the
-  sent `Message` with its text [V core.telegram.org/bots/api#forwardmessage] → parse the
-  `SPOTTER-LEDGER` line **from Telegram's copy** → call `public.ledger_recompute_root(first_seq,
-  last_seq)` and `ledger_verify` → return `{telegram_root, recomputed_root, match, head_ok}`. The database
-  copy of the root is shown but **not trusted**. The forwarded copy also appears in the chat as a visible
-  re-check.
-- Limits stated honestly: (1) the Telegram Bot API has no "get message by id" [V: none documented], so
-  the forward is the re-fetch; (2) whoever holds the bot token can edit the witness (`edit_date` exists on
-  `Message` [V]); our threat model separates the database owner from the Edge Function secrets holder;
-  (3) entries after the last checkpoint are covered only by the chain until the next checkpoint (30 min
-  in demo mode); (4) RFC 3161 timestamping stays on the roadmap as the second witness.
+- Leaf node `sha256(0x00 ‖ raw 32-byte entry_hash)` (the raw bytes, not the hex text; re-check (c)),
+  parent `sha256(0x01 ‖ left ‖ right)`, odd node carried up, empty = `sha256('')`, ordered by `seq`.
+- **Checkpoint** (director command, and every 30 min in demo mode; the daily job is P1):
+  `ledger_checkpoint()` takes lock 4210001, computes `(first_seq, last_seq, leaf_count, root_hex,
+  head_hash)` and queues one Telegram message to the fleet manager:
+  `SPOTTER-LEDGER v1 seq=1..214 n=214 root=<64 hex> head=<64 hex> at=14:02 IST`.
+  `ledger_roots` stores what was sent (for display only).
+- **Witness check = a human comparison, and we claim only that.** Verify recomputes, **from the ledger
+  rows alone**, the root and head for `seq 1..N`, where **N is typed or picked by the fleet manager
+  from the message in her own Telegram chat** (not read from `ledger_roots`). The console shows the
+  recomputed root/head beside an empty box where she pastes (or reads out) the line from her chat, and
+  highlights the first differing character. The demo claim is **"externally witnessed,
+  human-verifiable"**. No automated external check is claimed.
+- The automated `ledger-witness` function (`forwardMessage` using a database-supplied message id) is
+  **dropped**: the database owner can make `dispatch` post a forged line and repoint the id (N1). It also
+  added a duplicate message per Verify.
+- Limits, stated on the security slide: whoever holds the bot token can edit or post witness lines;
+  the human must use the checkpoint message sent at the time she remembers (the chat history is the
+  witness, ordered by Telegram, not by us); entries after the last checkpoint are covered only by the
+  chain.
+- **Second, owner-independent anchor → roadmap (not P0).** OpenTimestamps: submitting a digest to a
+  public calendar takes minutes, but the Bitcoin attestation needed to verify it arrives hours later
+  [U: timings from general knowledge, not re-checked], so it cannot be shown in the demo and does not fit
+  1 h with its verification path. A commit to a public git repo is rewritable by force-push and needs a
+  write token in our secrets, so it adds little over Telegram. Both stay on the roadmap with RFC 3161.
 
 ### 4.6 Tamper demo
 
-1. Publish a checkpoint (Telegram shows the full root and head).
-2. Naive edit as the database owner (disable the trigger, edit, re-enable) → Verify: "chain breaks at #N
-   (hash_mismatch)".
-3. Sophisticated edit (`demo_tamper(seq,'rehash')`, which also rewrites `ledger_roots.root_hex`) →
-   chain ✓, **anchor ✗ and witness ✗**: Telegram's root ≠ the recomputed root.
+1. Checkpoint → Anita's Telegram shows the full root and head for `seq=1..214`.
+2. Naive edit as the database owner (disable the trigger, edit, re-enable) → Verify: "chain breaks at
+   #N (hash_mismatch)".
+3. Consistent edit (`demo_tamper(seq,'rehash')` rewrites every later hash **and** `ledger_roots.root_hex`
+   **and** `head_hash`; it takes lock 4210001) → the internal Verify is ✓ (said out loud: "the database
+   agrees with itself"), then Anita enters `1..214`, the recomputed root is shown beside her Telegram
+   line, and they differ. That difference is the proof.
 Backup `private.demo_tamper` only via `director` when `demo_mode`.
 
 ### 4.7 Ledger and rehearsals
@@ -481,20 +549,40 @@ entries are visually grouped by `run_id` in the console.
 `alert_ack`, `incident_log`, `ledger_verify`, `near_miss_list`, `lesson_complete`, `replay_submit`,
 `lesson_assign`, `consent_set`, `my_snapshot`.
 
-## 6. Scheduled jobs (pg_cron): each job is its own transaction (G2-1)
+## 6. Scheduled jobs (pg_cron): two jobs (N4, N5)
 
-| Job | Schedule | Does | Touches |
+pg_cron opens a new libpq connection per run by default [V pg_cron README] and never runs two instances
+of one job at once (a late run is queued) [V]. Revision 3 therefore uses **two** 1-second jobs, not four:
+| Job | Schedule | Command | Does |
 |---|---|---|---|
-| `sos-escalator` | `'1 seconds'` | `private.escalations_due()` only: `select … for update skip locked` on due alerts, CAS, insert escalation dispatches | `alerts`, `dispatches`, `events` (no ledger, no frames) |
-| `scenario-tick` | `'1 seconds'` | `set local statement_timeout = '5s'`; `pg_try_advisory_xact_lock(4210002)` or skip; apply ≤ `max_frames_per_tick` frames, each detector call in its own `begin … exception` block → `tick_errors`; write `tick_log` | frames, state, anomalies, events, alerts, `ledger_queue` |
-| `ledger-writer` | `'1 seconds'` | `ledger_drain(50)` | `incidents`, `ledger_queue`, events |
-| `dispatch-requeue` | `'5 seconds'` | requeue stuck dispatches (§3.3) | `dispatches` |
-| `housekeeping` | `'*/10 * * * *'` | delete `cron.job_run_details` > 1 h; `tick_log` > 24 h; size guard (§7) | — |
-| `demo-checkpoint` | `'*/30 * * * *'` | `ledger_checkpoint()` if `demo_mode` | `ledger_roots`, dispatches |
+| `sos-escalator` | `'1 seconds'` | `call private.escalate_step();` | due alerts `for update skip locked`, CAS, escalation dispatches. Touches only `alerts`, `dispatches`, `events`, `loop_queue` (insert only). Isolated from everything below |
+| `worker` | `'1 seconds'` | `call private.worker_step();` | a **procedure** that `COMMIT`s between steps [V pg_cron runs `CALL`]: (1) ledger drain, (2) Loop queue, (3) scenario tick (≤ 200 frames, per-frame exception blocks, try-lock 4210002), (4) every 5th second: dispatch requeue and housekeeping. Each step is wrapped in its own exception block, so one failing step cannot stop the others |
+| `demo-checkpoint` | `'*/30 * * * *'` | `call private.ledger_checkpoint_if_demo();` | §4.5 |
+| `housekeeping-hourly` | `'0 * * * *'` | `call private.housekeeping();` | delete `cron.job_run_details` > 1 h, `tick_log` > 24 h, size guard (§7) |
 
-A failing tick can no longer block, roll back or delay an SOS escalation, and `sos_raise` never waits on
-a lock held by a job. [U] `cron.log_statement` defaults to true (G2-21); B0 checks whether it can be set
-off on Supabase; if not, the extra log lines are accepted (they are logs, not database size).
+- **Statement timeout (N4).** `set local` inside a function does not bound the statement already
+  running (the reviewer's point, accepted). A `set …; call …` job command is also avoided, because a
+  multi-statement simple query forms one implicit transaction block, in which a procedure cannot `COMMIT`
+  between steps [A: PostgreSQL CALL semantics; B9 confirms]. Design instead:
+  1. **The real guarantee is bounded work per step**: ≤ 200 frames per tick, ≤ 50 ledger rows per drain,
+     ≤ 20 Loop items, ≤ 50 due alerts; every query is index-backed. B11 measures p95 and max per step.
+  2. **Backstop timeout** through the job's role: `cron.schedule_in_database(name, schedule, command,
+     database, username)` [V signature] with roles `spotter_worker` (`alter role … set
+     statement_timeout = '8s'`) and `spotter_sos` (`'3s'`). [U] whether Supabase lets the project owner
+     schedule jobs as another role; B0 checks. If not, the `postgres` role's 2-min cap is the backstop and
+     rule 1 carries the guarantee.
+  3. B9 proves the behaviour with a probe step that sleeps 10 s: it must be cancelled (backstop in
+     place) or the gap is recorded in the track log.
+- **Connections (N5):** 2 new connections per second (≈ 173k/day) instead of 3-4. B11 measures
+  connection count and job duration from `cron.job_run_details` over a 10-minute play at 60×
+  (acceptance: no job run > 1 s p95, no queued runs). [U] whether Supabase enables
+  `cron.use_background_workers`; B0 reads the setting.
+- **Director `manual_tick`** takes the same try-lock 4210002 as the worker's tick step (N5), so it can
+  never run concurrently with the job.
+- `sos-escalator` never waits on a lock held by `worker`: it takes no advisory lock, and it skips rows
+  another transaction has locked. A slow or failing tick delays only the `worker` job.
+- `sos_raise` takes no advisory lock (it emits an event; the ledger entry is enqueued).
+[U] `cron.log_statement` (G2-21): B0 checks whether it can be turned off.
 
 ## 7. Size budget, including rehearsals and Realtime (G2-15)
 
@@ -511,5 +599,9 @@ page, and if they count, Spotter goes in its own organisation.
 | Eval sandbox (transient, one day at a time, truncated) | ≤ 15 MB peak |
 | pg_net responses (6 h), `cron.job_run_details` (1 h), `tick_log` (24 h) | ≤ 10 MB |
 | **Planned peak** | **≈ 260 MB** |
+`purge_run(run_id)` (rehearsal runs only) deletes, in order: `replay_attempts`, `replay_scenarios`,
+`lesson_assignments`, `loop_queue` rows, dispatches, alerts, events, anomalies, state, trail, telemetry of
+that run. The ledger and `ledger_queue` rows are kept; nothing in the ledger has a foreign key to them
+(re-check #15 residual).
 Guards: seed fails above 300 MB; `housekeeping` emits `system.db_size_warning` above 400 MB;
 `demo-check` prints size. [U] deleting old rows from `realtime.messages` ourselves: not relied on.
