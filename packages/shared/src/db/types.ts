@@ -53,6 +53,151 @@ export type Database = {
         }
         Relationships: []
       }
+      alerts: {
+        Row: {
+          abuse_suspected: boolean
+          ack_at: string | null
+          ack_by: string | null
+          ack_via: Database["public"]["Enums"]["ack_via"] | null
+          escalate_at: string | null
+          escalation_level: number
+          first_seen: string
+          hazard_key: string
+          id: string
+          kind: string
+          last_seen: string
+          machine_id: string | null
+          needs_ack: boolean
+          occurrences: number
+          operator_id: string | null
+          origin_event_id: string | null
+          protocol_card_id: string | null
+          run_id: string | null
+          site_id: string
+          status: Database["public"]["Enums"]["alert_status"]
+          suppress_reason: Database["public"]["Enums"]["suppress_reason"] | null
+          suppressed_by: string | null
+          tier: Database["public"]["Enums"]["alert_tier"]
+          tier_history: Json
+          updated_at: string
+        }
+        Insert: {
+          abuse_suspected?: boolean
+          ack_at?: string | null
+          ack_by?: string | null
+          ack_via?: Database["public"]["Enums"]["ack_via"] | null
+          escalate_at?: string | null
+          escalation_level?: number
+          first_seen?: string
+          hazard_key: string
+          id?: string
+          kind: string
+          last_seen?: string
+          machine_id?: string | null
+          needs_ack?: boolean
+          occurrences?: number
+          operator_id?: string | null
+          origin_event_id?: string | null
+          protocol_card_id?: string | null
+          run_id?: string | null
+          site_id: string
+          status?: Database["public"]["Enums"]["alert_status"]
+          suppress_reason?:
+            | Database["public"]["Enums"]["suppress_reason"]
+            | null
+          suppressed_by?: string | null
+          tier: Database["public"]["Enums"]["alert_tier"]
+          tier_history?: Json
+          updated_at?: string
+        }
+        Update: {
+          abuse_suspected?: boolean
+          ack_at?: string | null
+          ack_by?: string | null
+          ack_via?: Database["public"]["Enums"]["ack_via"] | null
+          escalate_at?: string | null
+          escalation_level?: number
+          first_seen?: string
+          hazard_key?: string
+          id?: string
+          kind?: string
+          last_seen?: string
+          machine_id?: string | null
+          needs_ack?: boolean
+          occurrences?: number
+          operator_id?: string | null
+          origin_event_id?: string | null
+          protocol_card_id?: string | null
+          run_id?: string | null
+          site_id?: string
+          status?: Database["public"]["Enums"]["alert_status"]
+          suppress_reason?:
+            | Database["public"]["Enums"]["suppress_reason"]
+            | null
+          suppressed_by?: string | null
+          tier?: Database["public"]["Enums"]["alert_tier"]
+          tier_history?: Json
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "alerts_kind_fkey"
+            columns: ["kind"]
+            isOneToOne: false
+            referencedRelation: "alert_policies"
+            referencedColumns: ["kind"]
+          },
+          {
+            foreignKeyName: "alerts_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_origin_event_id_fkey"
+            columns: ["origin_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_protocol_card_id_fkey"
+            columns: ["protocol_card_id"]
+            isOneToOne: false
+            referencedRelation: "protocol_cards"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "alerts_suppressed_by_fkey"
+            columns: ["suppressed_by"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       app_config: {
         Row: {
           checkpoint_every_min: number
@@ -130,6 +275,74 @@ export type Database = {
           },
         ]
       }
+      dispatches: {
+        Row: {
+          alert_id: string | null
+          attempts: number
+          body: Json
+          channel: Database["public"]["Enums"]["dispatch_channel"]
+          created_at: string
+          error: Json | null
+          escalation_level: number
+          id: string
+          provider_ref: string | null
+          purpose: string
+          recipient_ref: string
+          recipient_role: Database["public"]["Enums"]["app_role"]
+          sending_at: string | null
+          status: Database["public"]["Enums"]["dispatch_status"]
+          subject_id: string | null
+          subject_key: string | null
+          updated_at: string
+        }
+        Insert: {
+          alert_id?: string | null
+          attempts?: number
+          body?: Json
+          channel: Database["public"]["Enums"]["dispatch_channel"]
+          created_at?: string
+          error?: Json | null
+          escalation_level?: number
+          id?: string
+          provider_ref?: string | null
+          purpose: string
+          recipient_ref: string
+          recipient_role: Database["public"]["Enums"]["app_role"]
+          sending_at?: string | null
+          status?: Database["public"]["Enums"]["dispatch_status"]
+          subject_id?: string | null
+          subject_key?: string | null
+          updated_at?: string
+        }
+        Update: {
+          alert_id?: string | null
+          attempts?: number
+          body?: Json
+          channel?: Database["public"]["Enums"]["dispatch_channel"]
+          created_at?: string
+          error?: Json | null
+          escalation_level?: number
+          id?: string
+          provider_ref?: string | null
+          purpose?: string
+          recipient_ref?: string
+          recipient_role?: Database["public"]["Enums"]["app_role"]
+          sending_at?: string | null
+          status?: Database["public"]["Enums"]["dispatch_status"]
+          subject_id?: string | null
+          subject_key?: string | null
+          updated_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "dispatches_alert_id_fkey"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
       event_types: {
         Row: {
           alert_kind: string | null
@@ -162,6 +375,119 @@ export type Database = {
           type?: string
         }
         Relationships: []
+      }
+      events: {
+        Row: {
+          alert_id: string | null
+          audiences: Database["public"]["Enums"]["audience"][]
+          causation_id: string | null
+          correlation_id: string | null
+          id: string
+          idempotency_key: string
+          machine_id: string | null
+          operator_id: string | null
+          payload: Json
+          recorded_at: string
+          run_id: string | null
+          seq: number
+          sim_ts: string | null
+          site_id: string
+          source: string
+          task_id: string | null
+          tier: Database["public"]["Enums"]["alert_tier"] | null
+          type: string
+        }
+        Insert: {
+          alert_id?: string | null
+          audiences: Database["public"]["Enums"]["audience"][]
+          causation_id?: string | null
+          correlation_id?: string | null
+          id?: string
+          idempotency_key: string
+          machine_id?: string | null
+          operator_id?: string | null
+          payload: Json
+          recorded_at?: string
+          run_id?: string | null
+          seq?: never
+          sim_ts?: string | null
+          site_id: string
+          source: string
+          task_id?: string | null
+          tier?: Database["public"]["Enums"]["alert_tier"] | null
+          type: string
+        }
+        Update: {
+          alert_id?: string | null
+          audiences?: Database["public"]["Enums"]["audience"][]
+          causation_id?: string | null
+          correlation_id?: string | null
+          id?: string
+          idempotency_key?: string
+          machine_id?: string | null
+          operator_id?: string | null
+          payload?: Json
+          recorded_at?: string
+          run_id?: string | null
+          seq?: never
+          sim_ts?: string | null
+          site_id?: string
+          source?: string
+          task_id?: string | null
+          tier?: Database["public"]["Enums"]["alert_tier"] | null
+          type?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "events_alert_fk"
+            columns: ["alert_id"]
+            isOneToOne: false
+            referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_machine_id_fkey"
+            columns: ["machine_id"]
+            isOneToOne: false
+            referencedRelation: "machines"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_run_id_fkey"
+            columns: ["run_id"]
+            isOneToOne: false
+            referencedRelation: "scenario_runs"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_task_id_fkey"
+            columns: ["task_id"]
+            isOneToOne: false
+            referencedRelation: "tasks"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "events_type_fkey"
+            columns: ["type"]
+            isOneToOne: false
+            referencedRelation: "event_types"
+            referencedColumns: ["type"]
+          },
+        ]
       }
       explanation_templates: {
         Row: {
@@ -246,6 +572,85 @@ export type Database = {
             referencedColumns: ["id"]
           },
         ]
+      }
+      lesson_assignments: {
+        Row: {
+          assigned_at: string
+          because_event_id: string | null
+          completed_at: string | null
+          id: string
+          lesson_id: string
+          operator_id: string
+          quiz_score: number | null
+        }
+        Insert: {
+          assigned_at?: string
+          because_event_id?: string | null
+          completed_at?: string | null
+          id?: string
+          lesson_id: string
+          operator_id: string
+          quiz_score?: number | null
+        }
+        Update: {
+          assigned_at?: string
+          because_event_id?: string | null
+          completed_at?: string | null
+          id?: string
+          lesson_id?: string
+          operator_id?: string
+          quiz_score?: number | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: "lesson_assignments_because_event_id_fkey"
+            columns: ["because_event_id"]
+            isOneToOne: false
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_assignments_lesson_id_fkey"
+            columns: ["lesson_id"]
+            isOneToOne: false
+            referencedRelation: "lessons"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "lesson_assignments_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      lessons: {
+        Row: {
+          code: string
+          content: Json
+          id: string
+          topic_event_types: string[]
+          version: number
+          video_paths: Json | null
+        }
+        Insert: {
+          code: string
+          content: Json
+          id?: string
+          topic_event_types?: string[]
+          version?: number
+          video_paths?: Json | null
+        }
+        Update: {
+          code?: string
+          content?: Json
+          id?: string
+          topic_event_types?: string[]
+          version?: number
+          video_paths?: Json | null
+        }
+        Relationships: []
       }
       machine_models: {
         Row: {
@@ -749,6 +1154,156 @@ export type Database = {
           version?: number
         }
         Relationships: []
+      }
+      replay_attempts: {
+        Row: {
+          choices: Json
+          completed_at: string | null
+          efficiency_score: number | null
+          id: string
+          open_order: string[]
+          operator_id: string
+          procedure_score: number | null
+          process_trace: Json | null
+          replay_id: string
+          safety_score: number | null
+          started_at: string
+        }
+        Insert: {
+          choices?: Json
+          completed_at?: string | null
+          efficiency_score?: number | null
+          id?: string
+          open_order?: string[]
+          operator_id: string
+          procedure_score?: number | null
+          process_trace?: Json | null
+          replay_id: string
+          safety_score?: number | null
+          started_at?: string
+        }
+        Update: {
+          choices?: Json
+          completed_at?: string | null
+          efficiency_score?: number | null
+          id?: string
+          open_order?: string[]
+          operator_id?: string
+          procedure_score?: number | null
+          process_trace?: Json | null
+          replay_id?: string
+          safety_score?: number | null
+          started_at?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: "replay_attempts_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replay_attempts_replay_id_fkey"
+            columns: ["replay_id"]
+            isOneToOne: false
+            referencedRelation: "replay_scenarios"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      replay_scenarios: {
+        Row: {
+          answer_key: Json
+          created_at: string
+          id: string
+          operator_id: string
+          scenario_json: Json
+          source_event_id: string
+          template_version: number
+        }
+        Insert: {
+          answer_key?: Json
+          created_at?: string
+          id?: string
+          operator_id: string
+          scenario_json: Json
+          source_event_id: string
+          template_version: number
+        }
+        Update: {
+          answer_key?: Json
+          created_at?: string
+          id?: string
+          operator_id?: string
+          scenario_json?: Json
+          source_event_id?: string
+          template_version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "replay_scenarios_operator_id_fkey"
+            columns: ["operator_id"]
+            isOneToOne: false
+            referencedRelation: "operators"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "replay_scenarios_source_event_id_fkey"
+            columns: ["source_event_id"]
+            isOneToOne: true
+            referencedRelation: "events"
+            referencedColumns: ["id"]
+          },
+        ]
+      }
+      replay_templates: {
+        Row: {
+          brief: Json
+          correct_protocol_order: string[]
+          decide_steps: Json
+          event_type: string
+          evidence_spec: Json
+          ideal_open_order: string[]
+          protocol_card_id: string
+          version: number
+        }
+        Insert: {
+          brief: Json
+          correct_protocol_order: string[]
+          decide_steps: Json
+          event_type: string
+          evidence_spec: Json
+          ideal_open_order: string[]
+          protocol_card_id: string
+          version?: number
+        }
+        Update: {
+          brief?: Json
+          correct_protocol_order?: string[]
+          decide_steps?: Json
+          event_type?: string
+          evidence_spec?: Json
+          ideal_open_order?: string[]
+          protocol_card_id?: string
+          version?: number
+        }
+        Relationships: [
+          {
+            foreignKeyName: "replay_templates_event_type_fkey"
+            columns: ["event_type"]
+            isOneToOne: true
+            referencedRelation: "event_types"
+            referencedColumns: ["type"]
+          },
+          {
+            foreignKeyName: "replay_templates_protocol_card_id_fkey"
+            columns: ["protocol_card_id"]
+            isOneToOne: false
+            referencedRelation: "protocol_cards"
+            referencedColumns: ["id"]
+          },
+        ]
       }
       scenario_frames: {
         Row: {
@@ -1463,7 +2018,7 @@ export type Database = {
       }
     }
     Functions: {
-      [_ in never]: never
+      my_snapshot: { Args: never; Returns: Json }
     }
     Enums: {
       ack_via: "app" | "telegram" | "twilio_keypress" | "sensor"

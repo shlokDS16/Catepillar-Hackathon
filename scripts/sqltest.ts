@@ -23,7 +23,7 @@ if (files.length === 0) {
   console.error(`no test files in ${dir} matching ${filter}`);
   process.exit(2);
 }
-const sql = connect({ quiet: true });
+const sql = connect({ quiet: true, warnings: true });   // NOTICEs are noise, WARNINGs are test signals
 let failed = 0;
 for (const file of files) {
   const text = readFileSync(join(dir, file), "utf8");
