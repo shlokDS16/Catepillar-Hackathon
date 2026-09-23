@@ -22,7 +22,9 @@
     "simStatus": "Sim {time} ×{speed}",
     "noSignalStatus": "No signal · synced {time}",
     "safetyLabel": "{count, plural, =1 {Open safety: {state}} other {Open safety: {state}, {count} alerts}}",
-    "skipToContent": "Skip to content"
+    "skipToContent": "Skip to content",
+    "sosHold": "SOS: hold for 1.5 seconds to send",
+    "sosOpen": "Tap to open"
   },
   "start": {
     "chooseLanguage": "Choose your language"
@@ -81,5 +83,25 @@
     "fixIt": "Fix it: fasten seatbelt, or stop to respond",
     "upgraded": "Raised from {tier}",
     "takeover": "{tier} alert"
+  },
+  "sos": {
+    "title": "SOS",
+    "sending": "Sending SOS…",
+    "sent": "SOS sent",
+    "location": {
+      "device": "Location: from your phone",
+      "machine": "Location: from machine",
+      "site": "Location: site centre"
+    },
+    "escalatesIn": "Calling your supervisor in {s} s if no answer",
+    "escalated": "Supervisor called",
+    "cancel": "Cancel SOS",
+    "cancelWindow": "{s} s left to cancel",
+    "cancelled": "SOS cancelled",
+    "notSent": "Not sent. No signal.",
+    "retrying": "Retrying with the same request (attempt {n})",
+    "callSupervisor": "Call supervisor",
+    "listen": "Listen",
+    "soundBlocked": "Sound blocked, tap Listen"
   }
 }
