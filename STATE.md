@@ -4,8 +4,11 @@
 > side project. On resume: read the final lines of docs/sessions/track-b.md and track-f.md (each track
 > was asked to leave a WIP commit + "where I stopped" line), then merge in protocol order.
 > Resume points: Track B mid-B4 (migration 002 already applied to Supabase, reviews pending; realtime
-> partitions only through 26 Sep, re-run scripts/b0/realtime-wake.ts first). Track F mid-F06/F07
-> (fixture adapter, provenance, audio). Showable 1 still needs F06-F08 + F12.
+> partitions only through 26 Sep, re-run scripts/b0/realtime-wake.ts first).
+> Track F STOPPED at track-f 8c1a019 (pushed, NOT merged): F06 hero + motion lock, F07 fixtures/
+> DataPort/store/provenance/useAudio (@cat/shared), F08 Home, fixture /director, F12 started (no
+> MapView). Green: typecheck, lint, 44 vitest, build. The F06-F08 code-reviewer pass never returned:
+> apply it first, then merge. Showable 1 then needs only F12 MapView.
 > Live site stays up (dry-run SOS). Vercel production still holds Twilio/Telegram secrets (unused in
 > dry-run); remove them if the project is abandoned.
 
