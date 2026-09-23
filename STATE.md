@@ -17,6 +17,7 @@
   show hard-coded dashboards).
 - **Mobile (after review 1, D4):** load Shlok's skills ios-app-development + iosui (iOS/TestFlight) and
   Andriod_app + Andriod_APPUI (Android APK), adapted to Spotter. Credentials: .env.example "Mobile" section.
+- **AFTER THE REVIEW (integrator, do first):** set Vercel production SOS_LIVE=0 (public unauthenticated route places real Twilio calls) and remove KIT_PUBLIC unless Shlok keeps /dev/kit public; redeploy.
 - **Shlok actions during build:** B24c SOP review (~20 min, when Track B asks); OK before any live Twilio call.
 - **Verified env (2026-09-23):** Supabase (Mumbai, active), Groq A+B, Gemini, Pinecone, Voyage,
   LlamaCloud, Twilio (trial, $5.90, both demo phones verified), Telegram (@Spotter125Bot, chat

@@ -66,6 +66,7 @@ Only the integrator ticks this section, from docs/sessions/track-b.md and track-
 - [x] F03 op/fm shells, strip, nav + rail, SOS/Ask slots, z-layers: merged (see git log), build green; deviation: sheets non-modal so SOS stays tappable
 - [x] F04 alert tiers, useAlertFeedback, selectors, takeover + banner: merged 7087ab9; vitest 15/15 (log said 20), typecheck + build green
 - [x] F05 SOS hold-to-arm + SOS sheet on fixtures: merged d1bcd33, build green, deployed for the review; KIT_PUBLIC=1 set in Vercel production so /dev/kit serves (revert after the review)
+- [x] F05b SOS review-demo route /api/sos-demo (Telegram + one Twilio call per hold): merged 090acbf; SOS_LIVE=1 + 6 sensitive Twilio/Telegram vars in Vercel production, Shlok approved LIVE FOR THE REVIEW ONLY (set SOS_LIVE=0 after). Stand-in until F13 uses sos_raise.
 ### Showable milestones (build-protocol.md)
 - [ ] Showable 1 (≈ H3-4): fixture-driven cockpit, alerts, SOS, map, EN/HI deployed
 - [ ] Showable 2 (≈ H8-9): + Replay 4 phases, FM inbox + ledger UI
