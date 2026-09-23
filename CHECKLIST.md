@@ -53,9 +53,11 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 ## P4 — Build (Fable 5.1; two tracks + integrator, docs/sessions/build-protocol.md)
 Only the integrator ticks this section, from docs/sessions/track-b.md and track-f.md at each merge.
 - [x] H0 setup: vercel login OK (shlokds16), worktrees track-b/track-f, .env + apps/web/.env.local copies, pnpm install, web build green
-- [ ] H0 deploy smoke test on the Android phone (tasks B0b + F01's vibration/sound test page)
+- [~] H0 deploy smoke test on the Android phone (tasks B0b + F01's vibration/sound test page): deployed, awaiting Shlok's phone check at /haptics-test.html
 ### Track B (docs/architecture/backend-tasks.md)
 - [ ] B0 → … (tick each task ID as merged; full list in backend-tasks.md)
+- [x] B0 project link, function config, secrets, Vault, COMMIT probe PASS, Pinecone spotter-kb, smoke 11/11: merged 455b317
+- [x] B0b Vercel: project shlok-goenkas-projects/spotter (Next.js, root apps/web), 3 prod env vars, git-connected; production https://spotter-five-brown.vercel.app (200)
 ### Track F (docs/design/frontend-tasks.md)
 - [ ] F01 → … (tick each task ID as merged; full list in frontend-tasks.md)
 - [x] F01 tokens, fonts, Plate/Button/Chip, pictograms, /dev/kit, haptics-test page: merged 4393f2c (favicon fix 73c6e58), web build green
