@@ -41,7 +41,7 @@
 
 | time | task | status | SHA | blockers |
 |---|---|---|---|---|
-| 2026-09-23 17:40 IST | B1 contracts v1.0.0, gen-sql-seed, fixtures, freeze | done, **merge-ready**; tag `contracts-v1.0.0` is applied to the B1 commit | (set on commit) | none |
+| 2026-09-23 17:40 IST | B1 contracts v1.0.0, gen-sql-seed, fixtures, freeze | done, **merge-ready**; tag `contracts-v1.0.0` on this commit | a8a214e | none |
 
 **Delivered (`packages/shared`, api-contracts rev 3 §1 layout):** `contracts/{version,enums,events,registry,rpc,replay,lesson,functions,realtime,evidence,assumed,explain,audio,analytics,models}.ts`, `eta/model.ts` + `eta/model.v1.ts`, `fixtures/index.ts` (22 schema ↔ example pairs, exported as `@cat/shared/fixtures`), `contracts.test.ts` (+ the `AskAnswer` JSON-schema snapshot). `scripts/lib/contracts-sql.ts` + `scripts/gen-sql-seed.ts` write `supabase/migrations/20260923000000_contracts_enums.sql` (23 enums) and `supabase/seed/contracts_registry.sql` (47 event types, 9 alert policies, 7 explanation templates); `--into <migration>` embeds the seed between markers for B4. `scripts/gen-sql-seed.test.ts` fails when the committed SQL is stale.
 **Tests:** vitest 42/42 (`pnpm exec vitest run packages/shared scripts`); `pnpm exec tsc` exit 0 for `packages/shared`, `scripts` and `apps/web` (Track F's imports still resolve; `sync.ts` stays exported).
