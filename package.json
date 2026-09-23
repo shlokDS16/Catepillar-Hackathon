@@ -8,5 +8,9 @@
     "build:web": "pnpm --filter web build",
     "lint": "pnpm -r --if-present lint",
     "typecheck": "pnpm -r --if-present typecheck"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.15",
+    "vitest": "^5.0.1"
   }
 }

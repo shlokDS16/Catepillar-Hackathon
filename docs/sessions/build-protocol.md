@@ -31,6 +31,17 @@ Tasks run in **dependency order** as defined by the dependency graph in backend-
 frontend-tasks.md, not in raw list order. Within a track: one task at a time (the approved subagent
 lane is the only exception). Review after every task (backend-reviewer / code-reviewer). Commit per task.
 
+## Showable milestones (Shlok: other teams already show hard-coded dashboards, so we must always have a live URL)
+- **Showable 1 (target ≈ H3-4, Track F on fixtures):** Home cockpit with the hero card and today's tasks,
+  the alert tiers (vibration + sound on Android Chrome), SOS hold-to-arm, the map with trail and machines,
+  and language switch EN/HI. Track F pushes, and the integrator merges and deploys a Vercel preview. That
+  URL is the one to show.
+- **Showable 2 (≈ H8-9):** plus Replay on fixtures (all 4 phases) and the fleet-manager inbox and ledger UI.
+- **Showable 3 (≈ H11-12):** live data. The director panel drives a real scenario; Guardian places a real
+  Twilio call (with Shlok's OK); Telegram alerts are real.
+- The demo must never go backwards: a module switches from fixtures to live data only when its live
+  version works end to end.
+
 ## Budget guards
 Twilio: DRY_RUN on by default; live calls only when Shlok says so ($5.90 ≈ 100 min). Groq chain per D9.
 Sarvam: audio generated once by the batch script, then committed as static files.

@@ -44,3 +44,8 @@ in `claude/`. End-of-session routine runs before any session finishes.
 - Research 10-14 done (12 final compile pending). Spec v1 "Spotter" written (docs/specs/idea.md). Three G1 reviews running.
 - Shlok: gh login not needed (git push via credential manager); Supabase region = Mumbai.
 - Env check (read-only, no values logged): Supabase project ACTIVE in ap-south-1, keys + access token valid, postgis/vector/pg_cron/pg_net available (not yet enabled). Groq x2 valid (needs User-Agent header; 11 models incl. gpt-oss-120b/20b, qwen3.8-27b, whisper-large-v3, llama-prompt-guard-2, gpt-oss-safeguard-20b). Pinecone valid (existing indexes ledgrai-faq, demo; spotter-kb not yet created). Voyage, LlamaCloud valid. Twilio trial active, $5.90 balance, from-number owned; demo phones NOT verified. Telegram @Spotter125Bot valid, supervisor chat reachable. Sarvam x2 present (not called). Filled SUPABASE_PROJECT_REF, TELEGRAM_WEBHOOK_SECRET, DEMO_DRIVER_SECRET; phone spaces removed.
+
+## 2026-09-23 — Session 1 end: planning complete, build launched
+- G1 (spec v3 + D10 simulation-first training) and G2 (backend rev 3+, frontend plan v2, build protocol) passed after 5 red-team/validator rounds; all findings dispositioned in ADR-001.
+- H0: worktrees track-b/track-f, shared dependency commit (vitest, tsx, postgres, supabase-js, next-intl, maplibre-gl, @supabase/ssr), env copies incl. regenerated webhook + director secrets.
+- Next: three sessions (A integrator Opus; B and F on Fable 5.1). Showable 1 at ≈ H3-4.

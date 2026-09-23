@@ -1,0 +1,10 @@
+{
+  "name": "scripts",
+  "version": "0.0.0",
+  "private": true,
+  "type": "module",
+  "dependencies": {
+    "@supabase/supabase-js": "^2.117.1",
+    "postgres": "^3.4.9"
+  }
+}

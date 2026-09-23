@@ -2,23 +2,16 @@
 
 - **Updated:** 2026-09-23, session 1 (Opus 5.5, orchestrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)
-- **Phase:** P3, gate G2 (build plan). First pass FAILED on launch readiness (docs/gates/G2.md);
-  fixes in progress.
-- **In flight:**
-  - backend-lead: contract/task fixes (anomaly explanation + ₹ cost, Sarvam audio batch task,
-    one analytics chart, replay score drift, the assumed-fields registry, UI-17 to UI-22 owners, the
-    RAG corpus task, the dependency graph, tamper-evident wording).
-  - Orchestrator (done): build protocol (docs/sessions/build-protocol.md), RESUME prompts B/F,
-    CHECKLIST P4 track sections, the spec demo steps 4-5.
-- **Next action:** once backend-lead finishes → ui-ux-lead aligns frontend-tasks.md (re-adds the
-  analytics chart, anomaly explanation UI, audio manifest) + backend-reviewer re-checks rev 3 worker
-  procedure → phase-validator re-runs G2 → Shlok approves G2 → H0 setup per build-protocol.md →
-  "Switch now" (two Fable 5.1 sessions, prompts B and F in RESUME.md). The orchestrator stays open as
-  integrator. Reason: rule 1 + G2 FAIL.
-- **Decisions for Shlok at G2:** the subagent lane amendment; the cut lists of both tracks; the proximity
-  radar folded into the map rings.
-- **Blocking H0 (Shlok):** `vercel login` (the token is invalid). Fallback: import the GitHub repo in
-  the Vercel dashboard.
+- **Phase:** P4, BUILD. Gate G2 = PASS-WITH-FIXES (docs/gates/G2.md, the re-run's H0 fixes applied
+  2026-09-23). Decisions D1-D11 are final.
+- **Sessions:** A = integrator (Opus, main folder), B = Track B (Fable 5.1, ../spotter-track-b),
+  F = Track F (Fable 5.1, ../spotter-track-f). Prompts in RESUME.md; rules in docs/sessions/build-protocol.md.
+- **In flight:** Track B from B0 (includes the COMMIT probe, Pinecone index creation, and B0b Vercel
+  deploy); Track F from F01 toward **Showable 1** (fixture-driven demo, ≈ H3-4).
+- **Next action (integrator):** watch the track logs → merge contracts → merge Track F → deploy
+  Showable 1 preview and send Shlok the URL. Reason: Shlok needs a showable demo early (other teams
+  show hard-coded dashboards).
+- **Shlok actions during build:** B24c SOP review (~20 min, when Track B asks); OK before any live Twilio call.
 - **Verified env (2026-09-23):** Supabase (Mumbai, active), Groq A+B, Gemini, Pinecone, Voyage,
   LlamaCloud, Twilio (trial, $5.90, both demo phones verified), Telegram (@Spotter125Bot, chat
   reachable), Sarvam ×2 present. Pinecone index `spotter-kb` is not created yet (task B0).

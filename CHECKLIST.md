@@ -43,7 +43,8 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 ## P3 — Architecture and repo setup
 - [x] P3.1a Backend design v1 (Option C: DB owns time & truth) → docs/architecture/
 - [x] P3.1b G2 reviews: backend-reviewer FAIL (21 findings), program-architect READY-WITH-CHANGES
-- [~] P3.1c Backend design v2 (all findings dispositioned) + frontend plan (docs/design/*) in parallel
+- [x] P3.1c Backend design rev 3+ (all findings dispositioned) + frontend plan v2 (docs/design/*)
+- [x] **Gate G2**: FAIL → fixes → FAIL (H0 gaps) → fixed → PASS-WITH-FIXES; Shlok approved D11
 - [ ] P3.2 Folder structure (researched) scaffolded; git + GitHub remote
 - [ ] P3.3 Skills tailored per phase (copies under .claude/skills/, originals untouched)
 - [ ] P3.4 Task breakdown (task-master or writing-plans) with subtasks
@@ -57,6 +58,10 @@ Only the integrator ticks this section, from docs/sessions/track-b.md and track-
 - [ ] B0 → … (tick each task ID as merged; full list in backend-tasks.md)
 ### Track F (docs/design/frontend-tasks.md)
 - [ ] F01 → … (tick each task ID as merged; full list in frontend-tasks.md)
+### Showable milestones (build-protocol.md)
+- [ ] Showable 1 (≈ H3-4): fixture-driven cockpit, alerts, SOS, map, EN/HI deployed
+- [ ] Showable 2 (≈ H8-9): + Replay 4 phases, FM inbox + ledger UI
+- [ ] Showable 3 (≈ H11-12): live data, real Telegram + Twilio (Shlok's OK)
 ### Integration checkpoints
 - [ ] Contracts frozen and merged to main
 - [ ] Track F switched from the fixture adapter to live data
