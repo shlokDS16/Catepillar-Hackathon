@@ -220,7 +220,7 @@ ends in a **coached debrief**. The simulations are the learning; video is option
 Q&A backups: offline chip, Ask Spotter (if built), what-if ETA, the Tamil switch.
 
 ## 7b. Security story (a slide, plus it is built in)
-STRIDE threat model: SOS abuse (rate limit, audit, hold-to-arm), database access (RLS per role, secret
+STRIDE threat model: SOS abuse control (audit, hold-to-arm, never dropped or throttled), database access (RLS per role, secret
 key server-only), device login (auth, session expiry), AI prompt injection (retrieved and uploaded
 content treated as data, never as instructions), AI-initiated writes (incident logging needs human
 approval), and ledger tampering (canonical hash chain plus an external Merkle root).

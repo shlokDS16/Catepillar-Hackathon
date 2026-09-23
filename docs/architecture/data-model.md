@@ -285,26 +285,43 @@ so each statement stays under the 2-min `postgres` cap [V per G2 review].
 
 ### 2.8 Training, Replay and the Loop (G2-14, PA-1)
 
-**lessons**: `id`, `code unique` (`seatbelt_slopes`, `faulty_machine_nearby`), `title jsonb`,
-`video_paths jsonb`, `quiz jsonb`, `topic_event_types text[]`.
+**lessons** (D10: card-based micro-lessons; videos are P1): `id`, `code unique` (`seatbelt_slopes`,
+`faulty_machine_nearby`), `content jsonb` validated by `LessonContent` (3-5 cards + a 3-question quiz;
+api-contracts §5), `video_paths jsonb null` (P1), `topic_event_types text[]`, `version`.
 
 **lesson_assignments**: `id`, `operator_id`, `lesson_id`, `because_event_id null`, `assigned_at`,
 `completed_at`, `quiz_score`. Unique (operator_id, lesson_id, because_event_id).
 
-**replay_templates**: `event_type text pk` (P0: **`safety.seatbelt_breach` only**, cut list #7; changed
-in revision 3 to match the UI lead's demo beat 4, screens.md),
-`steps jsonb` (3-4 steps; each: prompt i18n, options with `id`, `correct_option`, `weight`,
-`time_limit_ms`), `version`.
+**replay_templates** (D10, authored content, one per event type; P0 = **`safety.seatbelt_breach`**, the
+UI's demo beat 4): `event_type text pk`, `version`, `brief jsonb` (i18n text slots),
+`evidence_spec jsonb` (which evidence card types to build, each with `relevant boolean` and a
+`why` text), `ideal_open_order text[]` (the ideal investigation order), `decide_steps jsonb` (3-4
+sequenced steps: prompt, choices, `correct_choice`, `time_limit_s`, `weight`, `score_axis` ∈ safety /
+procedure / efficiency), `correct_protocol_order text[]`, `protocol_card_id` (the rule is **quoted from
+this fixed card**, never generated).
 
 **replay_scenarios**: `id`, `source_event_id unique`, `operator_id`, `template_version`,
-`scenario_json jsonb` (validated by `ReplayScenario` in contracts): site map snapshot (zones within
-300 m), the operator's GPS trail for the 10 sim-minutes before the event, machine positions and health at
-`sim_ts`, wind at `sim_ts`, the faulty machine, the operator's real response time (event → ack), the
-steps from the template.
+`scenario_json jsonb` (validated by `ReplayScenario`, four phases), built by `private.build_replay` from
+the **event record plus the scenario frames**:
+- *Brief*: template text filled with the event's numbers (machine, slope, time).
+- *Investigate*: evidence cards, one per `evidence_spec` entry, payload by type:
+  `telemetry_trend` (speed, pitch, seatbelt from the machine's telemetry, 10 sim-min before → 2 after),
+  `wind` (from `weather_snapshots`), `map_snapshot` (zones within 300 m, the operator's trail, the
+  machine's track), `fault_code` (active codes at `sim_ts`, may be an irrelevant distractor),
+  `protocol_card` (the fixed card), `weather` (temperature, WBGT), `shift_hours` (hours since shift
+  start, circadian band).
+- *Decide*: the template's sequenced steps (no correct answers in the JSON sent to the client).
+- *Debrief* inputs: the re-enactment track (operator trail, machine positions and wind over time, from
+  frames and snapshots), the operator's real response time (event → ack), the quoted protocol rule.
 
 **replay_attempts**: `id`, `replay_id`, `operator_id`, `started_at`, `completed_at`,
-`outcome_score` (Σ weight of correct choices / Σ weights × 100), `process_score` (100 × share of steps
-answered within `time_limit_ms`, minus 25 if steps were answered out of order), `choices jsonb`.
+`open_order text[]` (evidence cards in the order opened), `choices jsonb` (step, choice, ms),
+`safety_score`, `procedure_score`, `efficiency_score` (0-100 each), `process_trace jsonb`.
+Scoring (server-side in `replay_submit`): **safety** = weighted correct choices on safety-axis steps;
+**procedure** = protocol order correctness (Kendall-style: share of correctly ordered pairs vs
+`correct_protocol_order`) + investigation process (share of relevant cards opened, minus irrelevant ones,
+and order agreement with `ideal_open_order`); **efficiency** = share of steps answered within their
+countdown. The response carries the process trace vs the ideal.
 
 **Loop builder (task B10b), after commit (N2):** the events insert trigger only inserts the event id into
 **`private.loop_queue`** (`event_id pk`, `enqueued_at`, `done_at`, `error`) when the event type has a
@@ -321,7 +338,7 @@ aggregates via `evidence_metrics` only (training records are non-punitive).
 ### 2.9 Ask Spotter (RAG)
 
 **kb_documents**, **kb_chunks** (mirror of Pinecone records; used to display citations and to run the
-**verbatim-rule check**, G2-13), **ask_logs** (`model`, `fallback_used`, `prompt_tokens`, `latency_ms`,
+**verbatim-rule check**, G2-13), **ask_logs** (`provider_served` (groq_a, gemini, groq_b; D9), `model`, `fallback_used`, `prompt_tokens`, `latency_ms`,
 `refusal_reason`). RLS: kb_* where role ∈ `audience`; ask_logs own; writes SVC.
 
 **private.ask_rate** (G2-6): `user_id`, `window_start`, `count`; global row `user_id = null` for the

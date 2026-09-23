@@ -248,16 +248,20 @@ sequenceDiagram
 5. Injection fixtures in B19: instructions inside a chunk, inside a photo's printed text, inside the
    question; each must end grounded or refused, and the log says which layer stopped it.
 
-**Providers: one Groq account, env-selected fallback (D9).**
-- The app uses **one** Groq account (`GROQ_API_KEY`, plus optional per-task keys of the **same**
-  organisation for observability). The second person's key/account is never read by the app, and there
-  is **no automatic cross-account failover** (the Groq AUP forbids orchestrating usage across
-  organisations to get around limits [R research 15]).
+**Providers: env-configurable chain (D9, updated by Shlok).**
+- Default `LLM_CHAIN=groq_a,gemini,groq_b`: Groq account A (`GROQ_API_KEY`) → Gemini
+  (`GOOGLE_GENERATIVE_AI_API_KEY`, verified live by the coordinator: `gemini-2.5-flash`,
+  `gemini-3-flash-preview` available) → Groq account B (`GROQ_API_KEY_BACKUP`). The next provider is tried
+  **only on 429 or 5xx**; any other 4xx is returned as an error (no chain walk).
+- **Every request logs `provider_served`** (and the model) in `ask_logs` and in `AskResponse`.
+- **AUP risk, accepted by Shlok:** using two Groq accounts for one app is what the Groq AUP describes as
+  orchestrating usage across organisations to get around limits [R research 15]. That is why Gemini sits
+  **before** account B: account B is the last resort, and the logs show how often it was used.
 - Code talks to a provider-agnostic `ChatProvider` interface (`complete(json-schema, messages)`,
-  `classify(text)`), with adapters `groq` and `gemini`. Selection is by environment:
-  `LLM_PRIMARY=groq` and `LLM_FALLBACK=none|gemini` (default `none`). A paid Groq Developer tier on the
-  same account needs no code change (only higher limits). With `LLM_FALLBACK=none`, a Groq 429 yields the
-  deterministic refusal + top chunk titles. Shlok chooses (D9).
+  `classify(text)`) with adapters `groq` (parameterised by key) and `gemini`; changing the order is an env
+  change.
+- Prompt guard and safeguard are Groq-only models: they run on account A, then account B on 429/5xx; if
+  both fail, safety-critical answers **fail closed** (refusal).
 - Budgets: answer ≤ 3,500 prompt tokens on 120b; rewrite ≈ 600 tokens on 20b; safeguard ≈ 800 tokens,
   safety-critical answers only; prompt guard on short inputs. Each model has its own per-org limits [R].
 - Photos never go to Gemini (free-tier content is used to improve products [V]); the vision fallback is
@@ -321,7 +325,7 @@ Seed (`ALERT_POLICIES`, generated into `alert_policies`) [A: tunable]:
 | Twilio `calls.create` | 32100 unverified number [R], geo permission, credit | Telegram still sent; UI shows the reason; backup video of the call step |
 | Twilio no answer | StatusCallback `no-answer`/`busy` | one retry after 60 s, then Telegram only |
 | Twilio signature | URL mismatch | signed URL is `PUBLIC_FUNCTIONS_URL + '/twilio-voice' + exact query we sent` (G2-7), never `req.url`; tested against Twilio's documented algorithm [V twilio.com/docs/usage/security] |
-| Groq chat | 429, 5xx | `LLM_FALLBACK` adapter if set (Gemini text) → else refusal + top chunk titles; never a second Groq account (D9) |
+| Groq chat | 429, 5xx | next provider in `LLM_CHAIN` (default Groq A → Gemini text → Groq B); all exhausted → refusal + top chunk titles; `provider_served` logged (D9) |
 | Groq vision | Preview model gone | icon grid (no Gemini for photos) |
 | Groq prompt guard / safeguard | 429, 5xx | fail closed for safety-critical answers (refusal); fail open for the prompt guard on non-safety questions, logged |
 | Voyage embed / rerank | 429/5xx | sparse-only retrieval / Pinecone order |
@@ -343,7 +347,7 @@ Seed (`ALERT_POLICIES`, generated into `alert_policies`) [A: tunable]:
 | **R**epudiation | SOS, PPE override, acks | who/why/when in the ledger; `ack_via`, `ack_by`; dispatch log with provider ids | — |
 | **I**nformation disclosure | Phone numbers, GPS trail, photos | numbers only in Edge Function secrets; RLS per role; photos owner-only, never sent to Gemini; near-miss rows pseudonymised for FM | Groq processes photos (vendor terms) |
 | I | Realtime | private topics, one topic per audience, RLS on `realtime.messages`; public access off | policies cached per connection [V] |
-| **D**enial of service | Groq TPM (one account, D9), Twilio credit | per-user and org-wide ask limits; dry-run for rehearsals; SOS abuse flag | a judge hammering Ask |
+| **D**enial of service | Groq TPM per account, Gemini free quota (D9), Twilio credit | per-user and org-wide ask limits; dry-run for rehearsals; SOS abuse flag | a judge hammering Ask |
 | D | Database | size budget §7 of data-model; statement timeouts on the tick | Free-plan compute |
 | **E**levation of privilege | RPCs | role check in every RPC; `search_path = ''`; secret key only in Edge Functions | — |
 | E | AI-initiated writes | the model only proposes `log_incident`; a human tap calls the RPC | — |

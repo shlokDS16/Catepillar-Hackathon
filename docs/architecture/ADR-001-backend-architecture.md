@@ -57,15 +57,22 @@ Adopt **Option C, "the database owns time and truth"**:
    labelled anomalies and the organiser-format CSVs.
 5. **Next.js (`apps/web`)** is UI only: supabase-js with the publishable key and the user's session
    (RLS), RPCs for every write, `functions.invoke` for `ask`, Realtime private channels for live state.
-6. **LLM layer (D9):** **one Groq account** (no cross-account failover; the Groq AUP forbids
-   orchestrating usage across organisations). Groq `openai/gpt-oss-120b` answers, `gpt-oss-20b` rewrites,
+6. **LLM layer (D9, updated by Shlok):** an env-configurable chain `LLM_CHAIN`, default **Groq account A
+   → Gemini (free key, text only) → Groq account B**, walked only on 429 or 5xx, with `provider_served`
+   logged per request. **Cross-account Groq use carries Groq AUP risk** (the AUP forbids orchestrating
+   usage across organisations to get around limits); **Shlok accepted this risk**, and Gemini sits before
+   account B so that B is the last resort. Groq `openai/gpt-oss-120b` answers, `gpt-oss-20b` rewrites,
    `meta-llama/llama-prompt-guard-2-86m` screens questions and ingested chunks,
-   `openai/gpt-oss-safeguard-20b` policy-checks safety-critical answers. A provider-agnostic
-   `ChatProvider` takes an env-selected fallback: `LLM_FALLBACK=none` (deterministic refusal) or
-   `gemini` (text only); Shlok chooses. Vision: Groq `qwen/qwen3.8-27b` (Preview) → icon grid.
+   `openai/gpt-oss-safeguard-20b` policy-checks safety-critical answers (Groq-only; they fail closed).
+   Vision: Groq `qwen/qwen3.8-27b` (Preview) → icon grid; photos never go to Gemini. TTS: Gemini TTS
+   (`gemini-2.5-flash-preview-tts`, on the key) is a candidate fallback for Sarvam; **Hindi quality is
+   unverified** (ADR-002).
 7. **Deploy is P0, owned by Track B:** Supabase continuously; the web app on Vercel over HTTPS from H0
    (the Android demo phone needs a secure context for vibration and audio).
-8. **Dataset (D8):** our own; the organiser's 9 + 7 fields are an exact subset exported as
+8. **Training (D10):** simulations are the learning; replays have four phases (Brief, Investigate,
+   Decide, Debrief) built from the event record plus the scenario frames; micro-lessons are cards + a
+   3-question quiz; Flow videos are P1.
+9. **Dataset (D8):** our own; the organiser's 9 + 7 fields are an exact subset exported as
    organiser-format CSVs; real Open-Meteo archive weather; handbook-style productivity baselines;
    hidden effects and held-out labels.
    Every AI path has a deterministic fallback (section "Consequences").
@@ -107,7 +114,7 @@ Negative / costs
 AI fallbacks and budgets (principle: every AI feature has a deterministic fallback)
 | Feature | Primary | Fallback | Deterministic floor | Budget |
 |---|---|---|---|---|
-| Ask Spotter answer | Groq gpt-oss-120b (one account) | `LLM_FALLBACK`: none or Gemini text (D9) | "Ask your supervisor" refusal + top 3 retrieved chunk titles | ≤ 3,500 prompt tokens, p95 ≤ 8 s |
+| Ask Spotter answer | Groq gpt-oss-120b (account A) | Gemini text → Groq account B (D9 chain) | "Ask your supervisor" refusal + top 3 retrieved chunk titles | ≤ 3,500 prompt tokens, p95 ≤ 8 s |
 | Photo understanding | Groq qwen3.8-27b → enum category only | none | Ask the operator to pick a category (icon grid) | 1 image, ≤ 4 MB |
 | Protocol cards (Guardian) | none: fixed, reviewed cards | — | the card itself | 0 LLM calls |
 | Alert audio | pre-generated Hindi clips | Twilio `<Say>` Hindi voice | text + vibration | 0 live TTS on the demo path |
@@ -177,6 +184,7 @@ Source: the "Re-check" section of `docs/gates/G2-backend-review.md` (N1-N5 and r
 | UI-1 … UI-16 | **15 closed, 1 partly (language RPC → P1)**; Replay adopts the UI's shape and its P0 event (seatbelt) | AC §10 |
 | Deploy P0 (coordinator item 3) | **Adopted.** Vercel HTTPS deploy in B0b, Shlok fixes `vercel login` at H0; redeploy at every IP | BT §0, B0b |
 | D8 dataset | **Adopted.** Exact organiser headers; real Open-Meteo archive weather (endpoint, parameters, 5-day delay, limits and CC BY 4.0 verified); handbook-style baselines; hidden effects; held-out labels; Estimated time = naive planner estimate | DM §1 · BT B6, B7 |
-| D9 one Groq account | **Adopted.** No cross-account failover; `ChatProvider` + `LLM_FALLBACK=none\|gemini`; the second account's keys are never in the app's secrets | ADR decision 6 · EP §6 · AC §6 · BT B0, B19, §4 |
+| D9 (updated) provider chain | **Adopted.** `LLM_CHAIN` default Groq A → Gemini → Groq B on 429/5xx only; `provider_served` logged; AUP risk of account B accepted by Shlok and noted in decision 6; Gemini TTS flagged unverified for Hindi | ADR decision 6 · EP §6, §9 · AC §6 · BT B0, B19, §4 |
+| D10 training redesign | **Adopted.** Four-phase `ReplayScenario` with seven evidence card types, sequenced decide steps, debrief scores (safety/procedure/efficiency), process trace, quoted protocol rule, re-enactment track; `LessonContent` for card lessons; B10b grows to 1 h, `demo-login` moves to the subagent lane to hold the 13.5 h main lane | AC §5 · DM §2.8 · BT B8, B10b, B22 |
 | Prompt guard + safeguard (coordinator item 6) | **Adopted.** Prompt guard on questions and at ingestion (quarantine); safeguard on safety-critical answers; both fail closed for safety answers | EP §6, §9, §10 · BT B18, B19 |
 

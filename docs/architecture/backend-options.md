@@ -184,12 +184,11 @@ Option C accepts that and moves the stateless compute next to the state.
   estimate client-side (what-if slider, offline) and the fitting script uses the same code.
 - From B: the generator is Python (uv) and stays outside the runtime entirely.
 
-Non-Groq LLM fallback (revised by decision D9): the app uses **one** Groq account; the Groq AUP
-forbids orchestrating usage across organisations to get around limits, so there is **no automatic
-failover to the second person's Groq account**. The LLM layer is provider-agnostic (`ChatProvider`
-adapters) and the fallback is chosen by environment: `LLM_FALLBACK=none` (deterministic refusal) or
-`gemini` (Google Gemini free tier, `@ai-sdk/google` reads `GOOGLE_GENERATIVE_AI_API_KEY` [V], text only:
-its free tier uses content to improve products [V], so photos never go to it). A paid Groq Developer
-tier on the same account only raises limits and needs no code change. Shlok picks the option.
+LLM fallback (decision D9, as updated by Shlok): an env-configurable chain `LLM_CHAIN`, default
+Groq account A → Google Gemini (free key, text only; `@ai-sdk/google` reads
+`GOOGLE_GENERATIVE_AI_API_KEY` [V]) → Groq account B, walked only on 429 or 5xx, with the serving
+provider logged per request. Cross-account Groq use carries Groq AUP risk; Shlok accepted it, and
+Gemini sits before account B to keep that use rare. Photos never go to Gemini (its free tier uses content
+to improve products [V]).
 
 Decision record: `ADR-001-backend-architecture.md`.

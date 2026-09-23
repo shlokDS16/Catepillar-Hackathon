@@ -252,9 +252,9 @@ export const NearMissListOut = z.array(z.object({ incident_id: Id, seq: z.number
 // Training
 export const LessonCompleteIn = z.object({ p_assignment_id: Id, p_quiz_score: z.number().min(0).max(100), p_request_id: RequestId });
 export const ReplaySubmitIn = z.object({ p_replay_id: Id, p_request_id: RequestId,
-  p_choices: z.array(z.object({ step: z.number().int(), option_id: z.string(), ms: z.number().int().min(0) })) });
-export const ReplaySubmitOut = z.object({ outcome_score: z.number(), process_score: z.number(),
-  review: z.array(z.object({ step: z.number().int(), chosen: z.string(), best: z.string(), why: I18nText })) });   // UI-3
+  p_open_order: z.array(z.string()),                                   // evidence card ids in the order opened (D10)
+  p_choices: z.array(z.object({ step: z.number().int(), choice_ids: z.array(z.string()).min(1), ms: z.number().int().min(0) })) });
+export const ReplaySubmitOut = ReplayDebriefResult;                   // §5 (D10 debrief; UI-3 review included)
 export const ReplayGetIn = z.object({ p_replay_id: Id });   // rpc replay_get → ReplayScenario (UI-3)
 export const LessonAssignIn = z.object({ p_operator_id: Id, p_lesson_code: z.string(),
   p_because_event_id: Id.nullable(), p_request_id: RequestId });      // trainer
@@ -299,30 +299,71 @@ export const MySnapshotOut = z.object({
 FM reads (inbox, ledger list, fleet map, evidence, analytics) are `select`s on RLS-protected tables and
 `v_task_analytics`; row types come from `supabase gen types` (B2), not hand-written.
 
-## 5. Replay (`contracts/replay.ts`; PA-1, G2-14, UI-3)
+## 5. Replay and lessons (`contracts/replay.ts`, `contracts/lesson.ts`; PA-1, UI-3, D10)
 
-Revision 3 adopts the **UI lead's requested shape** (frontend-tasks §5 #3; the fixture adapter already
-implements it). P0 event type: `safety.seatbelt_breach` (demo beat 4 in screens.md); the Guardian replay
-is P1 (the enum is additive).
+D10: **the simulations are the learning** (Flow videos → P1). A replay has four phases: **Brief,
+Investigate, Decide, Debrief**. It keeps the UI lead's field names from revision 3 where they still apply
+(frontend-tasks §5 #3). P0 event type: `safety.seatbelt_breach` (demo beat 4); others are additive.
 ```ts
+const Pt = z.object({ t_ms: z.number().int(), lat: z.number(), lon: z.number() });
+export const EvidenceType = z.enum(["telemetry_trend", "wind", "map_snapshot", "fault_code",
+  "protocol_card", "weather", "shift_hours"]);
+export const EvidenceCard = z.discriminatedUnion("type", [
+  z.object({ type: z.literal("telemetry_trend"), id: z.string(), title: I18nText,
+    series: z.array(z.object({ metric: z.enum(["speed_kmh", "pitch_deg", "roll_deg", "seatbelt", "hydraulic_temp_c", "rpm"]),
+      points: z.array(z.object({ t_ms: z.number().int(), v: z.number() })) })) }),
+  z.object({ type: z.literal("wind"), id: z.string(), title: I18nText, from_deg: z.number(), kmh: z.number(), gust_kmh: z.number().nullable() }),
+  z.object({ type: z.literal("map_snapshot"), id: z.string(), title: I18nText, center: LatLon, zoom: z.number(),
+    zones: z.array(z.object({ id: Id, name: z.string(), zone_type: z.string(), polygon: z.array(LatLon) })),
+    trail: z.array(Pt).max(600), machine_track: z.array(Pt).max(600) }),
+  z.object({ type: z.literal("fault_code"), id: z.string(), title: I18nText,
+    codes: z.array(z.object({ code_type: z.string(), code: z.string(), severity: z.string(), description: I18nText })) }),
+  z.object({ type: z.literal("protocol_card"), id: z.string(), title: I18nText, card_id: z.string() }),   // ProtocolCard by id
+  z.object({ type: z.literal("weather"), id: z.string(), title: I18nText, temperature_c: z.number(), wbgt_c: z.number().nullable() }),
+  z.object({ type: z.literal("shift_hours"), id: z.string(), title: I18nText, hours_on_shift: z.number(),
+    circadian_band: z.enum(["normal", "post_lunch_dip", "night_trough"]) }),
+]);   // `relevant` and `why` stay server-side until the debrief (they are the answer key)
+
 export const ReplayScenario = z.object({
-  id: Id, event_id: Id, event_type: z.enum(["safety.seatbelt_breach"]),
-  occurred_sim_ts: Ts, machine_code: z.string(), summary: I18nText,
-  map: z.object({ center: LatLon, zoom: z.number(), zones: z.array(z.object({ id: Id, name: z.string(),
-    zone_type: z.string(), polygon: z.array(LatLon) })) }),
-  trail: z.array(z.object({ t_ms: z.number().int(), lat: z.number(), lon: z.number() })).max(600),   // 10 sim-min before
-  machine_track: z.array(z.object({ t_ms: z.number().int(), lat: z.number(), lon: z.number(),
-    speed_kmh: z.number(), pitch_deg: z.number() })).max(600),
-  wind_from_deg: z.number().nullable(),
-  real_response_ms: z.number().int().nullable(),
-  steps: z.array(z.object({ step: z.number().int(), at_ms: z.number().int(), prompt: I18nText,
+  id: Id, event_id: Id, event_type: z.enum(["safety.seatbelt_breach"]), occurred_sim_ts: Ts,
+  machine_code: z.string(), summary: I18nText,
+  brief: z.object({ title: I18nText, situation: I18nText, goal: I18nText, time_budget_s: z.number().int() }),
+  investigate: z.object({ cards: z.array(EvidenceCard).min(3).max(7), max_open: z.number().int().nullable() }),
+  decide: z.object({ steps: z.array(z.object({ step: z.number().int(), prompt: I18nText,
     time_limit_s: z.number().int().positive(),
-    choices: z.array(z.object({ id: z.string(), label: I18nText, pictogram: z.string() })).min(2).max(4) })).min(3).max(4),
-});   // correct choice, weight and "why" stay server-side until replay_submit returns `review`
+    kind: z.enum(["single", "order"]),                                // "order" = arrange protocol actions in sequence
+    choices: z.array(z.object({ id: z.string(), label: I18nText, pictogram: z.string() })).min(2).max(5) })).min(3).max(4) }),
+  reenactment: z.object({ duration_ms: z.number().int(), trail: z.array(Pt), machine_track: z.array(Pt.extend({
+    speed_kmh: z.number(), pitch_deg: z.number() })), wind: z.array(z.object({ t_ms: z.number().int(), from_deg: z.number(), kmh: z.number() })),
+    real_response_ms: z.number().int().nullable() }),                  // played in the debrief
+});
+
+export const ReplayDebriefResult = z.object({
+  scores: z.object({ safety: z.number().min(0).max(100), procedure: z.number().min(0).max(100),
+    efficiency: z.number().min(0).max(100) }),
+  process_trace: z.object({ opened: z.array(z.string()), ideal: z.array(z.string()),
+    relevant: z.array(z.object({ card_id: z.string(), relevant: z.boolean(), why: I18nText })) }),
+  review: z.array(z.object({ step: z.number().int(), chosen: z.array(z.string()), best: z.array(z.string()), why: I18nText })),
+  rule: z.object({ card_id: z.string(), text: I18nText }),            // quoted from the fixed protocol card, never generated
+  lesson_code: z.string().nullable(),
+});
+
+export const LessonContent = z.object({                               // D10: card-based micro-lesson
+  code: z.string(), title: I18nText, duration_s: z.number().int().max(120),
+  cards: z.array(z.object({ id: z.string(), kind: z.enum(["rule", "why", "how", "example", "check"]),
+    title: I18nText, body: I18nText, pictogram: z.string(), image_path: z.string().nullable() })).min(3).max(5),
+  quiz: z.array(z.object({ id: z.string(), prompt: I18nText,
+    choices: z.array(z.object({ id: z.string(), label: I18nText, pictogram: z.string() })).min(2).max(4),
+    correct_id: z.string(), why: I18nText })).length(3),              // correct_id is sent: lessons are practice, not assessment
+  video_path: z.string().nullable(),                                  // P1 (Flow video)
+  source_refs: z.array(z.string()),
+});
 ```
-Reads: `replay_get(p_replay_id)` RPC (own replays only) and `assignments[].replay_id` in `my_snapshot`.
-Scoring (server-side, `replay_submit`): outcome = Σ weights of correct choices ÷ Σ weights × 100;
-process = 100 × share of steps answered within `time_limit_s`, minus 25 if out of order.
+Reads: `replay_get(p_replay_id)` → `ReplayScenario` (own replays only); lessons by `select` on `lessons`;
+`assignments[].replay_id` in `my_snapshot`.
+Scoring (server-side, `replay_submit`, data-model §2.8): safety (weighted correct safety-axis choices),
+procedure (protocol order + investigation process vs `ideal_open_order`, relevant cards opened, irrelevant
+ones penalised), efficiency (steps within countdown). Answer keys never leave the server before submit.
 
 ## 6. Edge Functions (`contracts/functions.ts`)
 
@@ -338,8 +379,10 @@ a publishable key through, per the review's reading of `functions/auth-headers`)
 | `twilio-voice` | Twilio | `X-Twilio-Signature` = base64(HMAC-SHA1(authToken, **`PUBLIC_FUNCTIONS_URL + "/twilio-voice" + "?" + exact query we sent`** + sorted POST params as name+value)) [V twilio.com/docs/usage/security]; never computed from `req.url` (G2-7) | — |
 
 New Edge Function secrets: `PUBLIC_FUNCTIONS_URL = https://<ref>.supabase.co/functions/v1`;
-`LLM_PRIMARY=groq`, `LLM_FALLBACK=none|gemini` (D9: one Groq account; no cross-account failover);
-`GOOGLE_GENERATIVE_AI_API_KEY` only when `LLM_FALLBACK=gemini`. Model ids live in
+`LLM_CHAIN=groq_a,gemini,groq_b` (**D9 updated**: env-configurable order, this is the default; the next
+provider is tried **only on 429 or 5xx**); `GROQ_API_KEY` (account A), `GOOGLE_GENERATIVE_AI_API_KEY`,
+`GROQ_API_KEY_BACKUP` (account B). Cross-account Groq use carries Groq AUP risk, accepted by Shlok
+(ADR-001 decision 6). Model ids live in
 `contracts/models.ts` (`openai/gpt-oss-120b`, `openai/gpt-oss-20b`, `qwen/qwen3.8-27b`,
 `meta-llama/llama-prompt-guard-2-86m`, `openai/gpt-oss-safeguard-20b`), so a model change is one line.
 
@@ -361,7 +404,8 @@ export const AskResponse = z.object({ request_id: RequestId,
   refusal_reason: z.enum(["no_evidence", "rule_not_verbatim", "citation_invalid", "rate_limited", "provider_down",
     "injection_suspected", "policy_violation"]).nullable(),   // prompt guard / safeguard (EP §6)
   answer: AskAnswer.nullable(), citations: z.array(Citation), photo: VisionResult.nullable(),
-  model: z.string(), fallback_used: z.string().nullable(), latency_ms: z.number().int() });
+  provider_served: z.enum(["groq_a", "gemini", "groq_b", "none"]), model: z.string(),   // logged per request (D9)
+  fallback_used: z.string().nullable(), latency_ms: z.number().int() });
 
 export const DirectorCommand = z.discriminatedUnion("cmd", [
   z.object({ cmd: z.literal("new_run"), scenario_code: z.string(), speed: Speed, rehearsal: z.boolean() }),
@@ -440,7 +484,7 @@ the `train` split; P90 = P50 · exp(q), q = split-conformal 90 % quantile of log
 |---|---|---|---|
 | UI-1 | `progress_pct` has no writer | **Closed.** `apply_frame` computes it from load cycles for the running task; `task.progress` event every 10 % | DM §2.2 · §3 `task.progress` |
 | UI-2 | ETA factors array vs record | **Closed.** `EtaFactor[]` everywhere (snapshot, `task_start`, events) | §4 |
-| UI-3 | `ReplayScenario`, replay reads, per-step review | **Closed with the UI's shape**; `replay_get` RPC; `ReplaySubmitOut.review`; assignments with `replay_id` in `my_snapshot`. P0 replay = seatbelt on a slope (aligned with screens.md) | §5 · §4 |
+| UI-3 | `ReplayScenario`, replay reads, per-step review | **Closed**, extended by D10 to four phases (Brief, Investigate, Decide, Debrief) keeping the UI's field names; `replay_get`; `ReplayDebriefResult` includes `review`, scores, process trace and the quoted rule; assignments with `replay_id` in `my_snapshot`; `LessonContent` for card lessons. P0 replay = seatbelt on a slope | §5 · §4 |
 | UI-4 | server time for countdowns | **Closed.** `server_now` in `MySnapshotOut`, `ClockTick`, `SosRaiseOut` | §4 · §7 |
 | UI-5 | client motion-lock predicate may disagree | **Closed.** `operator_state.motion_locked` + `call_allowed`, computed by the same SQL function as `can_call_operator`; `operator.motion_lock_changed` event | §3 · §4 · EP §2 |
 | UI-6 | seatbelt and nearest proximity not in the snapshot; `safety.proximity` missing | **Closed.** `machine.seatbelt_fastened`, `parking_brake`; `operator_state.nearest`; `safety.proximity` is in the registry | §3 · §4 |
