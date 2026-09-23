@@ -21,7 +21,14 @@ export function SosControl() {
   return (
     <>
       <SosButton active={active} onArmed={onArmed} onOpen={() => setOpen(true)} />
-      <SosSheet open={open} onClose={() => setOpen(false)} state={state} onCancel={() => void cancel()} emergencyTel={emergencyTel} />
+      <SosSheet
+        open={open}
+        onClose={() => setOpen(false)}
+        state={state}
+        onCancel={() => void cancel()}
+        emergencyTel={emergencyTel}
+        dispatchLine={state.phase === "sent" ? state.result.dispatch_line : undefined}
+      />
     </>
   );
 }

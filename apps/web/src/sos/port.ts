@@ -8,6 +8,8 @@ export type SosRaiseOut = {
   escalate_at: string;
   server_now: string;
   location_source: "device" | "machine" | "site";
+  /** Demo route only: what was dispatched ("Telegram: sent · Call: ringing"). */
+  dispatch_line?: string;
 };
 
 export type SosRaiseIn = { p_request_id: string; p_lat: number | null; p_lon: number | null; p_note: string | null };
@@ -40,5 +42,31 @@ export const fixtureSosPort: SosPort = {
   emergencyTel: "+911234567890",
 };
 
-export const SosPortContext = createContext<SosPort>(fixtureSosPort);
+type DemoDispatch = { mode: string; telegram: { status: string }; twilio: { status: string } };
+
+/**
+ * Review demo: the server route dispatches a real Telegram message and Twilio call (secrets stay
+ * on the server; dry run unless SOS_LIVE=1). F13 replaces this with the sos_raise RPC.
+ */
+export const demoSosPort: SosPort = {
+  async raise(input) {
+    const res = await fetch("/api/sos-demo", {
+      method: "POST",
+      headers: { "content-type": "application/json" },
+      body: JSON.stringify({ request_id: input.p_request_id, lat: input.p_lat, lon: input.p_lon }),
+    });
+    if (!res.ok) throw new Error(`sos-demo ${res.status}`);
+    const data = (await res.json()) as SosRaiseOut & { dispatch: DemoDispatch };
+    const d = data.dispatch;
+    const line =
+      d.mode === "dry_run" ? "Dry run: no message or call sent" : `Telegram: ${d.telegram.status} · Call: ${d.twilio.status}`;
+    return { ...data, dispatch_line: line };
+  },
+  async cancel() {
+    await wait(300);
+  },
+  emergencyTel: fixtureSosPort.emergencyTel,
+};
+
+export const SosPortContext = createContext<SosPort>(demoSosPort);
 export const useSosPort = () => useContext(SosPortContext);
