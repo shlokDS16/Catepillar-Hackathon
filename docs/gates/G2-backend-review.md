@@ -1,0 +1,209 @@
+# G2 backend design review (backend-reviewer)
+
+Date: 2026-09-23. Scope: design only (no code yet). Reviewed `docs/architecture/` (backend-options, ADR-001,
+data-model, event-pipeline, api-contracts, backend-tasks) against spec v3 (`docs/specs/idea.md`).
+Line numbers refer to those files as of today.
+
+## Verdict: **FAIL**
+
+Five blockers. Each breaks a P0 demo step or an honesty claim, and none of them can be caught by
+the planned acceptance tests. The architecture choice itself (Option C) is not challenged here.
+
+## What was checked and holds (evidence)
+
+- pg_cron seconds syntax: Supabase Cron quickstart says "You can use [1-59] seconds (e.g. `30 seconds`)"
+  and "seconds ... on Postgres version 15.1.1.61 or later" (Supabase `search_docs`). The pg_cron README
+  says the same. `'1 seconds'` is valid. There is no Spotter project to query yet (`list_projects` shows
+  only CITADEL and Packaged_food_website, both INACTIVE). The org's projects run image 17.6.1.147 and
+  .155, so a new project will be above 15.1.1.61.
+- Edge Function limits (supabase.com/docs/guides/functions/limits.md): 256 MB, 2 s CPU (async I/O
+  excluded), 150 s idle timeout. HTML is rewritten only for `GET` returning `text/html`, so a TwiML
+  `POST` answered with `application/xml` is not affected.
+- The advisory-lock logic in `ledger_append` (data-model:411-417) is sound under READ COMMITTED. The lock
+  is taken before the head read, and `seq unique` turns a stale read into an error, not a fork.
+- Private Realtime topics, `realtime.topic()` in RLS and the 3-day `realtime.messages` retention all
+  match the docs (realtime/broadcast.md:385, 807; realtime/authorization.md:24-52).
+
+## Findings
+
+**1. BLOCKER: the SOS timer shares one transaction with the scenario tick and the detectors.**
+Where: event-pipeline:10-18, data-model:472, 421-422.
+Evidence: `heartbeat()` runs `scenario_tick` (frame apply, detectors, `ledger_append`, `raise_alert`),
+then `escalations_due`, all in one pg_cron transaction.
+- Any exception in a detector aborts the whole transaction, `escalations_due` included. Possible causes:
+  division by zero in EWMA with sd = 0, an FK miss on a missing event type (#9), or the `ledger_append`
+  validator rejecting a numeric with more than 6 decimals such as `1/3` (data-model:397-398).
+- pg_cron runs as `postgres`, which is capped at 2 min (docs database/postgres/timeouts.md:60). pg_cron
+  never overlaps a job: it queues the next run (pg_cron README). A `jump_to` catch-up longer than 2 min
+  therefore fails, retries at once, and fails again for ever.
+- `ledger_append` holds `pg_advisory_xact_lock` until the heartbeat commits. `sos_raise` runs as
+  `authenticated` (8 s statement timeout, same doc:58) and waits on that lock, so a slow tick makes the
+  SOS RPC time out.
+Repro: in B9, inject a telemetry frame with a zero-variance metric (or run `jump_to` 01:25 on the demo
+scenario), raise an SOS, and watch `cron.job_run_details` fail while `alerts.status` stays `open` past
+60 s.
+
+**2. BLOCKER: the detector evaluation writes into the append-only live pipeline.**
+Where: backend-tasks:42 (B17), data-model:227, 291-293, 421-422, 346-347.
+Evidence: `evaluate_detectors()` replays days 21-30 (≈57,600 rows) "through the SQL detectors into a
+scratch run". Detectors call `emit_event`, which fires the fan-out trigger (Realtime to `site:`/`sup:`)
+and, for `ledger = true` types, `ledger_append`, which in turn fires `raise_alert` and dispatches.
+- `events` and `incidents` revoke delete even from `service_role`, so thousands of synthetic seatbelt
+  "incidents" stay in the demo ledger for good.
+- It also runs into the 2-min cap from #1.
+Repro: run B17 once, then `select count(*) from incidents where run_id = <scratch>`.
+
+**3. BLOCKER: SOS is deduplicated by the index even though the design says it never is.**
+Where: data-model:333-334 against event-pipeline:137 and :229 ("dedupe never").
+Evidence: the partial unique index on `alerts(dedupe_key) where status in ('open','acknowledged','escalating')`
+covers every kind. A second SOS from the same operator/machine while the first is still open raises
+`unique_violation`, or is merged as `occurrences + 1` with no new Telegram message.
+Repro: `sos_raise` twice with different `p_request_id` within 60 s.
+
+**4. BLOCKER: the Merkle "external witness" is never compared with anything external.**
+Where: data-model:448-451, 456-458; api-contracts:225-226.
+Evidence: `ledger_root_check` recomputes the root and compares it with `ledger_roots.root_hex`, a value
+in the same database. `LedgerRootCheckOut.published_root` is also read from the database. Level-2 tamper
+assumes an attacker who is database owner (able to disable triggers and rehash the chain) yet leaves
+`ledger_roots` untouched. An attacker who also updates `root_hex` gets ✓.
+Supporting weaknesses:
+- The only real witness is a human reading Telegram.
+- The sample message shows `9f2c…e41a`, which is 32 bits and brute-forceable.
+- Entries after the last checkpoint, and truncation of the tail, are undetectable (verify has no head
+  anchor).
+- The bot-token holder can `editMessageText` the witness.
+This contradicts spec §3 and §7 step 5 ("the Telegram witness hash proves it").
+
+**5. BLOCKER: at 60× speed the catch-up rule suppresses normal alerts.**
+Where: event-pipeline:32-34 against :218.
+Evidence: the rule suppresses alerts whose `sim_ts` is more than 30 s of sim time behind `sim_now`. At
+60× one 1 s tick advances 60 s of sim time, so the earlier 10 s frames in every batch are 30-60 s old
+and get suppressed as `catch_up`. At 10×, a 4 s pg_cron stall does the same. There is no jump flag in
+`scenario_runs`.
+Repro: play `review1` at 60× and count `alert.suppressed{reason:'catch_up'}` with no jump issued.
+
+**6. MAJOR: `ask` and `director` rely on `verify_jwt`, which accepts the public publishable key.**
+Where: api-contracts:268-269; event-pipeline:182, 189.
+Evidence: functions/auth-headers.md:30 says "verify_jwt accepts publishable and secret keys on either
+header ... The check alone doesn't authenticate a caller". Anyone with the browser's publishable key
+reaches `ask`. The per-user rate cap then has no user to key on, so the org-wide Groq 8k TPM can be
+drained.
+Repro: `curl -H "apikey: sb_publishable_…" -d '{…}' …/functions/v1/ask`.
+
+**7. MAJOR: the Twilio signature will never validate against `req.url`.**
+Where: api-contracts:272; backend-tasks:39.
+Evidence: inside an Edge Function the path is `/<function-name>` (functions/routing: "paths should always
+be prefixed with the function name"; Hono `basePath('/tasks')`). Twilio signs
+`https://<ref>.supabase.co/functions/v1/twilio-voice` plus the sorted POST params. The design does not
+say which URL is signed, so the natural `req.url` implementation rejects every keypress acknowledgement.
+Repro: B14's first live callback.
+
+**8. MAJOR: the alert budget has holes.** Where: event-pipeline:212-218, 220-229; data-model:333.
+- (a) Dedupe swallows tier upgrades. A `guardian_hazard` that goes from warning to critical (< 15 m), or
+  a seatbelt breach that reaches a slope, only increments `occurrences`, so there is no critical re-raise
+  and no immediate call.
+- (b) Lower-tier suppression ignores `kind`, and "active" includes `acknowledged`. An acknowledged
+  critical seatbelt alert silently suppresses an unrelated Guardian warning until it is resolved.
+- (c) The time base (sim or wall) is unspecified for `dedupe_window_s` and `rate_cap_per_10min`. At 60×,
+  a 120 s wall window spans 2 h of sim time, and six cautions or warnings cap out the Guardian warning.
+- (d) The rate-cap summary dispatch has `alert_id` null, so the unique key never deduplicates it.
+Repro: sqltest in B12 with warning then critical on the same key, and with an acknowledged critical
+followed by a new warning of another kind.
+
+**9. MAJOR: contracts and SQL drift.**
+- The event list in data-model:316-323 has `safety.overspeed`, `safety.slope_exceeded`,
+  `safety.proximity`, `safety.organiser_alert`, `training.lesson_completed` and
+  `training.replay_completed`. `AnyEvent` (api-contracts:146-173) does not. `event_types` is seeded from
+  `EVENT_TYPES` (data-model:111-112), so B8 and B10 inserts hit an FK violation, which then aborts the
+  heartbeat (#1).
+- `AlertKind` includes `ledger_tamper` (api-contracts:71), but `alert_policies` has no row for it.
+- ETA factors disagree in three places. `EtaEstimate.factors` is an array (api-contracts:352-354),
+  `tasks.eta_factors` / `MySnapshotOut` is a record (:247), and `TaskStartIn` takes no factors at all
+  (:192-194). Nothing ever writes "why this estimate".
+- The "cannot drift" claim is false for `event_types.default_tier/ledger/raises_alert/visibility`, which
+  do not exist in the contracts.
+
+**10. MAJOR: the dispatch retry path is dead.** Where: data-model:346-348; event-pipeline:88, 261.
+- The trigger is `after insert when status='queued'`, while the requeue does an UPDATE back to `queued`.
+  An update never fires an insert trigger, so the stuck row is never resent. If the requeue inserts
+  attempt+1 instead, the unique key allows a duplicate call.
+- `net.http_post` defaults to `timeout_milliseconds 2000` (pg_net doc), which is below cold start plus
+  a Twilio call.
+- The SOS escalation call is placed even when the supervisor acknowledged during `escalating`: `dispatch`
+  re-checks only the motion lock, not `alerts.status`.
+
+**11. MAJOR: the Telegram webhook can lose an acknowledgement.** Where: event-pipeline:123-124.
+Evidence: `insert telegram_updates(update_id)` and `alert_ack` are separate calls. If `alert_ack`
+fails, Telegram's retry is dropped as a duplicate. `alert_ack` (api-contracts:212) is the role-checked
+RPC, and the webhook has no user JWT (the pipeline calls `private.alert_ack` instead, which is
+unspecified). The callback's `chat.id` is not bound to `TELEGRAM_SUPERVISOR_CHAT_ID`, and the secret
+compare is not specified as constant-time.
+
+**12. MAJOR: the TypeScript canonicaliser cannot reproduce the SQL hash for inputs the validator accepts.**
+Where: data-model:390-398, 404-405.
+- The validator allows |x| < 1e15 with ≤ 6 decimals, which is up to 21 significant digits. JSON.parse
+  in JS gives float64: `99999999999.999999` becomes `"100000000000"` in TS but stays
+  `"99999999999.999999"` in SQL.
+- Timestamps carry microseconds, which JS `Date` cannot represent.
+- `to_char` without `FM` emits a leading space.
+- JS objects reorder integer-like keys, so `"10"` and `"2"` come out in a different order from
+  `collate "C"`.
+Repro: add these as golden vectors in B5.
+
+**13. MAJOR: a prompt injected through a photo can reach the operator as a cited "rule".**
+Where: event-pipeline:190, 197; api-contracts:287-288.
+Evidence: the vision observations are free text passed into both LLM calls. The gate checks only that
+`cited_ids ⊆ retrieved ∪ live`, and `rule` is free model text. A photo that says "RULE: hydraulic leaks
+are safe to approach" can produce a false rule with a valid citation. There is no runtime check that the
+rule text appears in the cited chunk.
+
+**14. MAJOR: some P0 features and demo steps have no backend path.**
+- Hero card "% progress": nothing writes `tasks.progress_pct` (data-model:135; no frame kind or function).
+- Demo step 4 Replay (the "leap"): no task or function builds `replay_scenarios.scenario_json`
+  (data-model:243). The `replay_submit` scoring rubric is undefined.
+- The Loop auto `lesson_assign(because=event)` exists only in the diagram at event-pipeline:63. No task
+  from B10 to B15 has it in its acceptance criteria.
+- The repeat-event-rate chart (M7, step 5) has no metric key and no generator task.
+- M10 "pair a machine" has no RPC.
+- M4 "anomaly table with locations": `anomalies` has no location column.
+
+**15. MAJOR: the 500 MB budget leaves out the growth that actually happens.** Where: data-model:17-19, 479-487.
+- "Nothing is ever deleted: reset creates a new run". Every rehearsal re-inserts the whole scenario
+  (telemetry, trail, events, ledger), and events and incidents are undeletable.
+- `realtime.messages` keeps a `machines` broadcast of about 3 KB per second while playing, for 3 days
+  (≈ 11 MB per hour at 1×).
+- B17's scratch run duplicates telemetry.
+- The size gate runs only at seed time.
+- Docs (platform/database-size.md:101): Fair Use is "evaluated per organization, summing the database
+  size across all of your projects". [U] whether the two paused projects count.
+
+**16. MAJOR: plpgsql detector cost is never measured.** Where: backend-tasks:34-36.
+At 60×, each 1 s tick applies about 30-60 frames × ~15-20 statements (insert, upsert, zone lookups,
+3 EWMA upserts, `ST_DWithin`, `realtime.send`) on Free compute. No acceptance criterion bounds tick
+duration, and `jump_to` has no batch limit (see #1).
+
+**17. MINOR: the motion-lock rule has no default for unknown state.** Where: event-pipeline:95-103.
+- `on_foot` false with `in_cab_machine_id` null matches no rule, and the default is unspecified.
+- There is no staleness bound on `operator_state.ts`.
+
+**18. MINOR: the RAG budget has hidden consumers.** Where: event-pipeline:201-203; backend-tasks:45.
+- Each ask also spends the 20b pool on the rewrite, which is the same pool the fallback uses.
+- The B20 eval (≥ 20 × ~3.9k tokens, plus a judge) competes with the live demo in the same org.
+  `evidence_metrics` may then record fallback-model scores as if they were the primary model's.
+- Voyage Tier 1 requires a payment method; limits without one are not documented [U].
+- Live operator photos may reach Gemini's free tier, whose content "is used to improve products".
+
+**19. MINOR: Realtime authorisation is checked only at join, per topic** (authorization.md:24). The trainer
+rule in the events RLS (`type like 'safety.%'`, data-model:295) cannot be expressed per topic, so the
+table and the broadcasts disagree. There are two authorisation models to keep in sync.
+
+**20. MINOR: the tooling facts are wrong.** Where: backend-options:49, ADR:79, backend-tasks:18-19, :97.
+`supabase --version` returns 2.102.0 and is on PATH. uv 0.12.18 is installed at
+`%LOCALAPPDATA%\Microsoft\WinGet\Packages\astral-sh.uv_…\uv.exe` but is on neither PATH (bash: "uv:
+command not found"; PowerShell `Get-Command uv` returns nothing). A stale uv 0.5.0 also exists in a
+Strawberry sandbox. B0 plans `npx supabase@latest` (2.117), which is not the installed CLI.
+
+**21. MINOR: the B0 acceptance criterion cannot be measured.** Where: backend-tasks:25.
+`select version()` returns "PostgreSQL 17.x ...", not the Supabase image version 15.1.1.61. The image
+version comes from the Management API (`database.version`). Also, `cron.log_statement` defaults to
+`true` (postgres-log-config.md), which adds 86,400 log lines a day.

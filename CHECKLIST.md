@@ -41,7 +41,9 @@ Each phase ends with a **Gate**: validator agent verdict (PASS/FAIL + evidence) 
 - [ ] **Gate P2**: validator PASS · Shlok approves · submitted
 
 ## P3 — Architecture and repo setup
-- [~] P3.1 Architecture options (3 framings) + red team → ADR-001 (backend-lead drafting)
+- [x] P3.1a Backend design v1 (Option C: DB owns time & truth) → docs/architecture/
+- [x] P3.1b G2 reviews: backend-reviewer FAIL (21 findings), program-architect READY-WITH-CHANGES
+- [~] P3.1c Backend design v2 (all findings dispositioned) + frontend plan (docs/design/*) in parallel
 - [ ] P3.2 Folder structure (researched) scaffolded; git + GitHub remote
 - [ ] P3.3 Skills tailored per phase (copies under .claude/skills/, originals untouched)
 - [ ] P3.4 Task breakdown (task-master or writing-plans) with subtasks
