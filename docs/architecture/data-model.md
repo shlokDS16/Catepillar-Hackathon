@@ -1,269 +1,293 @@
-# Data model (Postgres 15+ on Supabase, Mumbai)
+# Data model (Postgres 17 on Supabase, Mumbai)
 
-Status: Proposed with ADR-001. Owner: Track B. Migrations land in `supabase/migrations/` in the order of
-`backend-tasks.md`. Markers: **[V]** verified today, **[R]** from research 10-15, **[A]** assumption,
-**[U]** unverified.
+Status: Proposed with ADR-001, **revision 2 after gate G2** (findings are cited as `G2-n` for the
+backend review and `PA-n` for the program review; dispositions are in ADR-001). Owner: Track B.
+Migrations land in `supabase/migrations/` in the order of `backend-tasks.md`. Markers: **[V]** verified,
+**[R]** from research 10-15, **[A]** assumption, **[U]** unverified.
 
 ## 0. Conventions
 
 - Schemas: `public` (exposed to the Data API, RLS on every table), `private` (functions, held-out labels,
-  detector state; **not** exposed), `extensions` (postgis, pg_net), `cron`, `vault`, `realtime`.
+  detector state, queues; **not** exposed), `eval` (sandbox for detector evaluation; not exposed, no
+  triggers to live tables; G2-2), `extensions` (postgis, pg_net), `cron`, `vault`, `realtime`.
 - Keys: `uuid primary key default gen_random_uuid()` unless noted; high-volume streams use
   `bigint generated always as identity`. Business codes (`EXC-014`, `OP-0007`) are `unique text`.
 - Time: `timestamptz`. Scenario rows carry **simulated** time in `ts`/`sim_ts`; `recorded_at` is always
-  wall-clock `now()`. Timers (SOS, escalation) use wall-clock only.
+  wall-clock `now()`. Timers (SOS, escalation, alert windows, rate caps) use **wall-clock only** (G2-8c:
+  human attention runs on wall time at any scenario speed).
 - Geometry: `extensions.geography(Point, 4326)` / `(Polygon, 4326)`; GIST index on every geography
-  column. Distances in metres via `ST_DWithin(geography, geography, m)` [R] research 10 §6.
+  column. Distances in metres via `ST_DWithin` [R] research 10 §6.
 - Every scenario-produced row carries `run_id` (FK `scenario_runs`); `run_id is null` = historical
-  (generated history). **Nothing is ever deleted to reset a demo: reset creates a new run.** The UI
-  reads the run where `scenario_runs.is_current`.
-- Writes from clients go only through `security definer` RPCs with `set search_path = ''` and an
-  explicit role check. Tables grant clients `select` only (and only where a policy allows).
+  generated data. A new demo run is a new `run_id`. **Rehearsal runs** (`scenario_runs.rehearsal = true`)
+  are purged by `private.purge_run(run_id)` to keep the database small (G2-15); the ledger is never
+  purged (§4.7).
+- Writes from clients go only through `security definer` RPCs with `set search_path = ''`, an explicit
+  role check, and `set lock_timeout = '2s'`. Tables grant clients `select` only, where a policy allows.
 - RLS helpers (in `private`, `stable`, `security definer`), always wrapped as `(select …)` inside
-  policies so they are evaluated once per statement [A: Supabase RLS performance guidance, to be
-  checked against the `supabase-postgres-best-practices` skill in task B2]:
-  `private.app_role() → app_role`, `private.my_operator_id() → uuid`, `private.my_site_id() → uuid`.
+  policies [A: Supabase RLS performance guidance, confirmed in task B2 against the
+  `supabase-postgres-best-practices` skill]: `private.app_role() → app_role`,
+  `private.my_operator_id() → uuid`, `private.my_site_id() → uuid`.
 
-Enums (Postgres `create type … as enum`, mirrored 1:1 in `packages/shared` zod enums):
+Enums (Postgres `create type … as enum`; **generated** from `packages/shared` by
+`scripts/gen-sql-enums.ts`, so contracts are the single source, G2-9):
 `app_role` (operator, fleet_manager, trainer) · `alert_tier` (info, caution, warning, critical) ·
-`skill_level` (novice, intermediate, expert) · `task_type` (excavation, trenching, material_loading,
-grading, demolition) · `task_status` (planned, in_progress, paused, completed, cancelled, blocked_ppe) ·
-`weather_kind` (clear, hot, rain, windy, cold, fog, dust) · `fault_severity` (info, caution, derate,
-shutdown) [R] research 11 §1.3 · `run_status` (ready, playing, paused, finished) · `frame_kind`
-(telemetry, gps, operator_state, weather, fault, ppe, marker) · `alert_status` (open, acknowledged,
-escalating, escalated, resolved, suppressed) · `dispatch_channel` (telegram, twilio_voice) ·
-`dispatch_status` (queued, sending, sent, delivered, answered, no_answer, failed, suppressed, dry_run) ·
-`incident_type` (seatbelt_breach, guardian_hazard, sos, ppe_override, near_miss, first_aid,
-property_damage, manual, correction) · `visibility` (operator, site, supervisor).
+`skill_level` · `task_type` · `task_status` (planned, in_progress, paused, completed, cancelled,
+blocked_ppe) · `weather_kind` · `fault_severity` (info, caution, derate, shutdown) [R] ·
+`run_status` (ready, playing, paused, finished) · `frame_kind` (telemetry, gps, operator_state, weather,
+fault, ppe) · `alert_status` (open, acknowledged, escalating, escalated, resolved, suppressed) ·
+`dispatch_channel` (telegram, twilio_voice) · `dispatch_status` (queued, sending, sent, delivered,
+answered, no_answer, failed, suppressed, dry_run) · `incident_type` (seatbelt_breach, guardian_hazard,
+sos, ppe_override, near_miss, first_aid, property_damage, manual, correction) ·
+`audience` (operator, site, supervisor, trainer).
 
-Roles in the RLS matrices below: **OP** operator, **FM** fleet_manager, **TR** trainer, **SVC** service
-(Edge Functions using the secret key → Postgres role `service_role`, which bypasses RLS [V] but still
-obeys table grants). "RPC" = write only via a named security-definer function. "—" = no access.
+Roles in the RLS matrices: **OP** operator, **FM** fleet_manager, **TR** trainer, **SVC** service
+(Edge Functions with the secret key → `service_role`, bypasses RLS [V], still obeys grants).
+"RPC" = write only via a named security-definer function. "—" = no access.
 
 ## 1. Organiser dataset mapping
 
-Their files are not in the repo yet (`docs/brief/data/` holds only `.gitkeep`) **[A]: the mapping below
-uses the column names in the problem statement; units, value vocabularies and the meaning of
-"Idling time" must be confirmed against the sample file** (task B6).
+The files are not in the repo yet (`docs/brief/data/` holds only `.gitkeep`). **[A]: this mapping uses
+the column names in the problem statement; units, vocabularies and the meaning of "Idling time" are
+confirmed against the sample in task B6.**
 
-Telemetry dataset (9 fields) → `telemetry_readings` (+ reference tables):
+Telemetry dataset (9 fields) → `telemetry_readings`:
 | Organiser field | Column | Notes |
 |---|---|---|
-| Timestamp | `telemetry_readings.ts` | parsed as IST if no offset [A] |
-| Machine ID | `machines.code` → `telemetry_readings.machine_id` | loader upserts unknown codes into `machines` with `model_id` null + `assumed = true` |
-| Operator ID | `operators.employee_code` → `telemetry_readings.operator_id` | same upsert rule |
-| Engine hours | `telemetry_readings.engine_hours` numeric(10,2) | cumulative hour meter [A] |
-| Fuel used | `telemetry_readings.fuel_used_l` numeric(10,2) | litres, cumulative per shift [A] |
-| Load cycles | `telemetry_readings.load_cycles` int | cumulative per shift [A] |
-| Idling time | `telemetry_readings.idle_hours` numeric(10,2) | **[A] cumulative hours; could be minutes per interval: confirm** |
-| Seatbelt status | `telemetry_readings.seatbelt_fastened` boolean | map "Fastened/Unfastened", "Yes/No", 1/0 [A] |
-| Safety alerts | `telemetry_readings.organiser_safety_alert` text (raw) | loader also writes a `safety.organiser_alert` event per non-empty value, so their example ("unfastened and an alert triggered") shows up in the inbox |
+| Timestamp | `ts` | IST if no offset [A] |
+| Machine ID | `machines.code` → `machine_id` | unknown codes upserted with `assumed = true` |
+| Operator ID | `operators.employee_code` → `operator_id` | same rule |
+| Engine hours | `engine_hours numeric(10,2)` | cumulative hour meter [A] |
+| Fuel used | `fuel_used_l numeric(10,2)` | litres, cumulative per shift [A] |
+| Load cycles | `load_cycles int` | cumulative per shift [A]; also the **progress source** (§2.2) |
+| Idling time | `idle_hours numeric(10,2)` | **[A] cumulative hours; may be minutes per interval** |
+| Seatbelt status | `seatbelt_fastened boolean` | maps "Fastened/Unfastened", "Yes/No", 1/0 [A] |
+| Safety alerts | `organiser_safety_alert text` (raw) | loader also emits `safety.organiser_alert` per non-empty value |
 
-Task-time dataset (7 fields) → `task_history`:
-| Organiser field | Column |
-|---|---|
-| Task ID | `task_history.external_ref` (unique with `source`) |
-| Task type | `task_history.task_type` (`task_type` enum; unknown values rejected into a load report) |
-| Weather | `task_history.weather` (`weather_kind`; free text kept in `weather_raw`) |
-| Operator skill | `task_history.operator_skill` (`skill_level`) |
-| Machine age | `task_history.machine_age_years` numeric(4,1) [A years] |
-| Estimated time | `task_history.organiser_estimate_min` numeric(8,1) [A minutes] |
-| Actual time | `task_history.actual_min` numeric(8,1) [A minutes] |
+Task-time dataset (7 fields) → `task_history`: Task ID → `external_ref`; Task type → `task_type`;
+Weather → `weather` (+ `weather_raw`); Operator skill → `operator_skill`; Machine age →
+`machine_age_years` [A years]; Estimated time → `organiser_estimate_min` [A minutes]; Actual time →
+`actual_min` [A minutes].
 
-Every column beyond these is an **assumed sensor** or **synthetic** field and is tagged so in the UI
-(`packages/shared` exports `ASSUMED_FIELDS` per table for the "assumed" chip).
+Every other column is an **assumed sensor** or **synthetic** field; `packages/shared` exports
+`ASSUMED_FIELDS` per table for the UI's "assumed" chip.
 
 ## 2. Tables
 
 ### 2.1 Reference
 
-**sites**: `id`, `code text unique`, `name text`, `site_type text` (quarry, coal_mine, highway),
-`location geography(Point)`, `elevation_m numeric`, `timezone text default 'Asia/Kolkata'`,
-`created_at`. Index: GIST(location).
+**sites**: `id`, `code unique`, `name`, `site_type`, `location geography(Point)`, `elevation_m`,
+`timezone default 'Asia/Kolkata'`. GIST(location).
 
-**zones**: `id`, `site_id → sites`, `name`, `zone_type text` (work, hazard, no_go, parking, walkway,
-fuel), `boundary geography(Polygon)`, `max_speed_kmh numeric`, `max_slope_deg numeric`.
-Index: GIST(boundary), (site_id).
+**zones**: `id`, `site_id`, `name`, `zone_type` (work, hazard, no_go, parking, walkway, fuel),
+`boundary geography(Polygon)`, `max_speed_kmh`, `max_slope_deg`. GIST(boundary).
 
-**machine_models**: `id`, `code text unique` (e.g. `320`, `950GC`), `name text` (e.g. "Cat 320 GC
-excavator"), `machine_type text`, `rated_rpm int`, `idle_fuel_lph numeric`, `work_fuel_lph numeric`,
-`baseline_idle_pct numeric default 25` [R] research 11 §4.1.
+**machine_models**: `id`, `code unique`, `name`, `machine_type`, `rated_rpm`, `idle_fuel_lph`,
+`work_fuel_lph`, `baseline_idle_pct default 25` [R] research 11 §4.1.
 
-**machines**: `id`, `code text unique` (organiser Machine ID), `model_id → machine_models null`,
-`serial_number text`, `manufacture_year int`, `home_site_id → sites`, `service_status text`,
-`assumed boolean default false`. Index: (home_site_id).
+**machines**: `id`, `code unique`, `model_id null`, `serial_number`, `manufacture_year`, `home_site_id`,
+`service_status`, `assumed boolean default false`.
 
-**operators**: `id`, `employee_code text unique` (organiser Operator ID), `display_name`,
-`skill_level skill_level`, `experience_hours numeric`, `preferred_language text check in ('en','hi','ta')`,
-`site_id → sites`, `contact_ref text` (the **name of an Edge Function secret**, e.g.
-`DEMO_OPERATOR_PHONE`; phone numbers never enter the database), `created_at`.
+**operators**: `id`, `employee_code unique`, `display_name`, `skill_level`, `experience_hours`,
+`preferred_language check in ('en','hi','ta')`, `site_id`, `contact_ref text` (name of an Edge Function
+secret such as `DEMO_OPERATOR_PHONE`; phone numbers never enter the database), `pseudonym text unique`
+(e.g. `Operator-7F2`, used by the near-miss view).
 
-**profiles**: `user_id uuid pk → auth.users on delete cascade`, `role app_role not null`,
-`operator_id → operators null` (required when role = operator), `site_id → sites`, `display_name`,
-`language text`, `created_at`. One row per demo login (Ravi = operator, Anita = fleet_manager, a trainer).
+**profiles**: `user_id pk → auth.users`, `role app_role`, `operator_id null` (required for operator),
+`site_id`, `display_name`, `language`.
 
-**protocol_cards** (fixed, reviewed; never LLM-generated): `id text pk` (e.g. `hydraulic_fault`),
-`fault_type text`, `version int`, `steps jsonb` (`{"en":[...],"hi":[...],"ta":[...]}`),
-`audio_paths jsonb` (Storage paths of pre-generated clips), `source_refs text[]`, `reviewed_by text`,
-`reviewed_at timestamptz`. Content from research 10 §6 protocol.
+**operator_pairings** (M10 "pair a machine", G2-14/PA-8): `run_id`, `operator_id`, `machine_id`,
+`paired_at`, `unpaired_at null`. Unique (run_id, operator_id) where `unpaired_at is null`. RPC `pair_machine`.
 
-**event_types**: `type text pk` (e.g. `safety.seatbelt_breach`), `default_tier alert_tier null`,
-`ledger boolean` (auto-appends an incident), `raises_alert boolean`, `visibility visibility`,
-`description text`. Seeded from `packages/shared` `EVENT_TYPES` so the DB and the contracts cannot drift.
+**protocol_cards** (fixed, reviewed; never LLM-generated): `id text pk`, `fault_type`, `version`,
+`steps jsonb` (`{"en":[…],"hi":[…],"ta":[…]}`), `audio_paths jsonb`, `source_refs text[]`,
+`reviewed_by`, `reviewed_at`.
 
-**alert_policies** (the alert budget as data): `kind text pk`, `tier alert_tier`,
-`dedupe_window_s int`, `ack_timeout_s int null` (null = no escalation), `escalate_to text`
-(`supervisor_telegram`, `supervisor_call`, `operator_call`), `rate_cap_per_10min int`,
-`needs_ack boolean`.
+**event_types** (generated seed, never hand-edited; G2-9): `type text pk`, `default_tier`,
+`ledger boolean`, `raises_alert boolean`, `alert_kind text null`, `audiences audience[]`,
+`lesson_code text null`, `replay boolean`. Written by `scripts/gen-sql-seed.ts` from `EVENT_REGISTRY`
+(api-contracts §3); B4's test compares the table with the registry.
 
-**app_config** (single row): `demo_mode boolean`, `dry_run_external boolean` (dispatches become
-`dry_run`: used in rehearsals so we do not burn Twilio trial minutes), `guardian_radius_m int default 50`,
-`danger_radius_m int default 15`, `motion_speed_kmh numeric default 0.5`.
+**alert_policies** (generated seed from `ALERT_POLICIES` in contracts): `kind text pk`,
+`hazard_group text` (seatbelt, guardian:{machine}, proximity, ppe, machine_health, idle, sos, ledger,
+flood), `tier_default`, `dedupe_window_s` (wall), `ack_timeout_s null`, `escalate_to text[]`,
+`rate_capped boolean` (true only for info/caution kinds), `needs_ack`.
 
-RLS (all of 2.1): OP/FM/TR `select` (profiles: own row for OP; all rows for FM, TR). No client writes.
-SVC full. `app_config`: FM select only.
+**app_config** (single row): `demo_mode`, `dry_run_external`, `guardian_radius_m 50`,
+`danger_radius_m 15`, `motion_speed_kmh 0.5`, `state_stale_s 10`, `max_frames_per_tick 200`,
+`checkpoint_every_min 30`.
+
+RLS (2.1): OP/FM/TR select (profiles: OP own row; FM, TR all). `app_config`: FM select. No client writes
+except `pair_machine` (RPC).
 
 ### 2.2 Shifts, tasks, task history
 
-**shifts**: `id`, `run_id → scenario_runs null`, `operator_id`, `machine_id`, `site_id`,
-`shift_type text`, `scheduled_start`, `scheduled_end`, `actual_start`, `actual_end`, `status text`.
-Index: (operator_id, scheduled_start), (run_id).
+**shifts**: `id`, `run_id null`, `operator_id`, `machine_id`, `site_id`, `shift_type`,
+`scheduled_start/end`, `actual_start/end`, `status`.
 
-**tasks** (today's plan; scenario-scoped): `id`, `run_id`, `shift_id`, `external_ref text`,
-`operator_id`, `machine_id`, `site_id`, `zone_id null`, `task_type task_type`, `planned_start`,
-`planned_quantity numeric null` [A], `status task_status default 'planned'`, `started_at`, `paused_at`,
-`completed_at`, `progress_pct numeric(5,2) default 0`, `eta_p50_min numeric`, `eta_p90_min numeric`,
-`eta_model_version text`, `eta_factors jsonb` (factor → multiplier, for "why this estimate"),
-`ppe_override_incident_id → incidents(id) null`, `updated_at`.
-Index: (run_id, operator_id, planned_start), (run_id, status).
-RLS: OP select own (`operator_id = (select private.my_operator_id())`); FM select all; TR select all.
-Writes: RPC (`task_start`, `task_pause`, `task_complete`).
+**tasks**: `id`, `run_id`, `shift_id`, `external_ref`, `operator_id`, `machine_id`, `site_id`,
+`zone_id null`, `task_type`, `planned_start`, `status task_status`, `started_at`, `paused_at`,
+`completed_at`,
+`planned_cycles int` (from the generator: expected load cycles for the task),
+`cycles_at_start int null`, `progress_pct numeric(5,2) default 0`,
+`eta_p50_min`, `eta_p90_min`, `eta_model_version`, `eta_factors jsonb` (**array** of
+`{key, multiplier, assumed}`, same shape as `EtaFactor`; G2-9), `ppe_override_id → ppe_overrides null`,
+`updated_at`. Index (run_id, operator_id, planned_start).
+**Progress source (G2-14):** `apply_frame` for a telemetry frame of the machine paired with the task's
+operator, while the task is `in_progress`, sets
+`progress_pct = least(100, (load_cycles - cycles_at_start) * 100.0 / planned_cycles)` and emits
+`task.progress` at every 10 % step. `task_start` stores `cycles_at_start` from `machine_state`.
+RLS: OP own; FM, TR all. Writes: RPC.
 
-**task_history** (ETA training data): `id`, `external_ref text`, `source text check in
-('organiser','synthetic')`, `task_type`, `weather weather_kind`, `weather_raw text`,
-`operator_skill skill_level`, `machine_age_years numeric(4,1)`, `organiser_estimate_min numeric(8,1)`,
-`actual_min numeric(8,1)`; assumed extras: `operator_id null`, `machine_id null`, `site_id null`,
-`started_at`, `temperature_c`, `wind_kmh`, `humidity_pct`, `material text`, `shift_hour smallint`,
-`split text check in ('train','calib','test')` (fixed by seed; the test split is never used for fitting).
-Unique (source, external_ref). Index: (task_type, weather), (split).
-RLS: FM, TR select; OP select own rows; no client writes.
+**ppe_overrides**: `id`, `task_id`, `operator_id`, `granted_by uuid`, `reason text`, `missing text[]`,
+`granted_at`, `valid_until` (+15 min), `ledger_queue_id → private.ledger_queue`. RLS: OP own, FM all.
+
+**task_history**: `id`, `external_ref`, `source` (organiser, synthetic), `task_type`, `weather`,
+`weather_raw`, `operator_skill`, `machine_age_years`, `organiser_estimate_min`, `actual_min`; assumed:
+`operator_id`, `machine_id`, `site_id`, `started_at`, `temperature_c`, `wind_kmh`, `humidity_pct`,
+`material`, `shift_hour`, `split` (train, calib, test). Unique (source, external_ref).
+RLS: FM, TR select; OP own. View **`v_task_analytics`** (avg actual by task_type × weather, bias =
+mean(actual − estimate) for organiser and model; PA-8) owned by task B16.
 
 ### 2.3 Scenario engine
 
-**scenarios**: `id`, `code text unique` (`review1`), `seed bigint`, `site_id`, `shift_start_sim
-timestamptz`, `duration interval`, `frame_count int`, `generator_version text`, `created_at`.
+**scenarios**: `id`, `code unique` (`review1`), `seed`, `site_id`, `shift_start_sim`, `duration`,
+`frame_count`, `generator_version`.
 
-**scenario_frames** (pre-generated by the Python generator; the "sensor feed"):
-`scenario_id → scenarios`, `seq int`, `sim_offset_ms bigint`, `kind frame_kind`, `machine_id null`,
-`operator_id null`, `payload jsonb` (telemetry, GPS fix, PPE tags, on-foot flag, weather, fault code).
-PK (scenario_id, seq). Index: (scenario_id, sim_offset_ms).
-**Contains raw sensor values only: no event, no label.** RLS: **no client access** (future frames would
-leak the script). SVC and `private` functions only.
+**scenario_frames** (the sensor feed, raw values only, no events, no labels): PK (scenario_id, seq),
+`sim_offset_ms`, `kind frame_kind`, `machine_id null`, `operator_id null`, `payload jsonb`.
+Index (scenario_id, sim_offset_ms). RLS: no client access.
 
-**scenario_runs**: `id`, `scenario_id`, `status run_status`, `speed smallint check in (1,10,60)`,
-`sim_anchor timestamptz` (sim time at `wall_anchor`), `wall_anchor timestamptz`, `cursor_seq int
-default 0` (last applied frame), `is_current boolean default false` (partial unique index where true),
-`dry_run_external boolean`, `created_by uuid`, `created_at`.
-`sim_now = sim_anchor + (now() - wall_anchor) * speed` while playing.
-RLS: all roles select. Writes: `director` Edge Function → `private.run_*` functions.
+**scenario_runs**: `id`, `scenario_id`, `status`, `speed smallint check in (1,10,60)`, `sim_anchor`,
+`wall_anchor`, `cursor_seq int default 0`, `catchup_until_seq int null` (set by `jump_to`; G2-5),
+`is_current boolean` (partial unique where true), `rehearsal boolean default true` (the live demo run is
+created with `false`), `dry_run_external boolean`, `created_by`, `created_at`.
+`sim_now = sim_anchor + (now() - wall_anchor) * speed` while playing. RLS: all select; writes via
+`director`.
+
+**private.tick_log** (G2-16): `id`, `run_id`, `started_at`, `frames int`, `duration_ms int`,
+`errors int`, `lag_sim_ms bigint`. Kept 24 h. Read by `demo-check` (p95/max).
+
+**private.tick_errors**: `id`, `run_id`, `frame_seq`, `sqlstate`, `message`, `at`. A frame whose
+detector raises is logged here and skipped (the tick keeps going; G2-1).
 
 ### 2.4 Telemetry and live state
 
-**telemetry_readings**: `id bigint identity pk`, `run_id null`, `frame_seq int null`, `machine_id`,
-`operator_id null`, `ts` (organiser Timestamp), `engine_hours`, `fuel_used_l`, `load_cycles`,
-`idle_hours`, `seatbelt_fastened`, `organiser_safety_alert text` (the 9 organiser fields); assumed:
-`rpm int`, `engine_load_pct numeric`, `coolant_temp_c numeric`, `hydraulic_temp_c numeric`,
-`hydraulic_pressure_bar numeric`, `speed_kmh numeric`, `pitch_deg numeric`, `roll_deg numeric`,
-`parking_brake boolean`, `fuel_level_pct numeric`, `def_pct numeric`, `location geography(Point)`.
-Unique (run_id, frame_seq) (idempotent frame apply; history rows have both null). Index:
-(machine_id, ts), (run_id, machine_id, ts) where run_id is not null, BRIN(ts), GIST(location).
-RLS: OP select where `operator_id = me`; FM select all; TR —.
+**telemetry_readings**: `id bigint identity`, `run_id null`, `frame_seq null`, `machine_id`,
+`operator_id null`, `ts`, the 9 organiser fields (§1), assumed: `rpm`, `engine_load_pct`,
+`coolant_temp_c`, `hydraulic_temp_c`, `hydraulic_pressure_bar`, `speed_kmh`, `pitch_deg`, `roll_deg`,
+`parking_brake`, `fuel_level_pct`, `def_pct`, `location`. Unique (run_id, frame_seq).
+Index (machine_id, ts), (run_id, machine_id, ts) where run_id is not null, BRIN(ts), GIST(location).
+RLS: OP where `operator_id = me`; FM all; TR —.
 
-**machine_state** (latest per machine per run; what maps and Guardian read): PK (run_id, machine_id),
-`ts`, `speed_kmh`, `moving boolean` (speed > `app_config.motion_speed_kmh` or parking brake off),
-`parking_brake`, `seatbelt_fastened`, `operator_id null`, `pitch_deg`, `roll_deg`, `location`,
-`hydraulic_temp_c`, `coolant_temp_c`, `health text` (ok, caution, fault), `active_anomaly_ids uuid[]`,
-`updated_at`. Index: GIST(location).
-RLS: all roles select (machine-level, not personal).
+**machine_state** (latest per machine per run): PK (run_id, machine_id), `ts`, `speed_kmh`,
+`moving boolean`, `parking_brake`, `seatbelt_fastened`, `operator_id null`, `pitch_deg`, `roll_deg`,
+`location`, `hydraulic_temp_c`, `coolant_temp_c`, `load_cycles`, `health` (ok, caution, fault),
+`active_anomaly_ids uuid[]`, `updated_at`. RLS: all select.
 
-**operator_state** (latest per operator per run): PK (run_id, operator_id), `ts`, `location`,
-`on_foot boolean`, `in_cab_machine_id null`, `ppe jsonb` (`{"helmet":true,"vest":false,"boots":true}`,
-assumed UWB/RFID tags), `updated_at`. RLS: OP own; FM all; TR —.
+**operator_state**: PK (run_id, operator_id), `ts`, `location`, `on_foot boolean null`,
+`in_cab_machine_id null`, `ppe jsonb`, `updated_at`. RLS: OP own; FM all.
 
 **operator_gps_trail**: `id bigint identity`, `run_id null`, `operator_id`, `ts`, `location`,
-`speed_kmh`, `accuracy_m`. Index: (run_id, operator_id, ts), GIST(location).
-RLS: OP own; FM all (workplace-safety legitimate use, DPDP s.7 [R] research 10 §6); TR —.
-Retention: history older than 90 days deleted by a nightly cron job.
+`speed_kmh`, `accuracy_m`. RLS: OP own; FM all (DPDP s.7 workplace safety [R]); TR —. Retention 90 days.
 
-**weather_snapshots**: `id`, `site_id`, `run_id null`, `ts`, `temperature_c`, `apparent_temperature_c`,
-`humidity_pct`, `wind_kmh`, `precipitation_mm`, `wbgt_c` (approximation, labelled), `wind_chill_c`,
-`source text` (open_meteo_archive, scenario). Index: (site_id, ts). RLS: all select.
-
-**fault_codes**: `id`, `run_id null`, `machine_id`, `ts`, `code_type text` (j1939_spn_fmi,
-cat_cid_fmi, cat_eid), `spn int`, `fmi int`, `cid int`, `mid int`, `eid int`, `severity fault_severity`,
-`description_key text`, `active boolean`, `cleared_at`. Index: (machine_id, ts).
-RLS: all select.
+**weather_snapshots**, **fault_codes**: as in revision 1 (site/machine keyed, all roles select).
 
 ### 2.5 Detection
 
-**private.detector_state**: PK (run_id, machine_id, metric), `n int`, `ewma numeric`, `ewvar numeric`,
-`last_ts`, `in_alarm boolean`. EWMA λ = 0.2, control limit L = 3σ, warm-up 30 samples [A] (NIST
-EWMA chart, research 11 §4.3).
+Detectors are split into **pure functions** and an **effects layer** (G2-2):
+- `private.detect_rules(frame jsonb, state jsonb, cfg jsonb) returns setof finding` and
+  `private.detect_ewma(prev private.detector_state, x numeric, cfg jsonb) returns (next_state, finding)`
+  are `immutable`, write nothing, raise nothing (every division guarded: `sd = 0` → no finding).
+- `private.apply_findings(run_id, findings)` (live only) writes `anomalies`, emits events, raises alerts,
+  enqueues ledger entries.
+- The evaluator uses only the pure functions (§2.5.2).
 
-**detector_baselines**: PK (scope, scope_id, metric), `scope text` (machine, model), `mean`, `sd`, `n`,
-`fitted_from daterange`. Fitted from history days 1-20 only. RLS: FM, TR select.
+**Rules in P0** (cut list: the rest move to P1, see backend-tasks §5): `seatbelt_off_moving` (critical when
+pitch/roll > zone `max_slope_deg`), `overspeed` (zone `max_speed_kmh`), `slope_exceeded`,
+`idle_excess` (≥ 40 % caution, ≥ 50 % warning over a rolling 60-min sim window [R]),
+`fault_continued_operation`, `proximity_person_machine` (awareness/warning/danger rings).
+**EWMA in P0:** per machine only (λ 0.2, 3σ, warm-up 30, 2 consecutive) on `hydraulic_temp_c`,
+`coolant_temp_c`; fleet baseline → P1.
 
-**anomalies**: `id`, `run_id null`, `machine_id`, `operator_id null`, `anomaly_type text`
-(idle_excess, seatbelt_off_moving, overspeed, slope_exceeded, cold_overrev, harsh_operation,
-warning_ignored, fault_continued_operation, hydraulic_temp_drift, coolant_temp_drift, fuel_rate_drift),
-`method text` (rule, ewma, fleet_z), `ts_start`, `ts_end null`, `severity_score smallint` (0-100,
-risk-matrix weights [R] research 11 §4.4), `features jsonb` (numbers only: e.g. `idle_pct`,
-`ratio_to_normal`, `fuel_l`, `cost_inr`; the UI renders the sentence in the operator's language),
-`event_id → events`. Index: (run_id, machine_id, ts_start), (anomaly_type).
-RLS: OP select where `operator_id = me or operator_id is null`; FM, TR select all.
+**private.detector_state**: PK (run_id, machine_id, metric), `n`, `ewma`, `ewvar`, `last_ts`,
+`in_alarm`, `consecutive`.
 
-**private.injected_labels** (the answer key; held out): `id`, `run_id null`, `machine_id`,
-`anomaly_type`, `ts_start`, `ts_end`, `generator_version`. **Not exposed; no detector function reads
-it.** Only `private.evaluate_detectors()` joins it, after detection, to fill `evidence_metrics`.
+**anomalies**: `id`, `run_id null`, `machine_id`, `operator_id null`, `anomaly_type`, `method`,
+`ts_start`, `ts_end`, `severity_score`, `features jsonb` (numbers), **`location geography(Point)`**
+(G2-14), `event_id`. RLS: OP where own or `operator_id is null`; FM, TR all.
 
-**evidence_metrics**: `id`, `metric_key text` (`detector.precision.idle_excess`, `eta.mae.model`,
-`eta.mae.organiser`, `eta.p90_coverage`, `rag.hit_at_5`, `rag.faithfulness`), `value numeric`,
-`n int`, `details jsonb`, `dataset_version text`, `computed_at`. RLS: all select.
+**private.injected_labels** (the answer key): `id`, `machine_id`, `anomaly_type`, `ts_start`, `ts_end`,
+`generator_version`. Read only by `eval.score()`.
 
-### 2.6 Events, alerts, dispatches: see §3
+#### 2.5.1 Evidence metrics
 
-### 2.7 Ledger: see §4
+**evidence_metrics**: `metric_key`, `value`, `n`, `details jsonb`, `dataset_version`, `model`,
+`computed_at`. Keys (PA-2):
+`detector.precision.{type}`, `detector.recall.{type}` · `eta.mae.model`, `eta.mae.organiser`,
+`eta.p90_coverage` · **`fleet.idle_pct`, `fleet.idle_pct.by_model`** · **`loop.repeat_rate.assigned`,
+`loop.repeat_rate.control`** (synthetic cohort from the generator, labelled "how we would measure") ·
+`rag.hit_at_5`, `rag.faithfulness` (only rows where `model` = the primary; G2-18).
+RLS: all select.
 
-### 2.8 Training and the Loop
+#### 2.5.2 Evaluation sandbox (G2-2)
 
-**lessons**: `id`, `code text unique` (`seatbelt_slopes`, `faulty_machine_nearby`), `title jsonb`
-(i18n), `video_paths jsonb`, `quiz jsonb`, `topic_event_types text[]`.
-**lesson_assignments**: `id`, `operator_id`, `lesson_id`, `because_event_id → events null`,
-`assigned_at`, `completed_at`, `quiz_score numeric`. Unique (operator_id, lesson_id, because_event_id).
-**replay_scenarios**: `id`, `source_event_id → events unique`, `operator_id`, `scenario_json jsonb`
-(map snapshot, trail, machine, wind, decision steps), `created_at`.
+Schema `eval`: `eval.telemetry` (copy of history days 21-30, loaded by `scripts/eval.ts` in day-sized
+chunks), `eval.findings`, `eval.detector_state`. `eval.run_day(date)` calls the same pure
+`private.detect_*` functions and writes **only** to `eval.*`. `eval.score()` joins `eval.findings` with
+`private.injected_labels` after all days ran, writes `evidence_metrics`, then `truncate eval.telemetry,
+eval.findings, eval.detector_state`. No trigger, no `emit_event`, no ledger, no Realtime, no dispatch
+can be reached from `eval`. Run from `scripts/` over a direct connection (not pg_cron), one day per call,
+so each statement stays under the 2-min `postgres` cap [V per G2 review].
+
+### 2.6 Events, alerts, dispatches: §3 · 2.7 Ledger: §4
+
+### 2.8 Training, Replay and the Loop (G2-14, PA-1)
+
+**lessons**: `id`, `code unique` (`seatbelt_slopes`, `faulty_machine_nearby`), `title jsonb`,
+`video_paths jsonb`, `quiz jsonb`, `topic_event_types text[]`.
+
+**lesson_assignments**: `id`, `operator_id`, `lesson_id`, `because_event_id null`, `assigned_at`,
+`completed_at`, `quiz_score`. Unique (operator_id, lesson_id, because_event_id).
+
+**replay_templates**: `event_type text pk` (P0: **`guardian.hazard_near_operator` only**, cut list #7),
+`steps jsonb` (3-4 steps; each: prompt i18n, options with `id`, `correct_option`, `weight`,
+`time_limit_ms`), `version`.
+
+**replay_scenarios**: `id`, `source_event_id unique`, `operator_id`, `template_version`,
+`scenario_json jsonb` (validated by `ReplayScenario` in contracts): site map snapshot (zones within
+300 m), the operator's GPS trail for the 10 sim-minutes before the event, machine positions and health at
+`sim_ts`, wind at `sim_ts`, the faulty machine, the operator's real response time (event → ack), the
+steps from the template.
+
 **replay_attempts**: `id`, `replay_id`, `operator_id`, `started_at`, `completed_at`,
-`outcome_score numeric`, `process_score numeric`, `choices jsonb`.
-RLS: OP own (select; writes via `replay_submit`, `lesson_complete` RPCs); TR select all, assigns via
-`lesson_assign` RPC; FM select all (aggregates on the evidence card). Near-miss derived records are
-flagged non-punitive (§4) [policy, not technically enforced in P0].
+`outcome_score` (Σ weight of correct choices / Σ weights × 100), `process_score` (100 × share of steps
+answered within `time_limit_ms`, minus 25 if steps were answered out of order), `choices jsonb`.
+
+**Loop builder (task B10b):** `private.loop_on_event(event)`, called by `apply_findings` and the RPCs
+after an event commits (via the events insert trigger, **not** inside the tick's detector subtransaction):
+if `event_types.lesson_code` is set → insert `lesson_assignments` (idempotent unique) + emit
+`training.lesson_assigned`; if `event_types.replay` → `private.build_replay(event_id)` → insert
+`replay_scenarios` + emit `training.replay_ready`. Demo beat 4 replays **Ravi's Guardian near-miss with
+EXC-014** (step 3 of the demo); the seatbelt breach assigns the `seatbelt_slopes` lesson only.
+
+RLS: OP own (writes via `lesson_complete`, `replay_submit`); TR all + `lesson_assign`; FM select
+aggregates via `evidence_metrics` only (training records are non-punitive).
 
 ### 2.9 Ask Spotter (RAG)
 
-**kb_documents**: `id`, `title`, `source_url`, `licence text`, `audience app_role[]`, `language text`,
-`safety_critical boolean`, `checksum text`, `ingested_at`.
-**kb_chunks** (mirror of Pinecone records, used to display and to **validate citations**):
-`id text pk` (= Pinecone record id), `document_id`, `ordinal int`, `heading text`, `text text`,
-`page int null`, `modality text` (text, image), `image_path text null`, `audience app_role[]`.
-**ask_logs**: `id`, `user_id`, `role app_role`, `question text`, `photo_path text null`,
-`answer jsonb`, `cited_ids text[]`, `grounded boolean`, `model text`, `fallback_used text null`,
-`latency_ms int`, `prompt_tokens int`, `created_at`.
-RLS: kb_* select where `(select private.app_role()) = any(audience)`; ask_logs own select; writes SVC.
+**kb_documents**, **kb_chunks** (mirror of Pinecone records; used to display citations and to run the
+**verbatim-rule check**, G2-13), **ask_logs** (`model`, `fallback_used`, `prompt_tokens`, `latency_ms`,
+`refusal_reason`). RLS: kb_* where role ∈ `audience`; ask_logs own; writes SVC.
+
+**private.ask_rate** (G2-6): `user_id`, `window_start`, `count`; global row `user_id = null` for the
+org-wide breaker (≤ 20 asks/min across all users).
 
 ### 2.10 Privacy
 
-**consents**: `id`, `operator_id`, `version text`, `purpose text`, `granted_at`, `revoked_at null`.
-RLS: OP own (write via `consent_set` RPC); FM select. "My data" view = the OP-visible rows above.
+**consents** (OP own via `consent_set`; FM select). Near-miss mode (PA-8): FM's policy on `incidents`
+excludes `non_punitive = true` rows; FM reads them through RPC `near_miss_list()` which returns
+`operators.pseudonym` instead of the operator id. `ledger_verify` (security definer) still covers every
+row.
 
 ## 3. Events, alerts and dispatches
 
@@ -272,216 +296,220 @@ RLS: OP own (write via `consent_set` RPC); FM select. "My data" view = the OP-vi
 | Column | Type | Notes |
 |---|---|---|
 | id | uuid pk | |
-| seq | bigint generated always as identity unique | global order for the UI |
-| run_id | uuid → scenario_runs null | null for non-scenario events |
-| type | text → event_types(type) | `domain.verb`, e.g. `safety.seatbelt_breach` |
-| tier | alert_tier null | copied from payload rules / event_types |
-| sim_ts | timestamptz null | simulated time of the underlying frame |
-| recorded_at | timestamptz default now() | wall clock |
-| site_id, machine_id, operator_id, task_id, alert_id | uuid null | subjects |
-| visibility | visibility | operator / site / supervisor |
+| seq | bigint identity unique | UI order |
+| run_id | uuid null | |
+| type | text → event_types | from `EVENT_REGISTRY` |
+| tier | alert_tier null | |
+| sim_ts / recorded_at | timestamptz | sim / wall |
+| site_id, machine_id, operator_id, task_id, alert_id | uuid null | |
+| **audiences** | audience[] | from the registry; drives **both** RLS and Realtime topics (G2-19) |
 | source | text | `detector.rule`, `detector.ewma`, `guardian`, `user`, `director`, `system`, `telegram`, `twilio`, `loader` |
-| payload | jsonb check (jsonb_typeof(payload) = 'object') | validated by zod at every edge; schema per type in `api-contracts.md` §3 |
-| correlation_id | uuid | groups one story (SOS raise → ack → escalate) |
-| causation_id | uuid null → events(id) | parent event |
-| idempotency_key | text unique not null | see below |
+| payload | jsonb (object) | zod-validated at every edge |
+| correlation_id, causation_id | uuid | |
+| idempotency_key | text unique | |
 
-Indexes: unique(idempotency_key); (run_id, seq); (operator_id, recorded_at desc); (type, recorded_at desc);
-(correlation_id).
-Grants: clients `select` only; inserts only via `private.emit_event(...)` (security definer), called by
-detectors, RPCs and Edge Functions. `update`/`delete` revoked from `anon`, `authenticated`,
-`service_role`; the table is append-only.
-RLS: OP select where `visibility = 'site' or (operator_id = me and visibility = 'operator')`;
-FM select all; TR select where `type like 'safety.%' or type like 'training.%' or type like 'guardian.%'`.
+Append-only for API roles (`update`/`delete` revoked from `anon`, `authenticated`, `service_role`).
+Only `private.purge_run` (owner) deletes, and only rows of `rehearsal` runs.
+RLS (one rule per audience, mirroring topics exactly):
+OP: `'operator' = any(audiences) and operator_id = me` **or** `'site' = any(audiences) and site_id = my site`;
+FM: `site_id = my site`; TR: `'trainer' = any(audiences)`.
+**Fan-out** (after insert): one `realtime.send(envelope, type, topic, true)` per audience:
+`operator` → `op:{operator_id}`, `site` → `site:{site_id}`, `supervisor` → `sup:{site_id}`,
+`trainer` → `train:{site_id}`. `realtime.messages` select policies grant each topic prefix to exactly the
+same roles as the RLS above, so table and broadcast cannot disagree.
 
-**Idempotency keys** (a retry, duplicate webhook or re-applied frame becomes a no-op via
-`insert … on conflict (idempotency_key) do nothing returning …`, falling back to a select):
-| Producer | Key format |
-|---|---|
-| detector | `det:{run_id}:{machine_code}:{rule}:{frame_seq}` |
-| client RPC | `rpc:{function}:{request_id}` (client uuid v4 per user action) |
-| Telegram | `tg:{update_id}` |
-| Twilio | `tw:{CallSid}:{CallStatus}` or `tw:{CallSid}:digits` |
-| director | `dir:{request_id}` |
-| system job | `sys:{job}:{bucket}` (e.g. `sys:ledger_root:2026-09-23`) |
+Idempotency keys: detector `det:{run_id}:{machine_code}:{rule}:{frame_seq}` · client RPC
+`rpc:{function}:{request_id}` · Telegram `tg:{update_id}` · Twilio `tw:{CallSid}:{CallStatus}` /
+`tw:{CallSid}:digits` · director `dir:{request_id}` · system `sys:{job}:{bucket}`.
 
-**Fan-out:** an `after insert` trigger on `events` calls `realtime.send(to_jsonb(new), new.type, topic,
-true)` (the payload is the `EventEnvelope` of api-contracts §3) for each topic the event belongs to:
-`op:{operator_id}` (operator-visible), `site:{site_id}` (site-visible), `sup:{site_id}` (all). Private
-topics; RLS on `realtime.messages` (select) checks `realtime.topic()` against
-`private.my_operator_id()`, `private.my_site_id()` and `private.app_role()` [V] Realtime Authorization
-docs. The "Allow public access" Realtime setting is switched off.
+### 3.2 `alerts`
 
-Event types (P0; the canonical list lives in `packages/shared/src/contracts/events.ts`):
-`scenario.{started,paused,resumed,speed_changed,jumped,finished}` ·
-`task.{started,paused,completed,start_blocked}` · `ppe.{missing,restored,override_granted}` ·
-`safety.{seatbelt_breach,seatbelt_resolved,overspeed,slope_exceeded,proximity,organiser_alert}` ·
-`anomaly.{detected,cleared}` · `guardian.{hazard_near_operator,hazard_cleared}` ·
-`alert.{raised,acknowledged,escalated,resolved,suppressed}` ·
-`dispatch.{sent,delivered,answered,failed,suppressed}` · `sos.{raised,cancelled}` ·
-`incident.logged` · `ledger.{checkpoint_published,verified,tamper_detected}` ·
-`training.{lesson_assigned,lesson_completed,replay_completed}`.
+`id`, `run_id`, `origin_event_id`, `kind`, `hazard_key text` (`{hazard_group}:{operator_id}:{subject}`,
+e.g. `guardian:ravi:EXC-014`), `tier`, `status`, `operator_id`, `machine_id`, `site_id`,
+`occurrences`, `first_seen`, `last_seen`, `needs_ack`, `ack_by`, `ack_at`, `ack_via`,
+`escalate_at` (wall), `escalation_level`, `suppressed_by null`, `suppress_reason null`,
+`protocol_card_id null`, `tier_history jsonb` (upgrades), `updated_at`.
+Indexes:
+- **`unique (hazard_key) where status in ('open','acknowledged','escalating') and kind <> 'sos'`**:
+  dedupe for everything except SOS; every SOS is its own alert (G2-3).
+- `(escalate_at) where status = 'open' and escalate_at is not null` (timer scan).
+- `(operator_id, status)`.
+Budget semantics (G2-8) are specified in event-pipeline §7. RLS: OP own; FM all; TR —.
 
-### 3.2 `alerts`: one row per condition that needs a human
+### 3.3 `dispatches` (outbox)
 
-`id`, `run_id`, `origin_event_id → events`, `kind text → alert_policies`, `tier alert_tier`,
-`status alert_status`, `operator_id`, `machine_id null`, `site_id`, `dedupe_key text`
-(`{kind}:{operator_id}:{machine_id}`), `occurrences int default 1`, `first_seen`, `last_seen`,
-`needs_ack boolean`, `ack_by uuid null`, `ack_at`, `ack_via text` (app, telegram, twilio_keypress,
-sensor), `escalate_at timestamptz null` (wall clock), `escalation_level smallint default 0`,
-`suppressed_by → alerts null`, `protocol_card_id → protocol_cards null`, `updated_at`.
-Indexes: **unique (dedupe_key) where status in ('open','acknowledged','escalating')** (the dedupe
-guarantee); (status, escalate_at) where status = 'open' (the timer scan); (operator_id, status).
-RLS: OP select own; FM select all; TR —. Writes: `private.raise_alert`, RPC `alert_ack`,
-`private.escalations_due`.
-
-### 3.3 `dispatches`: the outbox for every external message
-
-`id`, `alert_id → alerts null`, `purpose text` (alert, escalation, ledger_root, reminder),
-`channel dispatch_channel`, `recipient_ref text` (secret name, e.g. `TELEGRAM_SUPERVISOR_CHAT_ID`),
-`recipient_role text`, `attempt smallint default 1`, `status dispatch_status default 'queued'`,
-`body jsonb` (template id + params + language; never a phone number), `provider_ref text`
-(Telegram message_id, Twilio CallSid), `error jsonb`, `created_at`, `sent_at`, `updated_at`.
-Unique (alert_id, purpose, channel, recipient_role, attempt).
-Trigger `after insert when (new.status = 'queued')` → `net.http_post` to the `dispatch` Edge Function
-with `{dispatch_id}` and `apikey` read from Vault [V] migration guide. Stuck rows (`sending` > 20 s) are
-re-queued by `heartbeat()` with `attempt + 1`, max 2 attempts.
+`id`, `alert_id null`, `purpose` (alert, escalation, ledger_checkpoint, flood_summary, reminder),
+`channel`, `recipient_ref` (secret name), `recipient_role`, `escalation_level smallint`,
+`attempts smallint default 0`, `status`, `body jsonb` (template id + params + language),
+`provider_ref text null` (CallSid / message_id), `sending_at`, `error jsonb`, `created_at`, `updated_at`.
+**Unique (coalesce(alert_id, root/flood subject id), purpose, channel, recipient_role, escalation_level)**
+(`flood_summary` rows carry a `subject_id` = the flood alert id, so they deduplicate too; G2-8d).
+Attempts are a counter on the same row, never a new row (G2-10).
+Kick: `after insert or update of status on dispatches for each row when (new.status = 'queued')` →
+`net.http_post(url, body {dispatch_id}, headers {apikey from Vault}, timeout_milliseconds := 20000)` [V
+pg_net signature; default 2000 ms is too short, G2-10].
+Requeue: the `dispatch-requeue` job sets `status = 'queued', attempts = attempts + 1` for rows in
+`sending` for > 30 s with `provider_ref is null` and `attempts < 2` (the update fires the kick).
+Rows with a `provider_ref` are never re-sent; `dispatch` polls the provider instead.
 RLS: FM select; others —.
 
-**private.telegram_updates**: `update_id bigint pk`, `received_at`. Webhook dedupe.
+**private.telegram_callback(update_id, chat_id, alert_id)** (G2-11): one transaction: insert
+`private.telegram_updates(update_id)` (conflict → return `duplicate`), check `chat_id` = the configured
+supervisor chat (stored in Vault as `telegram_supervisor_chat_id`), then `private.alert_ack(alert_id,
+'telegram', fm_user)`. Any failure rolls the dedupe row back, so Telegram's retry is processed.
+Execute granted to `service_role` only.
 
 ## 4. Ledger design
 
-### 4.1 Table `incidents` (the hash-chained ledger)
+### 4.1 Table `incidents`
 
-| Column | Type | In hash? |
-|---|---|---|
-| id | uuid pk | no (surrogate) |
-| seq | bigint unique not null, assigned as previous + 1 under the lock | yes |
-| idempotency_key | text unique not null | no |
-| run_id | uuid null | yes |
-| occurred_at | timestamptz not null | yes |
-| recorded_at | timestamptz not null (set inside `ledger_append`) | yes |
-| incident_type | incident_type | yes |
-| severity | smallint 1-5 | yes |
-| site_id, operator_id, machine_id | uuid null | yes |
-| lat, lon | numeric(9,6) null | yes (stored as numbers; a geography column is derived for maps) |
-| description | text | yes |
-| context | jsonb (auto snapshot: telemetry, conditions, task, GPS) | yes (canonicalised) |
-| reported_by | uuid null (auth user) | yes |
-| reporter_kind | text (user, system, detector, supervisor) | yes |
-| source_event_id | uuid null | yes |
-| supersedes_seq | bigint null (corrections are new rows, never edits) | yes |
-| non_punitive | boolean default true for near_miss | yes |
-| prev_hash | char(64) | yes |
-| entry_hash | char(64) | result |
-| canon_version | smallint default 1 | yes (as `v`) |
+Columns as revision 1 (`id`, `seq`, `idempotency_key`, `run_id`, `occurred_at`, `recorded_at`,
+`incident_type`, `severity`, `site_id`, `operator_id`, `machine_id`, `lat numeric(9,6)`,
+`lon numeric(9,6)`, `description`, `context jsonb`, `reported_by`, `reporter_kind`, `source_event_id`,
+`supersedes_seq`, `non_punitive`, `prev_hash char(64)`, `entry_hash char(64)`, `canon_version`).
+Append-only: revokes + mutation triggers + insert only via `private.ledger_write_one`.
+RLS: OP own; FM all except `non_punitive` rows (§2.10); TR `incident_type = 'near_miss'` (pseudonymised
+via the same RPC).
 
-Append-only, three layers: (1) `revoke insert, update, delete, truncate on incidents from anon,
-authenticated, service_role`; (2) `before update or delete` row trigger and `before truncate`
-statement trigger that raise; (3) inserts only through `private.ledger_append`, owned by `postgres`.
-RLS: OP select own (`operator_id = me`); FM select all; TR select `incident_type = 'near_miss'`.
+### 4.2 Ledger queue and writer (G2-1)
 
-### 4.2 Canonical serialisation v1
+Nothing user-facing or tick-facing waits on the ledger lock:
+- `private.ledger_enqueue(idempotency_key, entry jsonb) returns bigint` inserts into
+  **`private.ledger_queue`** (`id bigint identity`, `idempotency_key unique`, `entry jsonb`,
+  `enqueued_at`, `written_incident_id null`, `error text null`). No lock. Used by the tick, `sos_raise`,
+  `ppe_override`, `incident_log`.
+- pg_cron **`ledger-writer`** `'1 seconds'` → `private.ledger_drain(max 50)`: for each unwritten queue
+  row, in its own subtransaction: `pg_advisory_xact_lock(4210001)` → `ledger_write_one` → mark written.
+  The lock is held for microseconds per job run and never inside a user RPC or the tick.
+- RPCs return `ledger_queue_id`; the UI shows the incident when `incident.logged` arrives (≤ 1-2 s).
 
-A JSON object text with **keys in ascending code-point order, no whitespace, every scalar a JSON
-string** (numbers and timestamps are strings, so float formatting can never differ between
-implementations):
-- `occurred_at`, `recorded_at`: UTC, microseconds, `YYYY-MM-DD"T"HH24:MI:SS.US"Z"` via
-  `to_char(ts at time zone 'UTC', …)`.
-- `lat`, `lon`: fixed 6 decimals (`to_char` / `numeric(9,6)::text`); `seq`, `severity`, `v`: integer text.
-- uuids lower-case; nulls as JSON `null`; booleans as `true`/`false`.
-- strings: `to_json(text)::text` (JSON escaping).
-- `context`: `private.canon_jsonb(jsonb)`, recursive: object keys sorted with `collate "C"`, arrays in
-  order, numbers emitted as `trim_scale(n)::text` inside strings (`trim_scale(8.4100) → 8.41` [V]
-  postgresql.org functions-math). Writers must keep context numbers
-  finite, |x| < 1e15, ≤ 6 decimals (enforced by the `ledger_append` validator).
-- **Never hash `jsonb::text`**: jsonb does not preserve key order, so we build the text explicitly.
+### 4.3 Canonical serialisation v1: exact, byte-identical in SQL and TS (G2-12)
 
-`entry_hash = encode(sha256(convert_to(canonical, 'UTF8')), 'hex')` using the built-in
-`sha256(bytea) → bytea` [V] postgresql.org functions-binarystring. `prev_hash` is inside the canonical
-object, so the link is hashed. Genesis `prev_hash` = 64 × `0`.
-A TypeScript mirror (`packages/shared/src/ledger/canonical.ts`) exists only for the offline evidence
-script and must match golden vectors (including Hindi text and a nested context) in tests.
+The canonical text is the UTF-8 encoding of a JSON object built as follows. Every rule below is
+enforced by the validator in `ledger_write_one` **before** hashing, so both implementations only ever
+see the restricted domain.
+1. **Keys**: ASCII `[a-z0-9_]` only (validator), sorted by byte value, at every nesting level.
+   Implementations must sort `[key, value]` pairs explicitly; never rely on JS object iteration order
+   (integer-like keys reorder).
+2. **Scalars**: every non-null, non-boolean value is a JSON **string**. JSON numbers are **rejected** in
+   `context` (the context builder formats numbers as strings when the snapshot is taken, e.g.
+   `"6.2"`), so no float conversion ever happens.
+3. **Top-level fields** as strings: `seq`, `severity`, `v` = integer text (`bigint::text`, no padding);
+   `lat`, `lon` = `numeric(9,6)::text` (always 6 decimals, e.g. `"21.146300"`; no `to_char`, so no
+   leading space); `occurred_at`, `recorded_at` = `to_char(ts at time zone 'UTC',
+   'YYYY-MM-DD"T"HH24:MI:SS.US"Z"')` (always 6 fractional digits); uuids lower-case.
+   The TS side receives these as text from the view `public.v_ledger_canonical_input` and **never parses
+   them into `Date` or `number`** (microseconds and precision are preserved).
+4. **Strings**: validator rejects any code point < U+0020 (control characters). Escaping is then only
+   `"` → `\"` and `\` → `\\`; all other characters, including Devanagari, are emitted raw as UTF-8.
+5. **null**, **true**, **false** literal; arrays in stored order; no whitespace anywhere.
+6. `entry_hash = lower-hex(sha256(utf8(canonical)))` via `encode(sha256(convert_to(c,'UTF8')),'hex')` [V].
 
-### 4.3 `private.ledger_append(p_idempotency_key text, p_entry jsonb) returns incidents`
-
+**Golden vector 1** (computed 2026-09-23 with Python `json.dumps(ensure_ascii=False,
+separators=(',',':'), sort_keys=True)`; SQL and TS must both reproduce it byte for byte in B5):
 ```
-security definer, set search_path = ''
-1. perform pg_advisory_xact_lock(4210001);            -- one ledger-wide key; held to commit [V]
-2. if a row with p_idempotency_key exists → return it (idempotent retry).
-3. validate p_entry (types, numeric domain, description ≤ 2,000 chars).
-4. select seq, entry_hash from public.incidents order by seq desc limit 1;
-   new_seq := coalesce(seq, 0) + 1; prev := coalesce(entry_hash, repeat('0', 64));
-5. recorded_at := date_trunc('microseconds', clock_timestamp());
-6. canonical := private.ledger_canonical(new row values); entry_hash := sha256 hex.
-7. insert; perform private.emit_event('incident.logged', …, idem 'ledger:' || new_seq).
-8. return the row.
+input:
+{"v":"1","seq":"1","prev_hash":"0000000000000000000000000000000000000000000000000000000000000000",
+ "run_id":null,"occurred_at":"2026-09-23T08:15:02.123456Z","recorded_at":"2026-09-23T08:15:03.000001Z",
+ "incident_type":"seatbelt_breach","severity":"4","site_id":"11111111-1111-4111-8111-111111111111",
+ "operator_id":"22222222-2222-4222-8222-222222222222","machine_id":"33333333-3333-4333-8333-333333333333",
+ "lat":"21.146300","lon":"79.088200","description":"सीटबेल्ट नहीं लगा, ढलान 17.4° \"B3\"",
+ "context":{"speed_kmh":"6.2","pitch_deg":"17.4","zone":{"name":"Bench 3","max_slope_deg":"15"},
+            "ppe":["helmet","vest"]},
+ "reported_by":null,"reporter_kind":"detector","source_event_id":"44444444-4444-4444-8444-444444444444",
+ "supersedes_seq":null,"non_punitive":false}
+canonical (797 bytes):
+{"context":{"pitch_deg":"17.4","ppe":["helmet","vest"],"speed_kmh":"6.2","zone":{"max_slope_deg":"15","name":"Bench 3"}},"description":"सीटबेल्ट नहीं लगा, ढलान 17.4° \"B3\"","incident_type":"seatbelt_breach","lat":"21.146300","lon":"79.088200","machine_id":"33333333-3333-4333-8333-333333333333","non_punitive":false,"occurred_at":"2026-09-23T08:15:02.123456Z","operator_id":"22222222-2222-4222-8222-222222222222","prev_hash":"0000000000000000000000000000000000000000000000000000000000000000","recorded_at":"2026-09-23T08:15:03.000001Z","reported_by":null,"reporter_kind":"detector","run_id":null,"seq":"1","severity":"4","site_id":"11111111-1111-4111-8111-111111111111","source_event_id":"44444444-4444-4444-8444-444444444444","supersedes_seq":null,"v":"1"}
+entry_hash: b04bf3cbe21a368128e2f5eb4d7d0d8a3b3a8491f84998aa2869e3cb88b51181
 ```
-Callers: RPCs `incident_log`, `sos_raise`, `ppe_override`, and the event pipeline for event types with
-`event_types.ledger = true` (seatbelt breach, Guardian critical).
+**Golden vector 2** (chain link): same input with `seq "2"`, `prev_hash` = vector 1's hash,
+`incident_type "sos"`, `severity "5"`, `description "SOS"`, `context {}` →
+`db5217f0823bfc42c5c14ca00414c2c24da4dae60819589d7f63db77f03e065f`.
+**Golden vector 3** (Merkle, §4.5): leaves = [v1, v2] → root
+`603286c8575192d014b33463f312267d7dc8e7ab398b163959a91438e69b3574`.
+[A] PostgreSQL's `to_json(text)` produces the same escaping as rule 4 for this domain; B5 proves it
+against the vectors, and if it does not, the SQL canonicaliser implements rule 4 with `replace()`.
 
-### 4.4 `public.ledger_verify(p_from bigint default 1, p_to bigint default null)`
+### 4.4 `public.ledger_verify(p_from, p_to)`
 
-Returns `(ok boolean, checked int, first_bad_seq bigint, reason text, expected text, stored text,
-head_seq bigint, head_hash text)`. Walks by `seq`; for each row checks (a) `seq` continuity (reason
-`seq_gap`), (b) `prev_hash` = previous row's stored `entry_hash` (`link_broken`), (c) recomputed hash =
-stored `entry_hash` (`hash_mismatch`). Stops at the first failure → UI shows "chain breaks at #214".
-Executable by FM (and OP for own view is not needed). Emits `ledger.verified` or
-`ledger.tamper_detected`.
+Walks by `seq`: continuity (`seq_gap`), link (`link_broken`), recomputed hash (`hash_mismatch`); plus
+**head anchor** (G2-4): for the latest published checkpoint, the entry at `last_seq` must exist and have
+`entry_hash = head_hash` (`anchor_mismatch`, which catches truncation or rewriting before the checkpoint).
+Returns the first failure.
 
-### 4.5 Merkle root and external witness
+### 4.5 Merkle root and the external witness (G2-4)
 
-- Leaves: `entry_hash` bytes of entries in the period, ordered by `seq`. Leaf node =
-  `sha256(0x00 || leaf)`; parent = `sha256(0x01 || left || right)` (domain separation as in RFC 6962
-  [A]: we cite the idea, not the exact split rule); an odd node at a level is carried up unchanged.
-  Empty period = `sha256('')`.
-- `public.ledger_roots`: `id`, `kind text` (daily, checkpoint), `period_start`, `period_end`,
-  `first_seq`, `last_seq`, `leaf_count`, `root_hex char(64)`, `head_hash char(64)`, `computed_at`,
-  `dispatch_id → dispatches`, `telegram_message_id bigint null`. Insert-only (same grants/trigger as
-  the ledger). RLS: all roles select.
-- **Daily**: pg_cron `'35 18 * * *'` (00:05 IST; pg_cron runs in UTC [A]) calls
-  `private.ledger_publish_root('daily', day)` → inserts the root → queues a Telegram dispatch to the
-  fleet manager: "Spotter ledger 2026-09-23: 47 entries, #168-#214, root 9f2c…e41a, head a71b…".
-- **Checkpoint** (demo): director command `ledger_checkpoint` publishes the same message for entries up to
-  the head, just before the tamper step.
-- `public.ledger_root_check(p_root_id)` recomputes the root for that period and compares it with the
-  stored `root_hex`; the UI shows both next to "published to Telegram at 14:02, message #…". The
-  Telegram message is the witness the database cannot rewrite.
+- Leaf node `sha256(0x00 ‖ entry_hash bytes)`, parent `sha256(0x01 ‖ left ‖ right)`, odd node carried up,
+  empty = `sha256('')`; ordered by `seq`.
+- **Checkpoint** (demo and every `checkpoint_every_min` while `demo_mode`; the daily job is cut to P1):
+  `private.ledger_checkpoint()` computes `(first_seq, last_seq, leaf_count, root_hex, head_hash)` and
+  queues a Telegram dispatch whose text carries the **full 64-hex root and full head hash** in a fixed,
+  parseable line: `SPOTTER-LEDGER v1 seq=1..214 n=214 root=<64 hex> head=<64 hex>`.
+- `ledger_roots`: `id`, `kind`, `first_seq`, `last_seq`, `leaf_count`, `root_hex`, `head_hash`,
+  `computed_at`, **`telegram_chat_id`, `telegram_message_id`, `sent_text`, `sent_at`** (filled by
+  `dispatch` from Telegram's response). Insert-only.
+- **Witness check** = Edge Function **`ledger-witness`** (FM JWT): Telegram `forwardMessage(chat_id =
+  supervisor chat, from_chat_id = supervisor chat, message_id = telegram_message_id)`, which returns the
+  sent `Message` with its text [V core.telegram.org/bots/api#forwardmessage] → parse the
+  `SPOTTER-LEDGER` line **from Telegram's copy** → call `public.ledger_recompute_root(first_seq,
+  last_seq)` and `ledger_verify` → return `{telegram_root, recomputed_root, match, head_ok}`. The database
+  copy of the root is shown but **not trusted**. The forwarded copy also appears in the chat as a visible
+  re-check.
+- Limits stated honestly: (1) the Telegram Bot API has no "get message by id" [V: none documented], so
+  the forward is the re-fetch; (2) whoever holds the bot token can edit the witness (`edit_date` exists on
+  `Message` [V]); our threat model separates the database owner from the Edge Function secrets holder;
+  (3) entries after the last checkpoint are covered only by the chain until the next checkpoint (30 min
+  in demo mode); (4) RFC 3161 timestamping stays on the roadmap as the second witness.
 
-### 4.6 Tamper demo (two levels, both honest)
+### 4.6 Tamper demo
 
-1. **Naive edit** (SQL editor as the database owner: disable the mutation trigger, change one
-   description, re-enable): `ledger_verify` → "chain breaks at #N (hash_mismatch)".
-2. **Sophisticated edit** (an attacker who also recomputes every later hash): the chain verifies ✓,
-   but `ledger_root_check` ≠ the root published to Telegram → "database no longer matches the external
-   witness". This is the point of the Merkle root.
-Backup for stage: `private.demo_tamper(seq, mode)` callable only via the `director` function and only
-when `app_config.demo_mode`. "Tamper-evident", never "tamper-proof".
+1. Publish a checkpoint (Telegram shows the full root and head).
+2. Naive edit as the database owner (disable the trigger, edit, re-enable) → Verify: "chain breaks at #N
+   (hash_mismatch)".
+3. Sophisticated edit (`demo_tamper(seq,'rehash')`, which also rewrites `ledger_roots.root_hex`) →
+   chain ✓, **anchor ✗ and witness ✗**: Telegram's root ≠ the recomputed root.
+Backup `private.demo_tamper` only via `director` when `demo_mode`.
 
-## 5. Functions exposed as RPCs (signatures in api-contracts.md §4)
+### 4.7 Ledger and rehearsals
 
-`task_start`, `task_pause`, `task_complete`, `ppe_override`, `sos_raise`, `sos_cancel`, `alert_ack`,
-`incident_log`, `ledger_verify`, `ledger_root_check`, `lesson_complete`, `replay_submit`,
-`lesson_assign`, `consent_set`, `my_snapshot` (cockpit bootstrap in one call).
+Rehearsal runs also write ledger entries (≈ 20 per run, < 50 KB); they are never purged. The live run's
+entries are visually grouped by `run_id` in the console.
 
-## 6. Scheduled jobs (pg_cron)
+## 5. RPCs (signatures in api-contracts §4)
 
-| Job | Schedule | Does |
-|---|---|---|
-| `heartbeat` | `'1 seconds'` [V] | guarded by `pg_try_advisory_xact_lock`; `private.scenario_tick()` for the current playing run; `private.escalations_due()`; re-queue stuck dispatches |
-| `ledger-daily-root` | `'35 18 * * *'` | daily Merkle root → Telegram |
-| `cron-log-cleanup` | `'0 * * * *'` | delete `cron.job_run_details` older than 1 h ([V] rows are never cleaned automatically) |
-| `retention` | `'0 20 * * *'` | delete history GPS/telemetry past 90 days |
+`pair_machine`, `task_start`, `task_pause`, `task_complete`, `ppe_override`, `sos_raise`, `sos_cancel`,
+`alert_ack`, `incident_log`, `ledger_verify`, `near_miss_list`, `lesson_complete`, `replay_submit`,
+`lesson_assign`, `consent_set`, `my_snapshot`.
 
-## 7. Volumes and the 500 MB Free limit
+## 6. Scheduled jobs (pg_cron): each job is its own transaction (G2-1)
 
-The Free plan goes read-only at 500 MB database size [V]. Plan (estimates [A], measured in task B8):
-| Data | Rows | In DB? |
-|---|---|---|
-| History telemetry, 20 machines, 5-min, **30 days** | 172,800 | yes (days 1-20 fit baselines, days 21-30 held out for detector evaluation) |
-| History telemetry, full 90 days | 518,400 | **no**: CSV/Parquet in `data/` for judges; organiser-format export |
-| GPS trail, 30 operators, 8 h shift, 5-min, 30 days | 43,200 | yes |
-| task_history (synthetic + organiser rows) | ≈ 7,500 | yes |
-| Demo scenario frames (8 h at 1-min, 2 machines at 10 s) | ≈ 30,000 | yes |
-Target < 250 MB including indexes; the seed script prints `pg_database_size` and fails above 300 MB.
+| Job | Schedule | Does | Touches |
+|---|---|---|---|
+| `sos-escalator` | `'1 seconds'` | `private.escalations_due()` only: `select … for update skip locked` on due alerts, CAS, insert escalation dispatches | `alerts`, `dispatches`, `events` (no ledger, no frames) |
+| `scenario-tick` | `'1 seconds'` | `set local statement_timeout = '5s'`; `pg_try_advisory_xact_lock(4210002)` or skip; apply ≤ `max_frames_per_tick` frames, each detector call in its own `begin … exception` block → `tick_errors`; write `tick_log` | frames, state, anomalies, events, alerts, `ledger_queue` |
+| `ledger-writer` | `'1 seconds'` | `ledger_drain(50)` | `incidents`, `ledger_queue`, events |
+| `dispatch-requeue` | `'5 seconds'` | requeue stuck dispatches (§3.3) | `dispatches` |
+| `housekeeping` | `'*/10 * * * *'` | delete `cron.job_run_details` > 1 h; `tick_log` > 24 h; size guard (§7) | — |
+| `demo-checkpoint` | `'*/30 * * * *'` | `ledger_checkpoint()` if `demo_mode` | `ledger_roots`, dispatches |
+
+A failing tick can no longer block, roll back or delay an SOS escalation, and `sos_raise` never waits on
+a lock held by a job. [U] `cron.log_statement` defaults to true (G2-21); B0 checks whether it can be set
+off on Supabase; if not, the extra log lines are accepted (they are logs, not database size).
+
+## 7. Size budget, including rehearsals and Realtime (G2-15)
+
+Free plan: read-only above 500 MB **database size** [V]; the Fair Use check sums the organisation's
+projects [V per G2]; whether the two paused projects in the org count is [U] → B0 checks the org usage
+page, and if they count, Spotter goes in its own organisation.
+| Item | Estimate [A, measured in B8/B21] |
+|---|---|
+| Empty project baseline | 40-60 MB [V] |
+| Reference + 30-day history (telemetry 172,800, GPS 43,200, task_history 7,500) + indexes | ≈ 120 MB |
+| Scenario frames (≈ 30,000) | ≈ 10 MB |
+| One rehearsal run before purge (telemetry ≈ 12,000, GPS 14,400, events ≈ 400, state) | ≈ 8 MB → ≈ 0.2 MB after `purge_run` |
+| Realtime `realtime.messages` (kept 3 days [V]): `machines` frame sent as a **delta** (only machines that moved > 5 m or changed health), ≤ 600 B/s while playing | ≈ 2 MB per playing hour → ≤ 40 MB over 20 playing hours |
+| Eval sandbox (transient, one day at a time, truncated) | ≤ 15 MB peak |
+| pg_net responses (6 h), `cron.job_run_details` (1 h), `tick_log` (24 h) | ≤ 10 MB |
+| **Planned peak** | **≈ 260 MB** |
+Guards: seed fails above 300 MB; `housekeeping` emits `system.db_size_warning` above 400 MB;
+`demo-check` prints size. [U] deleting old rows from `realtime.messages` ourselves: not relied on.
