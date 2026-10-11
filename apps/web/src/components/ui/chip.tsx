@@ -27,6 +27,8 @@ type ChipProps = {
   href?: string;
   onClick?: ButtonHTMLAttributes<HTMLButtonElement>["onClick"];
   "aria-label"?: string;
+  /** Toggle chips (Simple/Detailed, language) state their pressed state (F06-F08 review 11). */
+  "aria-pressed"?: boolean;
   className?: string;
   children: ReactNode;
 };
@@ -54,6 +56,7 @@ export function Chip({
     "data-size": tappable ? "hit" : undefined,
     "data-dashed": dashed || undefined,
     "aria-label": rest["aria-label"],
+    "aria-pressed": rest["aria-pressed"],
   };
   const content = (
     <>

@@ -89,6 +89,8 @@ sequenceDiagram
   DB->>DB: detect_ewma: > UCL (3σ) twice → anomaly hydraulic_temp_drift (with location)
   DB->>DB: Guardian: ST_DWithin(ravi, EXC-014, 50 m) → 38 m → guardian.hazard_near_operator
   DB->>DB: raise_alert(hazard_key guardian:ravi:EXC-014, warning, escalate_at = now()+15 s)
+  Note over DB: guardian.hazard_near_operator must carry the raised alert's id as alert_id —
+  the operator takeover resolves its hazard and explanation by that id (F06-F08 review 6)
   Note over DB: loop_queue row → worker step 2 assigns the faulty_machine_nearby lesson (no replay in P0)
   DB-->>RT: map lights EXC-014; Warning card with the fixed protocol card
   T->>DB: later frame: distance 12 m (< 15 m) → same hazard_key, tier upgrade warning→critical (G2-8a)

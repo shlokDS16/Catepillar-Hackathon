@@ -6,6 +6,7 @@ import { Chip, type ChipTone } from "@/components/ui/chip";
 import { Mark, Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { Plate, type PlateTone } from "@/components/ui/plate";
 import { KitAlerts } from "./kit-alerts";
+import { KitHero } from "./kit-hero";
 
 const TONES: PlateTone[] = ["surface", "sunk", "ink", "clear", "caution", "warning", "critical", "mandatory", "nosignal"];
 const SAFETY: Array<{ tone: ChipTone; word: string; picto: PictogramName }> = [
@@ -67,12 +68,12 @@ export function Kit() {
         </div>
         <div className="flex flex-wrap gap-4">
           <div className="flex" role="group" aria-label="Mode">
-            <Chip tone={mode === "simple" ? "ink" : "outline"} onClick={() => setMode("simple")}>Simple</Chip>
-            <Chip tone={mode === "detailed" ? "ink" : "outline"} onClick={() => setMode("detailed")}>Detailed</Chip>
+            <Chip tone={mode === "simple" ? "ink" : "outline"} aria-pressed={mode === "simple"} onClick={() => setMode("simple")}>Simple</Chip>
+            <Chip tone={mode === "detailed" ? "ink" : "outline"} aria-pressed={mode === "detailed"} onClick={() => setMode("detailed")}>Detailed</Chip>
           </div>
           <div className="flex" role="group" aria-label="Language">
-            <Chip tone={lang === "en" ? "ink" : "outline"} onClick={() => setLang("en")}>English</Chip>
-            <Chip tone={lang === "hi" ? "ink" : "outline"} onClick={() => setLang("hi")}>हिन्दी</Chip>
+            <Chip tone={lang === "en" ? "ink" : "outline"} aria-pressed={lang === "en"} onClick={() => setLang("en")}>English</Chip>
+            <Chip tone={lang === "hi" ? "ink" : "outline"} aria-pressed={lang === "hi"} onClick={() => setLang("hi")}>हिन्दी</Chip>
           </div>
         </div>
       </header>
@@ -163,6 +164,10 @@ export function Kit() {
           <Chip tone="ink">②</Chip>
           <Chip tone="mandatory" icon={<Pictogram name="vest" />}>Wear vest</Chip>
         </div>
+      </Section>
+
+      <Section title="Hero card states (fixtures) and the motion lock">
+        <KitHero />
       </Section>
 
       <Section title="Alert tiers (fixtures): vibration, audio, stamp, +n more">
