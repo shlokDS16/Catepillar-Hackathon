@@ -137,18 +137,22 @@
     "someAssumed": "कुछ मान अनुमानित हैं"
   },
   "hero": {
-    "moving": "चल रही है {speed} किमी/घंटा",
+    "machine": "{code} · {model}",
+    "movingLine": "{line} · चल रही है {speed} किमी/घंटा",
     "noTask": "कोई काम शुरू नहीं",
-    "nextTask": "अगला: {task} {time}",
+    "noTaskNext": "कोई काम शुरू नहीं · अगला: {task} {time}",
+    "pct": "{pct} %",
     "progress": "{pct} % पूरा",
     "eta": "बचा समय",
     "etaMin": "{min} मिनट",
     "etaUpTo": "अधिकतम {min}",
+    "etaRange": "{min} मिनट · अधिकतम {max}",
     "why": "कारण: {factors}",
+    "factor": "{name} {sign}{pct} %",
+    "factorAssumed": "{name} {sign}{pct} % ({assumed})",
     "notUpdated": "अपडेट नहीं",
     "asOf": "{time} तक",
-    "stopMachine": "स्पॉटर के लिए मशीन रोकें",
-    "openTask": "काम खोलें"
+    "stopMachine": "स्पॉटर के लिए मशीन रोकें"
   },
   "home": {
     "conditions": "हालात",
@@ -165,6 +169,8 @@
     "modeLabel": "दृश्य",
     "simple": "सरल",
     "detailed": "विस्तृत",
+    "modeNotSaved": "इस डिवाइस पर सेव नहीं हुआ",
+    "lessonLink": "पाठ",
     "lesson": {
       "seatbelt_slopes": "ढलान पर सीटबेल्ट खुली",
       "faulty_machine_nearby": "पास में ख़राब मशीन"

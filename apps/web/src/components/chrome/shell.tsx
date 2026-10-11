@@ -4,6 +4,7 @@ import { AlertLayer } from "@/components/alerts/alert-layer";
 import { AskChip } from "@/components/chrome/ask-chip";
 import { AppProviders } from "@/components/chrome/providers";
 import { LanguageChip } from "@/components/chrome/language-sheet";
+import { LockableBody } from "@/components/chrome/lockable";
 import { ActiveTitle, Nav } from "@/components/chrome/nav";
 import type { ShellRole } from "@/components/chrome/nav-items";
 import { SosControl } from "@/components/chrome/sos-control";
@@ -27,7 +28,7 @@ export async function Shell({ role, children }: ShellProps) {
       </a>
       <StatusStrip showSafety={operator} />
       <Nav role={role} />
-      <div className="shell-body">
+      <LockableBody>
         <div className="title-row">
           <ActiveTitle role={role} />
           <div className="flex items-center gap-6">
@@ -38,7 +39,7 @@ export async function Shell({ role, children }: ShellProps) {
         <main id="main" className="shell-main">
           {children}
         </main>
-      </div>
+      </LockableBody>
       {operator ? <AlertLayer /> : null}
       {operator ? <SosControl /> : null}
     </div>

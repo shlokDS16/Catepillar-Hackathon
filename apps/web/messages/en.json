@@ -137,18 +137,22 @@
     "someAssumed": "Some values are assumed"
   },
   "hero": {
-    "moving": "moving {speed} km/h",
+    "machine": "{code} · {model}",
+    "movingLine": "{line} · moving {speed} km/h",
     "noTask": "No task started",
-    "nextTask": "next: {task} {time}",
+    "noTaskNext": "No task started · next: {task} {time}",
+    "pct": "{pct} %",
     "progress": "{pct} % done",
     "eta": "ETA",
     "etaMin": "{min} min",
     "etaUpTo": "up to {min}",
+    "etaRange": "{min} min · up to {max}",
     "why": "Why: {factors}",
+    "factor": "{name} {sign}{pct} %",
+    "factorAssumed": "{name} {sign}{pct} % ({assumed})",
     "notUpdated": "Not updated",
     "asOf": "as of {time}",
-    "stopMachine": "Stop the machine to use Spotter",
-    "openTask": "Open task"
+    "stopMachine": "Stop the machine to use Spotter"
   },
   "home": {
     "conditions": "Conditions",
@@ -165,6 +169,8 @@
     "modeLabel": "View",
     "simple": "Simple",
     "detailed": "Detailed",
+    "modeNotSaved": "Not saved on this device",
+    "lessonLink": "Lesson",
     "lesson": {
       "seatbelt_slopes": "Seatbelt off on a slope",
       "faulty_machine_nearby": "Faulty machine nearby"

@@ -27,6 +27,8 @@ export type AppState = {
   ppeMissing: string[];
   /** Guardian hazards keyed by anomaly id, so the map can draw them and the takeover can explain them. */
   guardian: Record<string, z.infer<typeof GuardianHazard>>;
+  /** The same hazards keyed by the alert id their event carried, so the takeover picks its own hazard (F06-F08 review 6). */
+  guardianByAlert: Record<string, string>;
   anomalies: Record<string, z.infer<typeof AnomalyDetected>>;
   clock: { sim_now: string; speed: number; status: string } | null;
   /** Wall-clock ms of the last frame (clock tick, event or snapshot); NO SIGNAL after 10 s. */
@@ -34,6 +36,8 @@ export type AppState = {
   connectivity: Connectivity;
   /** Sequence numbers already applied, so a Broadcast replay never double-applies. */
   seenSeq: number[];
+  /** Events that arrived before the snapshot; replayed (seq > snapshot) once it lands (F06-F08 review 7). */
+  buffer: AppEvent[];
 };
 
 export const initialState: AppState = {
@@ -47,11 +51,13 @@ export const initialState: AppState = {
   ledgerSeq: {},
   ppeMissing: [],
   guardian: {},
+  guardianByAlert: {},
   anomalies: {},
   clock: null,
   lastFrameMs: null,
   connectivity: { kind: "fixture" },
   seenSeq: [],
+  buffer: [],
 };
 
 export type Action =
@@ -81,7 +87,7 @@ export function reduce(state: AppState, action: Action): AppState {
   switch (action.type) {
     case "snapshot": {
       const s = action.snapshot;
-      return {
+      const next: AppState = {
         ...state,
         snapshot: s,
         tasks: s.tasks,
@@ -92,7 +98,15 @@ export function reduce(state: AppState, action: Action): AppState {
         clock: s.run ? { sim_now: s.run.sim_now, speed: s.run.speed, status: s.run.status } : state.clock,
         lastFrameMs: action.nowMs,
         seenSeq: s.recent_events.map((e) => e.seq),
+        buffer: [],
       };
+      // Events that raced the snapshot are replayed when they are newer than it; seenSeq drops the rest.
+      const snapshotSeq = Math.max(0, ...s.recent_events.map((e) => e.seq));
+      let drained = next;
+      for (const buffered of state.buffer) {
+        if (buffered.seq > snapshotSeq) drained = applyEvent(drained, buffered, action.nowMs);
+      }
+      return drained;
     }
     case "clock":
       return {
@@ -123,6 +137,11 @@ function isKnown(e: AppEvent): e is AnyEvent {
 
 function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
   if (state.seenSeq.includes(raw.seq)) return state;
+  // Before the snapshot there is no state to fold into: buffer (deduped by seq) instead of dropping.
+  // The buffer is capped at the seenSeq window so a snapshot that never arrives cannot grow it unbounded.
+  if (!state.snapshot) {
+    return state.buffer.some((b) => b.seq === raw.seq) ? state : { ...state, buffer: [...state.buffer.slice(-199), raw] };
+  }
   const base: AppState = { ...state, lastFrameMs: nowMs, seenSeq: [...state.seenSeq.slice(-200), raw.seq] };
   if (!isKnown(raw)) return base;
   const e = raw;
@@ -244,12 +263,18 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
     case "guardian.hazard_near_operator":
       {
       const g = payload(e, "guardian.hazard_near_operator");
-      return { ...base, guardian: { ...state.guardian, [g.anomaly_id]: g } };
+      return {
+        ...base,
+        guardian: { ...state.guardian, [g.anomaly_id]: g },
+        guardianByAlert: e.alert_id ? { ...state.guardianByAlert, [e.alert_id]: g.anomaly_id } : state.guardianByAlert,
+      };
     }
     case "guardian.hazard_cleared": {
-      const { [payload(e, "guardian.hazard_cleared").anomaly_id]: _gone, ...rest } = state.guardian;
+      const goneId = payload(e, "guardian.hazard_cleared").anomaly_id;
+      const { [goneId]: _gone, ...rest } = state.guardian;
       void _gone;
-      return { ...base, guardian: rest };
+      const byAlert = Object.fromEntries(Object.entries(state.guardianByAlert).filter(([, anomalyId]) => anomalyId !== goneId));
+      return { ...base, guardian: rest, guardianByAlert: byAlert };
     }
     case "anomaly.detected":
       {

@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
+import { useEffect, useState } from "react";
 import { useSafetyState } from "@/alerts/use-safety-state";
 import { HeroCard } from "@/components/hero/hero-card";
 import { Button } from "@/components/ui/button";
@@ -10,7 +11,7 @@ import { Pictogram } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import { ProvenanceChip, ProvenanceLine } from "@/components/ui/provenance";
 import { useMode } from "@/data/mode";
-import { useAppState } from "@/data/store";
+import { useAppState, useDataPort } from "@/data/store";
 import { currentTask } from "@/hero/work-state";
 
 /**
@@ -20,15 +21,36 @@ import { currentTask } from "@/hero/work-state";
 export function HomeScreen() {
   const t = useTranslations();
   const format = useFormatter();
-  const { mode, setMode } = useMode();
+  const { mode, setMode, persistFailed } = useMode();
   const snapshot = useAppState((s) => s.snapshot);
   const machine = useAppState((s) => s.machine);
   const tasks = useAppState((s) => s.tasks);
   const assignments = useAppState((s) => s.assignments);
+  const port = useDataPort();
   const { safety, topAlert } = useSafetyState();
   const weather = snapshot?.weather ?? null;
   const detailed = mode === "detailed";
   const current = currentTask(tasks);
+
+  // The lesson's card count comes from its content, not a hardcoded number (F06-F08 review 15).
+  const loop = assignments.find((a) => a.replay_id) ?? assignments[0];
+  const lessonCode = loop?.lesson_code ?? null;
+  const [lessonCards, setLessonCards] = useState<number | null>(null);
+  useEffect(() => {
+    if (!lessonCode) return;
+    let live = true;
+    void port
+      .lessonGet(lessonCode)
+      .then((lesson) => {
+        if (live) setLessonCards(lesson.cards.length);
+      })
+      .catch(() => {
+        if (live) setLessonCards(null);
+      });
+    return () => {
+      live = false;
+    };
+  }, [port, lessonCode]);
 
   if (!snapshot) {
     return (
@@ -40,7 +62,6 @@ export function HomeScreen() {
     );
   }
 
-  const loop = assignments.find((a) => a.replay_id) ?? assignments[0];
   const etaImpact = current?.eta_factors?.find((f) => f.key.startsWith("heat:") || f.key.startsWith("weather:"));
 
   return (
@@ -81,7 +102,7 @@ export function HomeScreen() {
                 </Button>
               ) : null}
               <Link href={`/op/training/lesson/${loop.lesson_code}`} className="t-label underline underline-offset-4">
-                {t("home.lessonCards", { n: 4 })}
+                {lessonCards != null ? t("home.lessonCards", { n: lessonCards }) : t("home.lessonLink")}
               </Link>
             </div>
           </Plate>
@@ -101,8 +122,11 @@ export function HomeScreen() {
                     {t(`enums.taskStatus.${task.status}`)}
                   </Chip>
                   <span className="t-meta text-ink-2 tnum">
-                    {task.eta_p50_min != null ? t("hero.etaMin", { min: Math.round(task.eta_p50_min) }) : ""}
-                    {detailed && task.eta_p90_min != null ? ` · ${t("hero.etaUpTo", { min: Math.round(task.eta_p90_min) })}` : ""}
+                    {task.eta_p50_min == null
+                      ? ""
+                      : detailed && task.eta_p90_min != null
+                        ? t("hero.etaRange", { min: Math.round(task.eta_p50_min), max: Math.round(task.eta_p90_min) })
+                        : t("hero.etaMin", { min: Math.round(task.eta_p50_min) })}
                   </span>
                   <ProvenanceChip table="tasks" field="planned_start" />
                 </li>
@@ -113,13 +137,14 @@ export function HomeScreen() {
 
         <ProvenanceLine fields={[["machine_state", "speed_kmh"], ["tasks", "planned_start"], ["operator_state", "ppe"]]} />
 
-        <div className="flex" role="group" aria-label={t("home.modeLabel")}>
-          <Chip tone={mode === "simple" ? "ink" : "outline"} onClick={() => setMode("simple")}>
+        <div className="flex items-center gap-4" role="group" aria-label={t("home.modeLabel")}>
+          <Chip tone={mode === "simple" ? "ink" : "outline"} aria-pressed={mode === "simple"} onClick={() => setMode("simple")}>
             {t("home.simple")}
           </Chip>
-          <Chip tone={mode === "detailed" ? "ink" : "outline"} onClick={() => setMode("detailed")}>
+          <Chip tone={mode === "detailed" ? "ink" : "outline"} aria-pressed={mode === "detailed"} onClick={() => setMode("detailed")}>
             {t("home.detailed")}
           </Chip>
+          {persistFailed ? <span className="t-meta text-ink-3">{t("home.modeNotSaved")}</span> : null}
         </div>
       </div>
     </div>

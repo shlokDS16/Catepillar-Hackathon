@@ -8,3 +8,6 @@ dist/
 *.tsbuildinfo
 graphify-out/cache/
 .DS_Store
+
+# Agent tool state (Mimosa security-scan baselines) — never commit
+.mimosa/

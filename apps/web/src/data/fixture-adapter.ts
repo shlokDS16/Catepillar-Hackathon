@@ -24,7 +24,8 @@ export class FixtureAdapter implements DataPort {
   private channel: BroadcastChannel | null = null;
 
   constructor(private latencyMs = 250) {
-    if (typeof BroadcastChannel !== "undefined") {
+    // Browser only: the server render has no business listening for director beats (F06-F08 review).
+    if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
       this.channel = new BroadcastChannel("spotter-director");
       this.channel.onmessage = (m: MessageEvent<{ beat: Beat }>) => void this.playBeat(m.data.beat);
     }
@@ -102,9 +103,13 @@ export class FixtureAdapter implements DataPort {
   /** The five demo beats (spec §7). Each emits exactly what the pipeline would. */
   async playBeat(beat: Beat): Promise<void> {
     switch (beat) {
-      case 1: // PPE: vest detected, so the blocked Start can go ahead.
+      case 1: {
+        // PPE: vest detected, so the blocked Start can go ahead (F06-F08 review: the flag must be
+        // set here, or Start stays blocked after "vest on").
+        this.markVestRestored();
         this.push(this.event("ppe.restored", { items: ["vest"] }));
         return;
+      }
       case 2: {
         // Seatbelt off on a slope while moving: breach, warning, motion lock.
         this.push(
@@ -125,7 +130,8 @@ export class FixtureAdapter implements DataPort {
         this.push(
           this.event("operator.motion_lock_changed", { motion_locked: false, call_allowed: true, reason: "on_foot" }),
           this.event("anomaly.detected", anomaly, { tier: "caution" }),
-          this.event("guardian.hazard_near_operator", EVENT_PAYLOADS["guardian.hazard_near_operator"], { tier: "warning" }),
+          // The hazard carries the guardian alert's id in the envelope, so the takeover can pick it by alert id.
+          this.event("guardian.hazard_near_operator", EVENT_PAYLOADS["guardian.hazard_near_operator"], { tier: "warning", alert_id: IDS.dispatch }),
           this.event("alert.raised", {
             ...EVENT_PAYLOADS["alert.raised"],
             alert_id: IDS.dispatch,
@@ -170,6 +176,7 @@ export class FixtureAdapter implements DataPort {
       return { status: "blocked" as const, task_id: input.p_task_id, missing: ["vest" as const] };
     }
     this.push(this.event("task.started", { ...EVENT_PAYLOADS["task.started"], task_id: input.p_task_id, status: "in_progress", progress_pct: 0 }));
+    this.progress = 0; // each task starts from zero (F06-F08 review: progress leaked across tasks)
     this.startProgress(input.p_task_id);
     return { status: "started" as const, task_id: input.p_task_id, started_at: new Date().toISOString() };
   }
@@ -198,8 +205,18 @@ export class FixtureAdapter implements DataPort {
   async alertAck(input: { p_alert_id: string }) {
     await wait(this.latencyMs);
     this.push(this.event("alert.acknowledged", { alert_id: input.p_alert_id, via: "app", by_role: "operator" }));
-    // The demo's seatbelt alert resolves by sensor a moment later.
-    setTimeout(() => this.push(this.event("safety.seatbelt_resolved", { frame_seq: 2460 }), this.event("alert.resolved", { alert_id: input.p_alert_id, via: "sensor" }), this.event("operator.motion_lock_changed", { motion_locked: false, call_allowed: true, reason: "parked" })), 4000);
+    // Only the seatbelt alert resolves by sensor a moment later; any other ack stays an ack.
+    if (input.p_alert_id === IDS.alert) {
+      setTimeout(
+        () =>
+          this.push(
+            this.event("safety.seatbelt_resolved", { frame_seq: 2460 }),
+            this.event("alert.resolved", { alert_id: input.p_alert_id, via: "sensor" }),
+            this.event("operator.motion_lock_changed", { motion_locked: false, call_allowed: true, reason: "parked" }),
+          ),
+        4000,
+      );
+    }
     return { alert_id: input.p_alert_id, status: "acknowledged" as const };
   }
 

@@ -7,12 +7,15 @@ import { useSafetyState } from "@/alerts/use-safety-state";
 import { Chip, type ChipTone } from "@/components/ui/chip";
 import { Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { useAppState } from "@/data/store";
+import { useMotionLock } from "@/hero/use-motion-lock";
 
 const FALLBACK_PICTO: Record<"clear" | "nosignal", PictogramName> = { clear: "seatbelt", nosignal: "sos" };
 
 /**
  * The 80 px status strip: [Safety chip][Connectivity chip], both from the store.
  * Colour + pictogram + word, always; NO SIGNAL after 10 s without a frame.
+ * While the motion lock shows, the strip stays visible above it but goes inert: its safety chip
+ * is a Link, so it must not stay tab-reachable or tappable during the lock (interaction-map §6).
  */
 export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
   const t = useTranslations();
@@ -20,6 +23,8 @@ export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
   const { safety, topAlert } = useSafetyState();
   const connectivity = useAppState((s) => s.connectivity);
   const clock = useAppState((s) => s.clock);
+  const serverLocked = useAppState((s) => s.operator?.motion_locked ?? false);
+  const lockShown = useMotionLock(serverLocked);
 
   const safetyWord = t(`enums.safety.${safety}`);
   const picto: PictogramName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? FALLBACK_PICTO.nosignal : FALLBACK_PICTO.clear;
@@ -44,7 +49,7 @@ export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
   }
 
   return (
-    <header className="strip">
+    <header className="strip" inert={lockShown || undefined}>
       {showSafety ? (
         <Chip
           tone={safetyTone(safety)}

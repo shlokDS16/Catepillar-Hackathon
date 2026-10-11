@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { EVENT_PAYLOADS, IDS, mySnapshot, seatbeltBreachEvent } from "@cat/shared/fixtures";
+
 import { MySnapshotOut } from "@cat/shared";
 import type { AppEvent } from "@/data/types";
 import { initialState, reduce, type AppState } from "./reducer";
@@ -67,6 +68,35 @@ describe("dispatch family", () => {
     s = reduce(s, { type: "event", event: ev("dispatch.sent", 330), nowMs: NOW });
     s = reduce(s, { type: "event", event: ev("dispatch.answered", 331), nowMs: NOW });
     expect(s.dispatch[IDS.alert]).toEqual(["telegram:sent", "twilio_voice:answered"]);
+  });
+});
+
+describe("guardian hazard ids", () => {
+  it("indexes the hazard by the alert id its event carried, and clears both (F06-F08 review 6)", () => {
+    const anomalyId = EVENT_PAYLOADS["guardian.hazard_near_operator"].anomaly_id;
+    let s = reduce(boot(), { type: "event", event: ev("guardian.hazard_near_operator", 400, { alert_id: IDS.dispatch }), nowMs: NOW });
+    expect(s.guardianByAlert[IDS.dispatch]).toBe(anomalyId);
+    expect(s.guardian[anomalyId]).toBeDefined();
+    s = reduce(s, { type: "event", event: ev("guardian.hazard_cleared", 401), nowMs: NOW });
+    expect(s.guardian).toEqual({});
+    expect(s.guardianByAlert).toEqual({});
+  });
+});
+
+describe("events before the snapshot", () => {
+  it("buffers them, then replays only events newer than the snapshot (F06-F08 review 7)", () => {
+    const older = ev("task.progress", 214); // seq already covered by the snapshot's recent_events
+    const newer = ev("task.progress", 300);
+    let s = reduce(initialState, { type: "event", event: older, nowMs: NOW });
+    expect(s.snapshot).toBeNull();
+    expect(s.buffer).toHaveLength(1);
+    const dup = reduce(s, { type: "event", event: older, nowMs: NOW });
+    expect(dup).toBe(s); // deduped by seq, no double buffer
+    s = reduce(dup, { type: "event", event: newer, nowMs: NOW });
+    expect(s.buffer).toHaveLength(2);
+    s = reduce(s, { type: "snapshot", snapshot, nowMs: NOW + 1 });
+    expect(s.buffer).toHaveLength(0);
+    expect(s.tasks[0]?.progress_pct).toBe(40); // the newer event was replayed onto the snapshot
   });
 });
 

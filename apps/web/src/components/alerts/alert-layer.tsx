@@ -35,18 +35,23 @@ export function AlertLayer() {
   const queue = takeoverQueue(alerts);
   const top = queue[0];
   const banner = cautionBanner(alerts);
+  const guardianByAlert = useAppState((s) => s.guardianByAlert);
 
-  const [card, setCard] = useState<ProtocolCard | null>(null);
+  // The card renders only for the id it was fetched for: a new alert shows no card section until
+  // its own fetch resolves, and a failed fetch clears it instead of leaving the previous one (F06-F08 review 5).
+  const [card, setCard] = useState<{ id: string; card: ProtocolCard } | null>(null);
   const cardId = top?.protocol_card_id ?? null;
   useEffect(() => {
+    if (!cardId) return;
     let live = true;
-    if (!cardId) {
-      const id = window.setTimeout(() => setCard(null), 0);
-      return () => window.clearTimeout(id);
-    }
-    void port.protocolCard(cardId).then((c) => {
-      if (live) setCard(c);
-    });
+    void port
+      .protocolCard(cardId)
+      .then((c) => {
+        if (live) setCard(c ? { id: cardId, card: c } : null);
+      })
+      .catch(() => {
+        if (live) setCard(null);
+      });
     return () => {
       live = false;
     };
@@ -65,7 +70,8 @@ export function AlertLayer() {
     }
   };
 
-  const hazard = top?.kind === "guardian_hazard" ? Object.values(guardian)[0] : undefined;
+  // The takeover explains the hazard its own alert points at, not whichever hazard arrived first (F06-F08 review 6).
+  const hazard = top?.kind === "guardian_hazard" ? guardian[guardianByAlert[top.alert_id] ?? ""] : undefined;
   const anomaly = hazard ? anomalies[hazard.anomaly_id] : undefined;
   const explanation = anomaly ? (lang === "hi" ? anomaly.explanation.hi : anomaly.explanation.en) : undefined;
   const dispatchLine = top && top.tier === "critical" ? dispatch[top.alert_id]?.at(-1) : undefined;
@@ -78,7 +84,7 @@ export function AlertLayer() {
         <AlertTakeover
           alert={top}
           more={queue.length - 1}
-          card={card ?? undefined}
+          card={card && card.id === cardId ? card.card : undefined}
           motionLocked={locked}
           onAcknowledge={() => void acknowledge()}
           ackStatus={ack.id === top.alert_id ? ack.status : "idle"}

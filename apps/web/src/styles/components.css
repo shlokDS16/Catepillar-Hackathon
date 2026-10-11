@@ -729,8 +729,5 @@
 .lock-line {
   text-align: center;
 }
-@media (min-width: 1024px) {
-  .lock {
-    inset: var(--strip-h) 0 0 var(--rail-w);
-  }
-}
+/* The lock spans to every edge below the strip at every width: the rail must not stay exposed
+   and touchable on desktop (F06-F08 review 3); Nav and .shell-body go inert while it shows. */

@@ -46,16 +46,21 @@ export function HeroCard({ machine, tasks, safety, topAlert, asOf, notUpdated, l
   const detailed = mode === "detailed";
   const factors = (task?.eta_factors ?? []).slice(0, 2);
   const pictoName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? SAFETY_PICTO.nosignal : SAFETY_PICTO.clear;
+  const codeModel = machine ? (machine.model_name ? t("hero.machine", { code: machine.code, model: machine.model_name }) : machine.code) : "—";
+  const machineLine =
+    machine && detailed && machine.moving
+      ? t("hero.movingLine", { line: codeModel, speed: format.number(machine.speed_kmh, { maximumFractionDigits: 0 }) })
+      : codeModel;
 
   const body = (
     <article className="hero" data-dashed={asOf ? "true" : undefined} data-lock={lock || undefined} aria-label={t("nav.home")}>
       <header className="hero-head">
         <p className="t-label text-ink-2">
-          {machine ? `${machine.code} · ${machine.model_name ?? ""}`.trim() : "—"}
+          {machineLine}
           {detailed && machine?.moving ? (
             <>
-              {" · "}
-              {t("hero.moving", { speed: format.number(machine.speed_kmh, { maximumFractionDigits: 0 }) })} <ProvenanceChip table="machine_state" field="speed_kmh" />
+              {" "}
+              <ProvenanceChip table="machine_state" field="speed_kmh" />
             </>
           ) : null}
         </p>
@@ -67,7 +72,7 @@ export function HeroCard({ machine, tasks, safety, topAlert, asOf, notUpdated, l
           <>
             <p className="t-title">{t(`enums.task.${task.task_type}`)}</p>
             <div className="flex items-baseline gap-3">
-              <span className="t-figure tnum">{Math.round(progress)}&nbsp;%</span>
+              <span className="t-figure tnum">{t("hero.pct", { pct: Math.round(progress) })}</span>
             </div>
             <div className="bar" role="progressbar" aria-valuenow={Math.round(progress)} aria-valuemin={0} aria-valuemax={100} aria-label={t("hero.progress", { pct: Math.round(progress) })}>
               <div className="bar-fill" style={{ width: `${progress}%` }} />
@@ -76,8 +81,9 @@ export function HeroCard({ machine, tasks, safety, topAlert, asOf, notUpdated, l
           </>
         ) : (
           <p className="t-title">
-            {t("hero.noTask")}
-            {next ? ` · ${t("hero.nextTask", { task: t(`enums.task.${next.task_type}`), time: format.dateTime(new Date(next.planned_start), "time") })}` : ""}
+            {next
+              ? t("hero.noTaskNext", { task: t(`enums.task.${next.task_type}`), time: format.dateTime(new Date(next.planned_start), "time") })
+              : t("hero.noTask")}
           </p>
         )}
       </div>
@@ -99,7 +105,13 @@ export function HeroCard({ machine, tasks, safety, topAlert, asOf, notUpdated, l
         <p className="hero-why t-meta text-ink-2">
           {t("hero.why", {
             factors: factors
-              .map((f) => `${factorLabel(f.key, t)} ${f.multiplier >= 1 ? "+" : "−"}${Math.round(Math.abs(f.multiplier - 1) * 100)} %${f.assumed ? ` (${t("enums.factor.assumed")})` : ""}`)
+              .map((f) => {
+                const pct = Math.round(Math.abs(f.multiplier - 1) * 100);
+                const sign = f.multiplier >= 1 ? "+" : "−";
+                return f.assumed
+                  ? t("hero.factorAssumed", { name: factorLabel(f.key, t), sign, pct, assumed: t("enums.factor.assumed") })
+                  : t("hero.factor", { name: factorLabel(f.key, t), sign, pct });
+              })
               .join(" · "),
           })}
           {!lock ? <span aria-hidden="true"> ›</span> : null}
@@ -116,8 +128,9 @@ export function HeroCard({ machine, tasks, safety, topAlert, asOf, notUpdated, l
   );
 
   if (lock) return body;
+  // No aria-label here: it would replace the card's content for screen readers (F06-F08 review 4).
   return (
-    <Link href="/op/task" className="hero-link" aria-label={t("hero.openTask")}>
+    <Link href="/op/task" className="hero-link">
       {body}
     </Link>
   );
