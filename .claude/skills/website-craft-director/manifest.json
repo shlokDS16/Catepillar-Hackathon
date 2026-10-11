@@ -1,0 +1,23 @@
+{
+  "name": "website-craft-director",
+  "version": "1.0.0",
+  "description": "Main orchestrator skill with eight step-by-step website creation subskills and detailed Aayush Visuals reference catalog.",
+  "entrypoint": "SKILL.md",
+  "subskills": [
+    "skills/01-reference-research/SKILL.md",
+    "skills/02-product-ux/SKILL.md",
+    "skills/03-design-system/SKILL.md",
+    "skills/04-frontend-build/SKILL.md",
+    "skills/05-backend-integration/SKILL.md",
+    "skills/06-motion-assets/SKILL.md",
+    "skills/07-quality-verification/SKILL.md",
+    "skills/08-release-handoff/SKILL.md"
+  ],
+  "references": [
+    "references/aayushvisuals-reference-catalog.md",
+    "references/agent-orchestration.md",
+    "references/component-contract.md",
+    "references/tools-and-setup.md",
+    "references/website-archetypes.md"
+  ]
+}
