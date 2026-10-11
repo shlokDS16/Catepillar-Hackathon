@@ -68,6 +68,7 @@ Only the integrator ticks this section, from docs/sessions/track-b.md and track-
 - [x] F04 alert tiers, useAlertFeedback, selectors, takeover + banner: merged 7087ab9; vitest 15/15 (log said 20), typecheck + build green
 - [x] F05 SOS hold-to-arm + SOS sheet on fixtures: merged d1bcd33, build green, deployed for the review; KIT_PUBLIC=1 was set for the review, removed after (/dev/kit 404)
 - [x] F05b SOS review-demo route /api/sos-demo (Telegram + one Twilio call per hold): merged 090acbf; SOS_LIVE=1 + 6 sensitive Twilio/Telegram vars in Vercel production, Shlok approved LIVE FOR THE REVIEW ONLY; SOS_LIVE removed after the review, dry_run verified. Stand-in until F13 uses sos_raise.
+- [x] F06 hero + motion lock, F07 @cat/shared swap + DataPort/store/provenance/useAudio, F08 Home, fixture /director + F06-F08 review fixes (all 15 findings closed on track-f-fixes, incl. re-pass: full-screen inert lock, pre-snapshot buffer, guardianByAlert): merged 131d301 (code 562ace0); tsc/lint/vitest 49/49/build green; QA F-fix-lock-{375,1440}.png; final independent re-verify of the re-pass runs before the next push (subagent credits). F12 still lacks MapView.
 ### Showable milestones (build-protocol.md)
 - [ ] Showable 1 (≈ H3-4): fixture-driven cockpit, alerts, SOS, map, EN/HI deployed
 - [ ] Showable 2 (≈ H8-9): + Replay 4 phases, FM inbox + ledger UI

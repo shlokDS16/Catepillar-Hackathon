@@ -1,19 +1,14 @@
 # STATE (source of truth; only the integrator/orchestrator edits this file)
 
-> **PAUSED 2026-09-23 (Shlok).** The team did not proceed past review 1; Spotter continues later as a
-> side project. On resume: read the final lines of docs/sessions/track-b.md and track-f.md (each track
-> was asked to leave a WIP commit + "where I stopped" line), then merge in protocol order.
-> Track B STOPPED at track-b 76e6278 (WIP, pushed, NOT merged). Migrations 002/002b are applied to
-> Supabase (7 migrations, local = remote). Both B4 reviews received, NOT applied: the fixes draft is
-> supabase/wip/002c_review_fixes.NOT_APPLIED.sql (outside migrations/, never pushed). Resume: apply
-> 002c + test patch, re-review, then merge; realtime safeguard = demo-check runs realtime-wake and
-> fails loudly (partitions exist only through 26 Sep); then B5. Details: PAUSED entry in track-b.md.
-> Track F STOPPED at track-f 8c1a019 (pushed, NOT merged): F06 hero + motion lock, F07 fixtures/
-> DataPort/store/provenance/useAudio (@cat/shared), F08 Home, fixture /director, F12 started (no
-> MapView). Green: typecheck, lint, 44 vitest, build. The F06-F08 code-reviewer pass never returned:
-> apply it first, then merge. Showable 1 then needs only F12 MapView.
-> Live site stays up (dry-run SOS). Vercel production still holds Twilio/Telegram secrets (unused in
-> dry-run); remove them if the project is abandoned.
+> **RESUMED 2026-10-11 (Shlok: "continue building").** Single-folder mode per AGENTS.md (work on
+> branch tracks in this repo; old ../spotter-track-* worktrees are read-only history). Supabase
+> restored 2026-10-11 with all 7 migrations intact; new SUPABASE_ACCESS_TOKEN in .env (project
+> linked, CLI 2.102.0 — Smart App Control was blocking it, Shlok turned it off).
+> **Track F merged 2026-10-11 (main 131d301):** F06-F08 + all review fixes. Subagent credits ran out
+> mid-session: the reviewer's final re-verify of the 5 re-pass fixes is deferred and MUST run before
+> the next push of main. Next: Track B 002c (in progress, worktree .claude/worktrees/track-b-002c),
+> then F12 MapView (Showable 1) and B5 in parallel. The 2026-09-23 stop-point details that follow are
+> history now; track logs are current.
 
 - **Updated:** 2026-09-23, session 2 (Opus 5.5, integrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)
