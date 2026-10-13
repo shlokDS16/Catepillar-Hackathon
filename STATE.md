@@ -4,11 +4,12 @@
 > branch tracks in this repo; old ../spotter-track-* worktrees are read-only history). Supabase
 > restored 2026-10-11 with all 7 migrations intact; new SUPABASE_ACCESS_TOKEN in .env (project
 > linked, CLI 2.102.0 — Smart App Control was blocking it, Shlok turned it off).
-> **Track F merged 2026-10-11 (main 131d301):** F06-F08 + all review fixes. Subagent credits ran out
-> mid-session: the reviewer's final re-verify of the 5 re-pass fixes is deferred and MUST run before
-> the next push of main. Next: Track B 002c (in progress, worktree .claude/worktrees/track-b-002c),
-> then F12 MapView (Showable 1) and B5 in parallel. The 2026-09-23 stop-point details that follow are
-> history now; track logs are current.
+> **Track F merged 2026-10-11 (main 131d301):** F06-F08 + all review fixes; independent re-verify
+> APPROVED 2026-10-12. **Track B merged 2026-10-12 (main 7e393ec):** B4 002/002b + 002c review
+> fixes + extended 004 tests (sqltest 5/5, vitest 125/125; in-session review PASS, independent
+> re-verify due at the push gate with Track F's). In flight: F12 MapView (ui-ux-lead, branch
+> track-f-f12 — completes Showable 1), then B5 (ledger) and Replay lanes. Subagent quota has been
+> flaky all day; lanes fall back to in-session work with the independent review deferred, disclosed.
 
 - **Updated:** 2026-09-23, session 2 (Opus 5.5, integrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)
