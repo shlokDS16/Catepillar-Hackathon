@@ -1,10 +1,20 @@
--- 002c (B4 review fixes; 002 and 002b are already applied to the shared project, so corrections land here).
---  1. fan-out: the "no operator" guard is simply `topic is not null` ('op:' || null is null)
---  2. dispatch kick: one trigger for inserts, one for a real status change back to 'queued' (a no-op
---     update of status = 'queued' must not post a second request)
---  3. my_snapshot: `is not distinct from` for the run comparisons, alerts scoped to the current run like
---     tasks, one comment per block
+-- Migration 002c (B4 review fixes; 002 and 002b are already applied to the shared project, so every
+-- change here is additive ALTER / CREATE OR REPLACE and safe to run once on top of them).
+--  1. fan-out: the "no operator" guard is simply `topic is not null` ('op:' || null is null); the old
+--     `not like '%:'` clause was noise.
+--  2. dispatches.site_id: the FM dispatch view becomes site-scoped (the alert's site).
+--  3. dispatch kick: one trigger for inserts, one for a real status change back to 'queued' (a no-op
+--     update of status = 'queued' must not post a second pg_net request).
+--  4. events RLS mirrors the Realtime topics exactly: FM = supervisor/site audiences of its site (no
+--     trainer-audience training records, no other sites), TR = trainer audience of its site (fixes the
+--     trainer cross-site read), OP = operator audience of self + site audience of its site.
+--  5. alerts RLS: FM site-scoped (was org-wide).
+--  6. service_role has no direct insert/truncate on events: private.emit_event is the single write path.
+--  7. my_snapshot: `is not distinct from` for the run comparisons, alerts scoped to the current run like
+--     tasks, recent_events under the same predicate as the new events RLS, one comment per block.
+--  8. least privilege on pg_net: client roles can neither read the request queue / responses nor use the schema.
 
+-- ── 1. fan-out guard ───────────────────────────────────────────────────────────────────────────────
 create or replace function private.events_after_insert()
 returns trigger language plpgsql security definer set search_path = '' as $$
 declare et public.event_types%rowtype; a public.audience; topic text; body jsonb;
@@ -32,6 +42,23 @@ begin
   return null;
 end $$;
 
+-- ── 2. dispatches.site_id (FM's dispatch view is site-scoped) ──────────────────────────────────────
+alter table public.dispatches add column if not exists site_id uuid references public.sites(id);
+update public.dispatches d set site_id = a.site_id
+  from public.alerts a where d.alert_id = a.id and d.site_id is null;   -- alert dispatches carry the alert's site
+update public.dispatches d set site_id = e.site_id
+  from public.events e where d.subject_id = e.id and d.site_id is null; -- checkpoint / flood summary rows
+create index if not exists dispatches_site_idx on public.dispatches (site_id);
+do $$   -- enforce it when the backfill left nothing behind (a fresh project has no rows)
+begin
+  if not exists (select 1 from public.dispatches where site_id is null) then
+    alter table public.dispatches alter column site_id set not null;
+  else
+    raise warning 'dispatches.site_id: rows without a site remain; not null not enforced';
+  end if;
+end $$;
+
+-- ── 3. dispatch kick: insert + real requeue, never a no-op update ──────────────────────────────────
 drop trigger if exists dispatches_kick on public.dispatches;
 drop trigger if exists dispatches_kick_insert on public.dispatches;
 drop trigger if exists dispatches_kick_requeue on public.dispatches;
@@ -40,11 +67,36 @@ create trigger dispatches_kick_insert after insert on public.dispatches
 create trigger dispatches_kick_requeue after update of status on public.dispatches
   for each row when (old.status is distinct from new.status and new.status = 'queued') execute function private.dispatch_kick();
 
--- RLS on events is a superset of the Realtime topics: everything a role can receive it can also select
--- (FM also selects operator-only events of the site; TR selects trainer-audience events of every site).
+-- ── 4. events RLS: exact mirror of the Realtime topics op:{me} / site:{site} / sup:{site} / train:{site} ──
+drop policy if exists events_read on public.events;
+create policy events_read on public.events for select to authenticated using (
+  ('site' = any (audiences) and site_id = (select private.my_site_id()))
+  or ('operator' = any (audiences) and operator_id = (select private.my_operator_id()))
+  or ((select private.is_fm()) and 'supervisor' = any (audiences) and site_id = (select private.my_site_id()))
+  or ((select private.app_role()) = 'trainer' and 'trainer' = any (audiences) and site_id = (select private.my_site_id()))
+);
 comment on policy events_read on public.events is
-  'Superset of the Realtime topics op:/site:/sup:/train:: a role can select every event it can receive, plus (FM) operator-only events of its site.';
+  'Exact mirror of the Realtime topics (api-contracts §7): a role selects only the events it can receive on op:{me}, site:{site}, sup:{site} (FM) or train:{site} (TR) — no trainer-audience training records for FM, no cross-site reads for TR.';
 
+-- alerts: FM is site-scoped (was org-wide)
+drop policy if exists alerts_read on public.alerts;
+create policy alerts_read on public.alerts for select to authenticated
+  using (operator_id = (select private.my_operator_id())
+         or ((select private.is_fm()) and site_id = (select private.my_site_id())));
+comment on policy alerts_read on public.alerts is
+  'Operators see their own alerts; the fleet manager sees only its site''s.';
+
+-- dispatches: FM is site-scoped through the new site_id
+drop policy if exists dispatches_read on public.dispatches;
+create policy dispatches_read on public.dispatches for select to authenticated
+  using ((select private.is_fm()) and site_id = (select private.my_site_id()));
+comment on policy dispatches_read on public.dispatches is
+  'The outbox is supervisor-only ( recipient_ref names an Edge Function secret) and site-scoped for the fleet manager.';
+
+-- ── 5. events: no direct writes for any client role, service_role included ─────────────────────────
+revoke insert, truncate on public.events from anon, authenticated, service_role;
+
+-- ── 6. my_snapshot (rewritten; shape unchanged, run comparisons are `is not distinct from`) ────────
 create or replace function public.my_snapshot()
 returns jsonb language plpgsql security definer set search_path = '' as $$
 declare
@@ -65,7 +117,7 @@ begin
   select decrypted_secret into v_tel from vault.decrypted_secrets where name = 'site_emergency_tel';
   select jsonb_build_object('id', s.id, 'name', s.name, 'emergency_tel', v_tel) into j_site from public.sites s where s.id = me.site_id;
 
-  -- the machine this operator is paired with in the current run
+  -- the machine this operator is paired with in the current run (or, with no run, outside any run)
   if me.operator_id is not null then
     select machine_id into v_machine_id from public.operator_pairings
       where operator_id = me.operator_id and unpaired_at is null and run_id is not distinct from run.id
@@ -102,7 +154,7 @@ begin
       into j_machine
       from public.machines m
       left join public.machine_models mm on mm.id = m.model_id
-      left join public.machine_state ms on ms.machine_id = m.id and ms.run_id = run.id
+      left join public.machine_state ms on ms.machine_id = m.id and ms.run_id is not distinct from run.id
       join public.sites s on s.id = me.site_id
       where m.id = v_machine_id;
   end if;
@@ -113,7 +165,7 @@ begin
         'location', case when os.location is null then null else jsonb_build_object('lat', extensions.ST_Y(os.location::extensions.geometry), 'lon', extensions.ST_X(os.location::extensions.geometry)) end,
         'ts', os.ts, 'motion_locked', os.motion_locked, 'call_allowed', os.call_allowed, 'nearest', os.nearest)
       into j_state
-      from public.operator_state os where os.operator_id = me.operator_id and os.run_id = run.id;
+      from public.operator_state os where os.operator_id = me.operator_id and os.run_id is not distinct from run.id;
   end if;
 
   -- latest weather for the site: the current run's snapshot first, otherwise the site's newest
@@ -134,13 +186,13 @@ begin
     left join public.replay_scenarios rs on rs.source_event_id = la.because_event_id and rs.operator_id = la.operator_id
     where la.operator_id = me.operator_id and la.completed_at is null;
 
-  -- the 50 newest events this role may see (same predicate as the events RLS policy)
+  -- the 50 newest events this role may see (same predicate as the events RLS policy: topic mirror)
   select coalesce(jsonb_agg(to_jsonb(e) order by e.seq desc), '[]') into j_events
     from (select * from public.events e
-          where ('operator' = any (e.audiences) and e.operator_id = me.operator_id)
-             or ('site' = any (e.audiences) and e.site_id = me.site_id)
-             or (me.role = 'fleet_manager' and e.site_id = me.site_id)
-             or (me.role = 'trainer' and 'trainer' = any (e.audiences))
+          where ('site' = any (e.audiences) and e.site_id = me.site_id)
+             or ('operator' = any (e.audiences) and e.operator_id = me.operator_id)
+             or (me.role = 'fleet_manager' and 'supervisor' = any (e.audiences) and e.site_id = me.site_id)
+             or (me.role = 'trainer' and 'trainer' = any (e.audiences) and e.site_id = me.site_id)
           order by e.seq desc limit 50) e;
 
   return jsonb_build_object(
@@ -159,8 +211,7 @@ begin
     'recent_events', j_events);
 end $$;
 
--- 4. least privilege on pg_net: pending requests carry the apikey header; the `net` schema is not exposed
---    over the API, but client roles should not be able to read the queue or responses at all.
+-- ── 7. pg_net: client roles cannot read the request queue / responses or use the schema ────────────
 do $$
 begin
   revoke all on all tables in schema net from anon, authenticated;

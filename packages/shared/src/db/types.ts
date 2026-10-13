@@ -290,6 +290,7 @@ export type Database = {
           recipient_ref: string
           recipient_role: Database["public"]["Enums"]["app_role"]
           sending_at: string | null
+          site_id: string
           status: Database["public"]["Enums"]["dispatch_status"]
           subject_id: string | null
           subject_key: string | null
@@ -309,6 +310,7 @@ export type Database = {
           recipient_ref: string
           recipient_role: Database["public"]["Enums"]["app_role"]
           sending_at?: string | null
+          site_id: string
           status?: Database["public"]["Enums"]["dispatch_status"]
           subject_id?: string | null
           subject_key?: string | null
@@ -328,6 +330,7 @@ export type Database = {
           recipient_ref?: string
           recipient_role?: Database["public"]["Enums"]["app_role"]
           sending_at?: string | null
+          site_id?: string
           status?: Database["public"]["Enums"]["dispatch_status"]
           subject_id?: string | null
           subject_key?: string | null
@@ -339,6 +342,13 @@ export type Database = {
             columns: ["alert_id"]
             isOneToOne: false
             referencedRelation: "alerts"
+            referencedColumns: ["id"]
+          },
+          {
+            foreignKeyName: "dispatches_site_id_fkey"
+            columns: ["site_id"]
+            isOneToOne: false
+            referencedRelation: "sites"
             referencedColumns: ["id"]
           },
         ]

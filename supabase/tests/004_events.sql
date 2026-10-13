@@ -2,8 +2,9 @@
 -- per-audience RLS and Realtime topics, my_snapshot shape. Runs inside begin … rollback.
 create temp table t (k text primary key, v uuid not null) on commit drop;
 insert into t values
-  ('site', gen_random_uuid()), ('op_ravi', gen_random_uuid()), ('op_other', gen_random_uuid()),
+  ('site', gen_random_uuid()), ('site2', gen_random_uuid()), ('op_ravi', gen_random_uuid()), ('op_other', gen_random_uuid()),
   ('u_ravi', gen_random_uuid()), ('u_anita', gen_random_uuid()), ('u_trainer', gen_random_uuid()),
+  ('u_fm2', gen_random_uuid()), ('u_trainer2', gen_random_uuid()),
   ('machine', gen_random_uuid()), ('scenario', gen_random_uuid()), ('run', gen_random_uuid()), ('task', gen_random_uuid()),
   ('sos1', gen_random_uuid()), ('sos2', gen_random_uuid());
 create or replace function pg_temp.id(text) returns uuid language sql as $$ select v from t where k = $1 $$;
@@ -14,14 +15,17 @@ insert into auth.users (id, instance_id, aud, role, email, encrypted_password, e
 select pg_temp.id(k), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', k || '@sqltest.local', '', now(), '{}', '{}', now(), now()
 from t where k like 'u\_%';
 insert into public.sites (id, code, name, site_type, location) values
-  (pg_temp.id('site'), 'SQLTEST', 'sqltest quarry', 'quarry', extensions.ST_SetSRID(extensions.ST_MakePoint(79.0882, 21.1463), 4326)::extensions.geography);
+  (pg_temp.id('site'), 'SQLTEST', 'sqltest quarry', 'quarry', extensions.ST_SetSRID(extensions.ST_MakePoint(79.0882, 21.1463), 4326)::extensions.geography),
+  (pg_temp.id('site2'), 'SQLTES2', 'sqltest pit 2', 'quarry', extensions.ST_SetSRID(extensions.ST_MakePoint(79.0982, 21.1563), 4326)::extensions.geography);
 insert into public.operators (id, employee_code, display_name, skill_level, site_id, pseudonym) values
   (pg_temp.id('op_ravi'), 'OP-T001', 'Ravi (test)', 'novice', pg_temp.id('site'), 'Operator-T01'),
   (pg_temp.id('op_other'), 'OP-T002', 'Other (test)', 'expert', pg_temp.id('site'), 'Operator-T02');
 insert into public.profiles (user_id, role, operator_id, site_id, display_name) values
   (pg_temp.id('u_ravi'), 'operator', pg_temp.id('op_ravi'), pg_temp.id('site'), 'Ravi'),
   (pg_temp.id('u_anita'), 'fleet_manager', null, pg_temp.id('site'), 'Anita'),
-  (pg_temp.id('u_trainer'), 'trainer', null, pg_temp.id('site'), 'Trainer');
+  (pg_temp.id('u_trainer'), 'trainer', null, pg_temp.id('site'), 'Trainer'),
+  (pg_temp.id('u_fm2'), 'fleet_manager', null, pg_temp.id('site2'), 'FM other site'),
+  (pg_temp.id('u_trainer2'), 'trainer', null, pg_temp.id('site2'), 'TR other site');
 insert into public.machines (id, code, home_site_id) values (pg_temp.id('machine'), 'EXC-T01', pg_temp.id('site'));
 insert into public.scenarios (id, code, seed, site_id, shift_start_sim, duration, generator_version) values
   (pg_temp.id('scenario'), 'sqltest', 1, pg_temp.id('site'), now(), interval '8 hours', 'test');
@@ -60,10 +64,14 @@ begin
   assert (select count(*) from public.events where idempotency_key = k) = 1, 'no duplicate event';
   assert (select count(*) from private.ledger_queue where idempotency_key = 'ledger:' || k) = 1, 'no double enqueue';
   assert (select count(*) from private.loop_queue where event_id = e1.id) = 1, 'no double loop enqueue';
+  -- a training record (operator + trainer audiences, no ledger/replay flags): the FM must never see it
+  perform private.emit_event('training.lesson_assigned', '{"lesson_code": "seatbelt_slopes"}'::jsonb,
+                             'sys:test:training:1', 'system', pg_temp.id('site'), pg_temp.id('run'), null::uuid, pg_temp.id('op_ravi'));
   -- a type without ledger/lesson flags touches no queue
   e2 := private.emit_event('task.progress', ('{"task_id": "' || pg_temp.id('task') || '", "status": "in_progress", "progress_pct": 10, "eta_p50_min": null, "eta_p90_min": null}')::jsonb,
                            'sys:test:progress:1', 'system', pg_temp.id('site'), pg_temp.id('run'), null::uuid, pg_temp.id('op_ravi'), pg_temp.id('task'));
-  assert (select count(*) from private.ledger_queue) = 1 and (select count(*) from private.loop_queue) = 1, 'plain event queues nothing';
+  assert (select count(*) from private.ledger_queue where event_id in (select id from public.events where run_id = pg_temp.id('run'))) = 1
+     and (select count(*) from private.loop_queue where event_id in (select id from public.events where run_id = pg_temp.id('run'))) = 1, 'plain event queues nothing';
   begin
     perform private.emit_event('safety.nope', '{}'::jsonb, 'x:1', 'system', pg_temp.id('site'));
     raise exception 'unknown type accepted';
@@ -77,9 +85,29 @@ begin
   end;
 end $$;
 
+-- fan-out: one broadcast row per audience topic, carrying the event id (checked as owner, before any role switch)
+do $$
+declare e_id uuid;
+begin
+  if (select exists (select 1 from pg_inherits where inhparent = 'realtime.messages'::regclass)) then
+    select id into e_id from public.events where type = 'safety.seatbelt_breach' and run_id = pg_temp.id('run');
+    assert (select array_agg(topic order by topic) from realtime.messages where extension = 'broadcast' and payload ->> 'id' = e_id::text)
+      = array['op:' || pg_temp.id('op_ravi'), 'sup:' || pg_temp.id('site'), 'train:' || pg_temp.id('site')], 'seatbelt fans out to op, sup, train';
+  end if;
+end $$;
+
 -- supervisor-only event (for the RLS matrix below)
 select private.emit_event('alert.suppressed', ('{"alert_id": "' || pg_temp.id('sos1') || '", "reason": "dedupe", "suppressed_by": null}')::jsonb,
                           'sys:test:supp:1', 'system', pg_temp.id('site'), pg_temp.id('run'), null::uuid, pg_temp.id('op_other'));
+do $$
+declare sup_id uuid;
+begin
+  if (select exists (select 1 from pg_inherits where inhparent = 'realtime.messages'::regclass)) then
+    select id into sup_id from public.events where idempotency_key = 'sys:test:supp:1';
+    assert (select array_agg(topic) from realtime.messages where extension = 'broadcast' and payload ->> 'id' = sup_id::text)
+      = array['sup:' || pg_temp.id('site')], 'supervisor-only event fans out to sup only';
+  end if;
+end $$;
 
 -- alerts: two SOS rows coexist; a second open alert with the same non-SOS hazard key is refused
 insert into public.alerts (id, run_id, kind, hazard_key, tier, operator_id, site_id, needs_ack, escalate_at) values
@@ -95,21 +123,35 @@ begin
     raise exception 'duplicate active hazard accepted';
   exception when unique_violation then null;
   end;
-  assert (select count(*) from public.alerts where kind = 'sos') = 2, 'two SOS alerts coexist';
+  assert (select count(*) from public.alerts where kind = 'sos' and run_id = pg_temp.id('run')) = 2, 'two SOS alerts coexist';
 end $$;
 
 -- dispatches: one row per (subject, purpose, channel, role, level); the kick trigger queues a pg_net request (sent only on commit)
-insert into public.dispatches (alert_id, purpose, channel, recipient_ref, recipient_role, escalation_level) values
-  (pg_temp.id('sos1'), 'alert', 'telegram', 'TELEGRAM_SUPERVISOR_CHAT_ID', 'fleet_manager', 0);
+insert into public.dispatches (alert_id, site_id, purpose, channel, recipient_ref, recipient_role, escalation_level) values
+  (pg_temp.id('sos1'), pg_temp.id('site'), 'alert', 'telegram', 'TELEGRAM_SUPERVISOR_CHAT_ID', 'fleet_manager', 0);
 do $$
 begin
   begin
-    insert into public.dispatches (alert_id, purpose, channel, recipient_ref, recipient_role, escalation_level) values
-      (pg_temp.id('sos1'), 'alert', 'telegram', 'TELEGRAM_SUPERVISOR_CHAT_ID', 'fleet_manager', 0);
+    insert into public.dispatches (alert_id, site_id, purpose, channel, recipient_ref, recipient_role, escalation_level) values
+      (pg_temp.id('sos1'), pg_temp.id('site'), 'alert', 'telegram', 'TELEGRAM_SUPERVISOR_CHAT_ID', 'fleet_manager', 0);
     raise exception 'duplicate dispatch accepted';
   exception when unique_violation then null;
   end;
   assert (select status from public.dispatches where alert_id = pg_temp.id('sos1')) = 'queued', 'dispatch queued (vault secrets present)';
+end $$;
+
+-- kick count: insert = 1 request; a no-op status update keeps it at 1; sending → queued (requeue) adds 1.
+-- Safe to count: everything here is one transaction, so the pg_net worker cannot consume the rows yet.
+do $$
+declare before_n int; d_id uuid;
+begin
+  select id into d_id from public.dispatches where alert_id = pg_temp.id('sos1');
+  select count(*) into before_n from net.http_request_queue;
+  update public.dispatches set status = 'queued' where id = d_id;
+  assert (select count(*) from net.http_request_queue) = before_n, 'a no-op status update must not re-kick';
+  update public.dispatches set status = 'sending', sending_at = now() where id = d_id;
+  update public.dispatches set status = 'queued', attempts = attempts + 1 where id = d_id;
+  assert (select count(*) from net.http_request_queue) = before_n + 1, 'a requeue kicks once';
 end $$;
 
 -- ── RLS and Realtime topics per role ─────────────────────────────────────────────────────────────
@@ -122,7 +164,7 @@ grant select on rt to authenticated;
 do $$
 begin
   if not (select enabled from rt) then
-    raise warning 'realtime.messages has no partition: Realtime topic assertions skipped (run scripts/b0/realtime-wake.ts)';
+    raise warning 'realtime.messages has no partition: Realtime topic assertions SKIPPED (run scripts/b0/realtime-wake.ts)';
   end if;
 end $$;
 set local role authenticated;
@@ -130,10 +172,10 @@ select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_r
 do $$
 declare snap jsonb;
 begin
-  assert (select count(*) from public.events where type = 'safety.seatbelt_breach') = 1, 'OP sees own seatbelt event';
-  assert (select count(*) from public.events where type = 'alert.suppressed') = 0, 'OP does not see supervisor-only events';
-  assert (select count(*) from public.alerts) = 3, 'OP sees own alerts';
-  assert (select count(*) from public.dispatches) = 0, 'OP sees no dispatches';
+  assert (select count(*) from public.events where run_id = pg_temp.id('run') and type = 'safety.seatbelt_breach') = 1, 'OP sees own seatbelt event';
+  assert (select count(*) from public.events where run_id = pg_temp.id('run') and type = 'alert.suppressed') = 0, 'OP does not see supervisor-only events';
+  assert (select count(*) from public.alerts where run_id = pg_temp.id('run')) = 3, 'OP sees own alerts';
+  assert (select count(*) from public.dispatches where alert_id = pg_temp.id('sos1')) = 0, 'OP sees no dispatches';
   if (select enabled from rt) then
     perform set_config('realtime.topic', 'op:' || pg_temp.id('op_ravi'), true);
     assert (select count(*) from realtime.messages where extension = 'broadcast') >= 1, 'OP receives on op:{me}';
@@ -151,15 +193,16 @@ begin
   assert snap -> 'machine' ->> 'code' = 'EXC-T01' and (snap -> 'machine' ->> 'moving')::boolean, 'machine state';
   assert (snap -> 'operator_state' ->> 'motion_locked')::boolean, 'motion lock default deny';
   assert (snap -> 'weather' ->> 'temperature_c')::numeric = 38.5, 'weather';
-  assert jsonb_array_length(snap -> 'recent_events') = 2, 'recent events (seatbelt + task.progress)';
+  assert jsonb_array_length(snap -> 'recent_events') = 3, 'recent events (seatbelt + training + task.progress)';
   assert snap -> 'recent_events' -> 0 ->> 'type' = 'task.progress', 'newest first';
 end $$;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_anita'), 'role', 'authenticated')::text, true);
 do $$
 declare snap jsonb;
 begin
-  assert (select count(*) from public.events) = 3, 'FM sees every site event';
-  assert (select count(*) from public.dispatches) = 1, 'FM sees dispatches';
+  assert (select count(*) from public.events where run_id = pg_temp.id('run')) = 3, 'FM sees every site event';
+  assert (select count(*) from public.events where run_id = pg_temp.id('run') and type = 'training.lesson_assigned') = 0, 'FM does not see training records';
+  assert (select count(*) from public.dispatches where alert_id = pg_temp.id('sos1')) = 1, 'FM sees dispatches';
   if (select enabled from rt) then
     perform set_config('realtime.topic', 'sup:' || pg_temp.id('site'), true);
     assert (select count(*) from realtime.messages where extension = 'broadcast') >= 1, 'FM receives on sup:{site}';
@@ -173,10 +216,22 @@ end $$;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_trainer'), 'role', 'authenticated')::text, true);
 do $$
 begin
-  assert (select count(*) from public.events) = 1, 'TR sees trainer-audience events only';
+  assert (select count(*) from public.events where run_id = pg_temp.id('run')) = 2, 'TR sees trainer-audience events of its site only';
   if (select enabled from rt) then
     perform set_config('realtime.topic', 'train:' || pg_temp.id('site'), true);
     assert (select count(*) from realtime.messages where extension = 'broadcast') >= 1, 'TR receives on train:{site}';
   end if;
+end $$;
+select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_fm2'), 'role', 'authenticated')::text, true);
+do $$
+begin
+  assert (select count(*) from public.events where run_id = pg_temp.id('run')) = 0, 'FM of another site sees no events';
+  assert (select count(*) from public.alerts where run_id = pg_temp.id('run')) = 0, 'FM of another site sees no alerts';
+  assert (select count(*) from public.dispatches where alert_id = pg_temp.id('sos1')) = 0, 'FM of another site sees no dispatches';
+end $$;
+select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_trainer2'), 'role', 'authenticated')::text, true);
+do $$
+begin
+  assert (select count(*) from public.events where run_id = pg_temp.id('run')) = 0, 'TR of another site sees no events';
 end $$;
 reset role;
