@@ -3,16 +3,18 @@
  *   supabase_secret_key         → `dispatch` apikey header sent by pg_net
  *   telegram_supervisor_chat_id → chat binding for Telegram acks / checkpoint line
  *   site_emergency_tel          → `my_snapshot.site.emergency_tel` (the supervisor demo phone)
+ *   public_functions_url        → base URL the `dispatches` kick trigger posts to (not secret, but read where the key is)
  * Idempotent: creates or updates by name. Prints names only.
  */
 import { connect } from "../lib/db.ts";
-import { loadEnv, requireEnv } from "../lib/env.ts";
+import { loadEnv, projectRef, requireEnv } from "../lib/env.ts";
 
 const env = requireEnv(loadEnv(), "SUPABASE_SECRET_KEY", "TELEGRAM_SUPERVISOR_CHAT_ID", "DEMO_SUPERVISOR_PHONE");
 const wanted: Record<string, string> = {
   supabase_secret_key: env.SUPABASE_SECRET_KEY,
   telegram_supervisor_chat_id: env.TELEGRAM_SUPERVISOR_CHAT_ID,
   site_emergency_tel: env.DEMO_SUPERVISOR_PHONE,
+  public_functions_url: `https://${projectRef(env)}.supabase.co/functions/v1`,
 };
 const sql = connect();
 try {

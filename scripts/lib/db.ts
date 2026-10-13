@@ -18,12 +18,17 @@ export function poolerUrl(env = loadEnv()): string {
   return `postgres://postgres.${projectRef(env)}:${encodeURIComponent(env.SUPABASE_DB_PASSWORD)}@${host}:5432/postgres`;
 }
 
-export function connect(opts: { max?: number; quiet?: boolean } = {}) {
+/** `quiet` drops NOTICEs; `warnings` still prints WARNING and above (a test's loud guard must be seen). */
+export function connect(opts: { max?: number; quiet?: boolean; warnings?: boolean } = {}) {
   return postgres(poolerUrl(), {
     max: opts.max ?? 1,
     prepare: false,
     idle_timeout: 20,
     connect_timeout: 15,
-    onnotice: opts.quiet ? () => {} : (n) => console.log(`  notice: ${n.message}`),
+    onnotice: (n) => {
+      const severity = (n as { severity?: string }).severity ?? "NOTICE";
+      if (!opts.quiet) console.log(`  ${severity.toLowerCase()}: ${n.message}`);
+      else if (opts.warnings && severity !== "NOTICE" && severity !== "DEBUG" && severity !== "LOG" && severity !== "INFO") console.log(`  ${severity}: ${n.message}`);
+    },
   });
 }
