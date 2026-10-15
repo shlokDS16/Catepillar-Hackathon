@@ -7,9 +7,11 @@
 > **Track F merged 2026-10-11 (main 131d301):** F06-F08 + all review fixes; independent re-verify
 > APPROVED 2026-10-12. **Track B merged 2026-10-12 (main 7e393ec):** B4 002/002b + 002c review
 > fixes + extended 004 tests (sqltest 5/5, vitest 125/125; in-session review PASS, independent
-> re-verify due at the push gate with Track F's). In flight: F12 MapView (ui-ux-lead, branch
-> track-f-f12 — completes Showable 1), then B5 (ledger) and Replay lanes. Subagent quota has been
-> flaky all day; lanes fall back to in-session work with the independent review deferred, disclosed.
+> re-verify due at the push gate with Track F's). **F12 MapView merged 2026-10-12 (main 1e6126d):**
+> map screens, Guardian rings, plan-first fallback — **Showable 1 is code-complete on main**; it
+> needs the phase-validator check and a deploy. Next: B5 (ledger) and Replay lanes. Subagent quota
+> has been flaky all day; lanes fall back to in-session work with the independent review deferred
+> to the push gate, disclosed each time.
 
 - **Updated:** 2026-09-23, session 2 (Opus 5.5, integrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)

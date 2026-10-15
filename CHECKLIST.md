@@ -70,8 +70,9 @@ Only the integrator ticks this section, from docs/sessions/track-b.md and track-
 - [x] F05 SOS hold-to-arm + SOS sheet on fixtures: merged d1bcd33, build green, deployed for the review; KIT_PUBLIC=1 was set for the review, removed after (/dev/kit 404)
 - [x] F05b SOS review-demo route /api/sos-demo (Telegram + one Twilio call per hold): merged 090acbf; SOS_LIVE=1 + 6 sensitive Twilio/Telegram vars in Vercel production, Shlok approved LIVE FOR THE REVIEW ONLY; SOS_LIVE removed after the review, dry_run verified. Stand-in until F13 uses sos_raise.
 - [x] F06 hero + motion lock, F07 @cat/shared swap + DataPort/store/provenance/useAudio, F08 Home, fixture /director + F06-F08 review fixes (all 15 findings closed on track-f-fixes, incl. re-pass: full-screen inert lock, pre-snapshot buffer, guardianByAlert): merged 131d301 (code 562ace0); tsc/lint/vitest 49/49/build green; QA F-fix-lock-{375,1440}.png; final independent re-verify of the re-pass runs before the next push (subagent credits). F12 still lacks MapView.
+- [x] F12 MapView: MapLibre + OpenFreeMap positron, 15/50 m Guardian rings, trail, zones, machines by health, anomaly pins; /op/map Guardian card + "why this machine"; /fm/map AnomalyExplain side sheet; DataPort.siteMap(); paper site plan renders first and the basemap upgrades it (also no-WebGL + offline): merged 1e6126d (code 9615543); tsc/lint/build green, vitest 56/56; QA F12-map-{375,1440}.png, F12-guardian-1440.png
 ### Showable milestones (build-protocol.md)
-- [ ] Showable 1 (≈ H3-4): fixture-driven cockpit, alerts, SOS, map, EN/HI deployed
+- [~] Showable 1 (≈ H3-4): fixture-driven cockpit, alerts, SOS, map, EN/HI — all code merged on main (F01-F08, F12); pending: phase-validator check + deploy
 - [ ] Showable 2 (≈ H8-9): + Replay 4 phases, FM inbox + ledger UI
 - [ ] Showable 3 (≈ H11-12): live data, real Telegram + Twilio (Shlok's OK)
 ### Integration checkpoints
