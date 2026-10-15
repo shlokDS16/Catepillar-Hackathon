@@ -231,5 +231,42 @@
     "loadFailed": "Map data did not load.",
     "retry": "Try again",
     "machineList": "Machines on site"
+  },
+  "replay": {
+    "frame": "REPLAY · your event {time}",
+    "frameLoading": "REPLAY · loading your event",
+    "simulatedNote": "Practice rebuilt from your recorded event · simulated",
+    "phasesLabel": "Practice phases · {n} of {total}",
+    "phase": {
+      "brief": "Brief",
+      "investigate": "Investigate",
+      "decide": "Decide",
+      "debrief": "Debrief"
+    },
+    "phaseState": {
+      "done": "done",
+      "current": "this phase",
+      "todo": "to come"
+    },
+    "eventLine": "{summary} · {code} · {time}",
+    "budget": "You have {s} s to look at the evidence",
+    "start": "Start",
+    "listen": "Listen",
+    "soundBlocked": "Sound blocked, tap Listen",
+    "loading": "Loading the practice…",
+    "loadFailed": "Could not load the practice. Try again.",
+    "retry": "Try again",
+    "backToTraining": "← Training",
+    "paused": {
+      "title": "Practice paused",
+      "body": "A safety alert is open. The clock is stopped and costs you nothing.",
+      "resume": "Resume practice"
+    },
+    "leave": {
+      "title": "Leave practice?",
+      "body": "Your answers will be lost.",
+      "confirm": "Leave",
+      "cancel": "Back"
+    }
   }
 }
