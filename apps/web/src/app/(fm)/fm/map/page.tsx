@@ -1,5 +1,5 @@
-import { Stub } from "@/components/ui/stub";
+import { FmMapScreen } from "@/components/map/fm-map-screen";
 
 export default function Page() {
-  return <Stub task="F12" />;
+  return <FmMapScreen />;
 }

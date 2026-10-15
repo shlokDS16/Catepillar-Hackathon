@@ -731,3 +731,119 @@
 }
 /* The lock spans to every edge below the strip at every width: the rail must not stay exposed
    and touchable on desktop (F06-F08 review 3); Nav and .shell-body go inert while it shows. */
+
+/* ---------- S4 Map and the paper site plan (F12) ---------- */
+.map-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.map-wrap,
+.map-slot {
+  position: relative;
+  min-height: 320px;
+  height: clamp(320px, 52vh, 560px);
+  border: var(--rule) solid var(--ink);
+  background: var(--paper);
+  overflow: hidden;
+}
+/* MapLibre adds .maplibregl-map (position: relative) to this node from its own stylesheet, which
+   loads after ours; the extra .map-wrap raises specificity so the canvas still fills the frame. */
+.map-wrap .map-canvas {
+  position: absolute;
+  inset: 0;
+}
+/* The one control stack: 80 px targets, over the map, never under the SOS corner. */
+.map-controls {
+  position: absolute;
+  inset-block-start: var(--s-4);
+  inset-inline-start: var(--s-4);
+  z-index: 1;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+/* MapLibre's own chrome is ink on paper; attribution stays legible and uncoloured. */
+.map-canvas .maplibregl-ctrl-attrib {
+  background: var(--paper);
+  color: var(--ink-3);
+  font-size: 11px;
+}
+.map-canvas .maplibregl-ctrl-attrib a {
+  color: var(--ink-2);
+}
+
+/* The plan sits inside the map frame until the basemap is live, so there is never a blank box. */
+.map-plan {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  padding: var(--s-4);
+  display: flex;
+  flex-direction: column;
+}
+.map-plan .site-plan {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+.map-plan .site-plan-svg {
+  flex: 1 1 auto;
+  height: auto;
+  min-height: 0;
+  border: none;
+}
+.site-plan {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.site-plan-svg {
+  width: 100%;
+  height: clamp(280px, 46vh, 520px);
+  border: var(--rule) solid var(--ink);
+  background: var(--paper);
+}
+.plan-zone {
+  fill: var(--ink);
+  fill-opacity: 0.06;
+  stroke: var(--ink);
+  stroke-width: 1.5;
+  stroke-dasharray: 6 4;
+  vector-effect: non-scaling-stroke;
+}
+.plan-trail {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+.plan-ring {
+  fill: none;
+  stroke-width: 2;
+  stroke-dasharray: 4 4;
+  vector-effect: non-scaling-stroke;
+}
+.plan-ring[data-ring="danger"] {
+  stroke: var(--state-critical);
+}
+.plan-ring[data-ring="warning"] {
+  stroke: var(--state-warning);
+}
+.plan-me {
+  fill: var(--ink);
+  stroke: var(--paper);
+  stroke-width: 3;
+  vector-effect: non-scaling-stroke;
+}
+.plan-machine {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.plan-machine[data-health="fault"] {
+  fill: var(--state-critical);
+}
+.plan-machine[data-health="caution"] {
+  fill: var(--state-caution);
+}

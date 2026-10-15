@@ -175,5 +175,56 @@
       "seatbelt_slopes": "Seatbelt off on a slope",
       "faulty_machine_nearby": "Faulty machine nearby"
     }
+  },
+  "map": {
+    "mapLabel": "Site map",
+    "planLabel": "Site plan",
+    "centreOnMe": "Centre on me",
+    "asOf": "as of {time}",
+    "guardianTitle": "Machine hazard nearby",
+    "machineAt": "{code} · {m} m away",
+    "moveUpwind": "Move upwind: go {dir}",
+    "whyThisMachine": "Why this machine",
+    "isoLine": "Informed by ISO 21815; not a certified collision-warning system.",
+    "anomalyDetail": "Machine detail",
+    "noAnomaly": "No anomaly on this machine.",
+    "english": "English",
+    "litres": "about {l} L diesel",
+    "atPrice": "at {price}/L (assumed)",
+    "severity": "Severity {score} / 100",
+    "method": "Method",
+    "detected": "Detected",
+    "showOnMap": "Show on map",
+    "tier": {
+      "caution": "Caution",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "methodName": {
+      "rule": "rule",
+      "ewma": "trend vs its own baseline (EWMA)"
+    },
+    "feature": {
+      "value": "Now",
+      "mean": "Its normal",
+      "idle_pct": "Idle share",
+      "ratio": "Times its normal"
+    },
+    "compass": {
+      "n": "north",
+      "ne": "north-east",
+      "e": "east",
+      "se": "south-east",
+      "s": "south",
+      "sw": "south-west",
+      "w": "west",
+      "nw": "north-west"
+    },
+    "fallback": {
+      "loading": "Site plan · live map loading",
+      "no_webgl": "Site plan: this device cannot draw the live map.",
+      "tiles_blocked": "Site plan: map tiles did not load.",
+      "offline": "Site plan: offline, last known positions."
+    }
   }
 }

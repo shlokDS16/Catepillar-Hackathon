@@ -50,3 +50,27 @@ export function compassKey(deg: number): "n" | "ne" | "e" | "se" | "s" | "sw" | 
   const keys = ["n", "ne", "e", "se", "s", "sw", "w", "nw"] as const;
   return keys[Math.round((((deg % 360) + 360) % 360) / 45) % 8];
 }
+
+/**
+ * The paper site plan (tiles/WebGL unavailable): lat/lon → SVG user units (1 u = 1 m at the
+ * centre latitude), +x east, +y south so it drops straight into an SVG viewBox. Pure, so the
+ * fallback geometry is unit-testable without a browser.
+ */
+export function planProject(p: LatLon, center: LatLon): { x: number; y: number } {
+  const mPerDegLat = 111_320;
+  const mPerDegLon = 111_320 * Math.cos((center.lat * Math.PI) / 180);
+  // `+ 0` keeps the centre at 0 rather than -0, so coordinates never render as "-0".
+  return { x: (p.lon - center.lon) * mPerDegLon + 0, y: (center.lat - p.lat) * mPerDegLat + 0 };
+}
+
+/** The viewBox extents for a plan covering every point with `pad` metres around it. */
+export function planBounds(points: LatLon[], center: LatLon, pad = 40): { x: number; y: number; w: number; h: number } {
+  const projected = points.map((p) => planProject(p, center));
+  const xs = projected.map((p) => p.x);
+  const ys = projected.map((p) => p.y);
+  const minX = Math.min(0, ...xs) - pad;
+  const maxX = Math.max(0, ...xs) + pad;
+  const minY = Math.min(0, ...ys) - pad;
+  const maxY = Math.max(0, ...ys) + pad;
+  return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}

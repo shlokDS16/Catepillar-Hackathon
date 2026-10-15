@@ -32,6 +32,7 @@ import type {
 } from "@cat/shared";
 import type { AppEvent, ClockTick, MachineDelta, Snapshot } from "@/data/types";
 import type { Connectivity } from "@/data/reducer";
+import type { SiteMapData } from "@/map/site-map";
 
 type In<T> = z.input<T extends z.ZodType ? T : never>;
 type Out<T> = z.output<T extends z.ZodType ? T : never>;
@@ -62,6 +63,8 @@ export type DataPort = {
   snapshot(): Promise<Snapshot>;
   subscribe(onMessage: (m: PortMessage) => void): () => void;
   protocolCard(id: string): Promise<ProtocolCard | null>;
+  /** Zones, the operator's trail and the other machines (S4). Mine comes from the snapshot. */
+  siteMap(): Promise<SiteMapData>;
 
   pairMachine(input: In<typeof PairMachineIn>): Promise<Out<typeof PairMachineOut>>;
   consentSet(input: In<typeof ConsentSetIn>): Promise<void>;
