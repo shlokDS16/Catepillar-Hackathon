@@ -29,7 +29,9 @@ type TimerOptions = {
 };
 
 /** The server render and the first paint show a full, stopped clock. */
-const IDLE: TimerSnapshot = { secondsLeft: 0, fraction: 1, running: false, expired: false };
+// No phase is timed yet (the Brief is untimed, D11): report a full bar with no elapsed time
+// rather than "0 s", which would read as an expired timer on first paint.
+const IDLE: TimerSnapshot = { secondsLeft: null, fraction: 1, running: false, expired: false };
 
 /**
  * useReplayTimer: the client's countdown for Investigate and for each Decide step

@@ -59,6 +59,10 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
   // call askLeave() directly; this captures the links the persistent chrome owns.
   const guarded = needsLeaveConfirm(phase);
   const leftRef = useRef(false);
+  // One sentinel entry for the whole visit. Re-arming the guard (debrief -> practise again) must
+  // not push another, or Back needs one extra press per replay and the app reads as frozen.
+  const sentinelRef = useRef(false);
+  const destRef = useRef(TRAINING_HREF);
   useEffect(() => {
     if (!guarded) return;
     const onClick = (e: MouseEvent) => {
@@ -71,28 +75,59 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
       dispatch({ type: "ask_leave", href });
     };
     const onPopState = () => {
-      if (leftRef.current) return;
+      // Leaving on purpose: this pop is our own sentinel being consumed, so the current entry is
+      // the replay itself. Replace it, and the practice is gone from history for good.
+      if (leftRef.current) {
+        // A hard replace, not router.replace: inside popstate the App Router's own handling wins
+        // and the navigation is dropped (measured — the screen stayed on the replay). Leaving a
+        // practice is rare, so the full load is a fair price for a history that is actually clean.
+        window.location.replace(destRef.current);
+        return;
+      }
       window.history.pushState(null, "", window.location.href);
       dispatch({ type: "ask_leave", href: TRAINING_HREF });
     };
-    window.history.pushState(null, "", window.location.href);
+    if (!sentinelRef.current) {
+      window.history.pushState(null, "", window.location.href);
+      sentinelRef.current = true;
+    }
     document.addEventListener("click", onClick, true);
     window.addEventListener("popstate", onPopState);
     return () => {
       document.removeEventListener("click", onClick, true);
       window.removeEventListener("popstate", onPopState);
     };
-  }, [guarded]);
+  }, [guarded, router]);
 
+  /**
+   * Leaving has to unwind the guard, not navigate over it. `replace` alone would overwrite the
+   * sentinel and leave the replay entry underneath, so Back walked straight back into the practice
+   * the operator had just abandoned (caught in the browser). Instead: consume the sentinel, then
+   * replace the replay entry itself from the popstate handler.
+   */
   const leave = useCallback(() => {
     leftRef.current = true;
-    router.push(state.leavingTo ?? TRAINING_HREF);
+    destRef.current = state.leavingTo ?? TRAINING_HREF;
+    if (sentinelRef.current) window.history.back();
+    else router.replace(destRef.current);
   }, [router, state.leavingTo]);
 
   const askLeave = () => {
     if (needsLeaveConfirm(phase)) dispatch({ type: "ask_leave", href: TRAINING_HREF });
-    else router.push(TRAINING_HREF);
+    else router.replace(TRAINING_HREF);
   };
+
+  // The phase block is keyed on `phase`, so React unmounts whatever had focus ([Start]). Put focus
+  // on the new block instead of letting it fall to <body>, where the next Tab restarts the page.
+  const phaseRef = useRef<HTMLDivElement>(null);
+  const firstPhase = useRef(true);
+  useEffect(() => {
+    if (firstPhase.current) {
+      firstPhase.current = false;
+      return;
+    }
+    phaseRef.current?.focus();
+  }, [phase]);
 
   const scenario = state.scenario;
   const frameTime = scenario ? format.dateTime(new Date(scenario.occurred_sim_ts), "time") : null;
@@ -105,8 +140,10 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
         <p className="t-meta text-ink-3">{t("simulatedNote")}</p>
       </header>
 
+      <p className="replay-announce" role="status">{state.paused ? t("paused.title") : ""}</p>
+
       {state.paused ? (
-        <Plate as="section" rule="heavy" className="replay-paused" aria-live="polite">
+        <Plate as="section" rule="heavy" className="replay-paused">
           <p className="t-title">{t("paused.title")}</p>
           <p className="t-body">{t("paused.body")}</p>
           <Button variant="primary" onClick={() => dispatch({ type: "resume" })}>
@@ -115,7 +152,7 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
         </Plate>
       ) : null}
 
-      <div className="replay-phase" key={phase}>
+      <div className="replay-phase" key={phase} ref={phaseRef} tabIndex={-1}>
         {phase === "loading" ? <Plate loading className="min-h-hit-sos" aria-label={t("loading")} /> : null}
 
         {phase === "load_failed" ? (

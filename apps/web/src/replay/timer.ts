@@ -67,7 +67,8 @@ export const ANNOUNCE_FROM_S = 5;
 export const TIMER_TICK_MS = 1000;
 
 export type TimerSnapshot = {
-  secondsLeft: number;
+  /** Null when no phase is timed, so a consumer renders nothing rather than a misleading "0 s". */
+  secondsLeft: number | null;
   /** 1 → full, 0 → empty. */
   fraction: number;
   /** False while the page is hidden or the run is frozen; the display holds its last value. */
@@ -90,7 +91,9 @@ export class ReplayClock {
 
   constructor(
     budgetMs: number,
-    private readonly now: () => number = Date.now,
+    // interaction-map 4.5 specifies performance.now(): monotonic, so a system clock change
+    // (NTP, timezone, a user edit) cannot rewind or jump a running practice.
+    private readonly now: () => number = typeof performance !== "undefined" ? () => performance.now() : Date.now,
     private readonly tickMs: number = TIMER_TICK_MS,
   ) {
     this.sw = createStopwatch(budgetMs);

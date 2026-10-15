@@ -32,7 +32,7 @@ export function PhaseRail({ phase }: { phase: ReplayPhase }) {
   const current = railPhase(phase);
   const index = RAIL_PHASES.indexOf(current);
   return (
-    <ol className="phase-rail" aria-label={t("phasesLabel", { n: index + 1, total: RAIL_PHASES.length })}>
+    <ol className="phase-rail" role="list" aria-label={t("phasesLabel", { n: index + 1, total: RAIL_PHASES.length })}>
       {RAIL_PHASES.map((p, i) => {
         const state = i < index ? "done" : i === index ? "current" : "todo";
         return (
