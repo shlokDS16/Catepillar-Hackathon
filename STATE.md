@@ -21,6 +21,14 @@
 > pg_net on this project; B15's dispatch function must authenticate the work, not the caller.
 > Also added: `.claude/agents/token-optimizer.md` (measured context-efficiency playbook) and rtk
 > wiring in CLAUDE.md.
+> **DEPLOYED 2026-10-12 (main 9709a84+).** https://spotter-five-brown.vercel.app serves Showable 1:
+> landing → /op cockpit, /op/map live basemap with the plan fallback, Hindi, dry-run SOS, and
+> `/maplibre/maplibre-gl-worker.mjs` 200 (prebuild ran on Vercel). **Vercel gotcha:** the first
+> push failed the build with `Can't resolve '@vercel/turbopack-next/internal/font/google/font'`
+> (next/font + Turbopack against a stale build cache) while the identical build was green locally;
+> `vercel --prod --force` rebuilt cache-less and succeeded in 57 s. If a deploy fails on that font
+> error, force a rebuild before touching the font setup. The Ask sheet legitimately still reads
+> "Coming in a later task" (F19).
 
 - **Updated:** 2026-09-23, session 2 (Opus 5.5, integrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)
