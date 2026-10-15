@@ -29,6 +29,16 @@
 > `vercel --prod --force` rebuilt cache-less and succeeded in 57 s. If a deploy fails on that font
 > error, force a rebuild before touching the font setup. The Ask sheet legitimately still reads
 > "Coming in a later task" (F19).
+> **2026-10-12 later: B5 (ledger) and R1 (Replay shell) merged at 0873588.** Both reviews failed
+> first and were fixed: the ledger's append-only guard was forgeable by `service_role` (003b revokes
+> INSERT; the GUC handshake any role can set was never the real lock), and Replay's history guard
+> accumulated a Back press per practice while leaving let Back re-enter an abandoned run. A flaky
+> root test suite was also root-caused: vitest's 5 s default against the Mumbai database, plus the
+> worktree copies being collected — both fixed in the new root `vitest.config.mts`.
+> **Three decisions wait on Shlok** (recorded in track-b.md): `ledger_export` hands the FM
+> `operator_id` for near-miss rows §2.10 hides from her, so verification and pseudonymity conflict;
+> a failed `ledger_queue` row is dropped silently while `ledger_verify` still reports ok; and the
+> tier→severity scale (caution→2 unreachable) is in no spec.
 
 - **Updated:** 2026-09-23, session 2 (Opus 5.5, integrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)
