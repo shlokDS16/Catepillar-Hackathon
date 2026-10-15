@@ -848,3 +848,132 @@
 .plan-machine[data-health="caution"] {
   fill: var(--state-caution);
 }
+
+/* ---------- S5b Replay shell (R1): the frame, the phase rail and the Brief ---------- */
+.replay {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-4);
+}
+.replay-head {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+/* The frame's own blocks are full width; only its controls shrink to their label, so no button
+   sits under the floating SOS plate in the bottom-right corner. */
+.replay > .replay-head,
+.replay > .replay-phase,
+.replay > section {
+  align-self: stretch;
+}
+
+/* The rail: four phases, the current one inverted in ink. Not tappable — a replay cannot be
+   skipped into — so it is a list of list items, never buttons. */
+.phase-rail {
+  display: grid;
+  grid-auto-flow: column;
+  /* auto, not 1fr: equal columns break "INVESTIGATE" mid-word at 360 px. Auto tracks take the
+     width their word needs and then share what is left, so no phase word ever wraps. */
+  grid-auto-columns: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+}
+.phase-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--s-7);
+  padding: var(--s-2) var(--s-1);
+  border-inline-end: var(--bw-hair) solid var(--rule-soft);
+  font-family: var(--ff-display);
+  font-size: var(--t-meta);
+  font-weight: var(--fw-title);
+  line-height: var(--lh-label);
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.phase-step:last-child {
+  border-inline-end: 0;
+}
+.phase-step[data-state="current"] {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.phase-step[data-state="done"] {
+  background: var(--surface-sunk);
+  color: var(--ink-2);
+}
+.phase-step[data-state="todo"] {
+  color: var(--ink-3);
+}
+@media (min-width: 640px) {
+  .phase-step {
+    font-size: var(--t-label);
+    padding: var(--s-3) var(--s-2);
+  }
+}
+
+/* The simulation carve-out (visual-language §5.1): phases slide in over 240 ms, 0 ms in reduced
+   motion because --dur-phase is zeroed there. Nothing else in the replay frame moves. */
+@keyframes replay-phase-in {
+  from {
+    opacity: 0;
+    transform: translateX(var(--s-5));
+  }
+}
+.replay-phase {
+  animation: replay-phase-in var(--dur-phase) var(--ease);
+}
+
+.replay-brief,
+.replay-failed,
+.replay-paused {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  align-items: flex-start;
+}
+.replay-brief > *,
+.replay-failed > *,
+.replay-paused > * {
+  margin: 0;
+}
+/* The situation and its [Listen] sit on one line when there is room, stacked on a phone. */
+.replay-brief-read {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  gap: var(--s-3);
+  width: 100%;
+}
+.replay-brief-read > .t-body {
+  flex: 1 1 24ch;
+}
+/* A reading measure on a 1200 px frame; `ch` follows the font, so no px literal leaves tokens.css. */
+.replay-brief > p,
+.replay-brief-read > .t-body {
+  max-width: 62ch;
+}
+.replay-leave-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+  margin-top: var(--s-4);
+}
+/* Like .sheet-head: keep the sheet's actions clear of the SOS plate, which floats above sheets. */
+.shell[data-role="operator"] .replay-leave-actions {
+  padding-inline-end: calc(var(--hit-sos) + var(--s-4));
+}
+
+@media (min-width: 1024px) {
+  .replay {
+    max-width: var(--content-max);
+  }
+}
