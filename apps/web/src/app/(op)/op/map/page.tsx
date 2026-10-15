@@ -1,5 +1,5 @@
-import { Stub } from "@/components/ui/stub";
+import { OpMapScreen } from "@/components/map/op-map-screen";
 
 export default function Page() {
-  return <Stub task="F12" />;
+  return <OpMapScreen />;
 }

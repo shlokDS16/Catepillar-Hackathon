@@ -1,7 +1,8 @@
 import { MySnapshotOut } from "@cat/shared";
-import { EVENT_PAYLOADS, IDS, lessonContent, mySnapshot, protocolCard, replayDebrief, replayScenario, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
+import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, protocolCard, replayDebrief, replayScenario, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
 import { RpcError, type DataPort, type PortMessage } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
+import type { SiteMapData } from "@/map/site-map";
 
 /**
  * The FixtureAdapter: every read answers from @cat/shared/fixtures, every RPC succeeds after a short
@@ -157,6 +158,23 @@ export class FixtureAdapter implements DataPort {
   async protocolCard(id: string) {
     await wait(this.latencyMs);
     return id === protocolCard.id ? protocolCard : { ...protocolCard, id };
+  }
+
+  /**
+   * S4 map data. The site centre, zone and trail come from the Replay map-snapshot fixture (the one
+   * place the fixtures carry site geometry); EXC-014 is the Guardian beat's machine, placed where
+   * Beat 3's anomaly reports it so the rings and the card agree.
+   */
+  async siteMap(): Promise<SiteMapData> {
+    await wait(this.latencyMs);
+    const plan = evidenceCards.map_snapshot;
+    const me = this.snapshotValue.machine?.location ?? plan.center;
+    return {
+      center: plan.center,
+      zones: plan.zones.map((z) => ({ id: z.id, name: z.name, zone_type: z.zone_type, polygon: z.polygon })),
+      trail: [...plan.trail.map((p) => ({ lat: p.lat, lon: p.lon })), me],
+      machines: [{ id: IDS.anomaly, code: "EXC-014", lat: 21.1468, lon: 79.0879, moving: false, health: "fault" }],
+    };
   }
 
   async pairMachine(input: { p_machine_code: string; p_request_id: string }) {
