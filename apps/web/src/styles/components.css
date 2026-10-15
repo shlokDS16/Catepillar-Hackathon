@@ -747,9 +747,10 @@
   background: var(--paper);
   overflow: hidden;
 }
-/* MapLibre adds .maplibregl-map (position: relative) to this node from its own stylesheet, which
-   loads after ours; the extra .map-wrap raises specificity so the canvas still fills the frame. */
-.map-wrap .map-canvas {
+/* MapLibre adds .maplibregl-map (position: relative) to this node from its own stylesheet. Ours
+   wins because maplibre-gl.css is imported into the `vendor` layer, which is ordered before
+   `components` in globals.css — not because of selector specificity. */
+.map-canvas {
   position: absolute;
   inset: 0;
 }

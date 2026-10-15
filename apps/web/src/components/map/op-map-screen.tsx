@@ -5,6 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { takeoverQueue } from "@/alerts/selectors";
 import { GuardianCard } from "@/components/map/guardian-card";
 import { MapView } from "@/components/map/map-view";
+import { Button } from "@/components/ui/button";
 import { Plate } from "@/components/ui/plate";
 import { ProvenanceLine } from "@/components/ui/provenance";
 import { newRequestId } from "@/data/port";
@@ -30,20 +31,24 @@ export function OpMapScreen() {
   const connectivity = useAppState((s) => s.connectivity);
 
   const [data, setData] = useState<SiteMapData | null>(null);
+  const [failed, setFailed] = useState(false);
+  const [attempt, setAttempt] = useState(0);
   useEffect(() => {
     let live = true;
     void port
       .siteMap()
       .then((d) => {
-        if (live) setData(d);
+        if (!live) return;
+        setData(d);
+        setFailed(false);
       })
       .catch(() => {
-        if (live) setData(null);
+        if (live) setFailed(true);
       });
     return () => {
       live = false;
     };
-  }, [port]);
+  }, [port, attempt]);
 
   const top = takeoverQueue(alerts).find((a) => a.kind === "guardian_hazard");
   const hazard = top ? guardian[guardianByAlert[top.alert_id] ?? ""] : undefined;
@@ -81,6 +86,15 @@ export function OpMapScreen() {
     }
   };
 
+  // A failed load says so and offers a retry, instead of spinning on a loading plate forever.
+  if (failed && !data) {
+    return (
+      <Plate as="section" className="flex flex-col items-start gap-4" aria-label={t("mapLabel")}>
+        <p className="t-body">{t("loadFailed")}</p>
+        <Button onClick={() => setAttempt((n) => n + 1)}>{t("retry")}</Button>
+      </Plate>
+    );
+  }
   if (!data) return <Plate loading className="map-slot" />;
 
   const me = operator?.location ?? machine?.location ?? null;

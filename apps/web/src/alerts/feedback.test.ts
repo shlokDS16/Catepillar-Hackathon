@@ -2,6 +2,12 @@ import { describe, expect, it } from "vitest";
 import { alertAudioLang, clipFor, feedbackPlan } from "./feedback";
 import { STUB_AUDIO_MANIFEST } from "./stub-manifest";
 
+/**
+ * The stub ships every entry as `missing` until B23 commits the clips, so these tests — which
+ * cover clip RESOLUTION, not the stub's rollout state — use the same entries marked playable.
+ */
+const PLAYABLE = STUB_AUDIO_MANIFEST.map((e) => ({ ...e, status: "ok" as const }));
+
 describe("feedback plan per tier (interaction-map §5)", () => {
   it("info is silent", () => {
     expect(feedbackPlan("info", "idle_excess", "en", STUB_AUDIO_MANIFEST)).toMatchObject({ vibrate: null, clip: null });
@@ -13,7 +19,7 @@ describe("feedback plan per tier (interaction-map §5)", () => {
     expect(plan.clip).toBeNull();
   });
   it("warning repeats [400,200,400] every 5 s and the clip every 10 s at most 6 times", () => {
-    const plan = feedbackPlan("warning", "seatbelt_off_moving", "hi", STUB_AUDIO_MANIFEST);
+    const plan = feedbackPlan("warning", "seatbelt_off_moving", "hi", PLAYABLE);
     expect(plan.vibrate).toEqual([400, 200, 400]);
     expect(plan.vibrateEveryMs).toBe(5_000);
     expect(plan.clip).toBe("/audio/hi/alert.seatbelt_off_moving.warning.mp3");
@@ -21,7 +27,7 @@ describe("feedback plan per tier (interaction-map §5)", () => {
     expect(plan.clipMaxPlays).toBe(6);
   });
   it("critical repeats [800,200,800,200,800] every 4 s and the clip until acknowledged", () => {
-    const plan = feedbackPlan("critical", "guardian_hazard", "en", STUB_AUDIO_MANIFEST);
+    const plan = feedbackPlan("critical", "guardian_hazard", "en", PLAYABLE);
     expect(plan.vibrate).toEqual([800, 200, 800, 200, 800]);
     expect(plan.vibrateEveryMs).toBe(4_000);
     expect(plan.clip).toBe("/audio/en/alert.guardian_hazard.critical.mp3");
@@ -39,8 +45,24 @@ describe("clip resolution from the manifest", () => {
   });
   it("the Tamil UI plays the English alert clip", () => {
     expect(alertAudioLang("ta")).toBe("en");
-    expect(feedbackPlan("warning", "seatbelt_off_moving", "ta", STUB_AUDIO_MANIFEST).clip).toBe(
+    expect(feedbackPlan("warning", "seatbelt_off_moving", "ta", PLAYABLE).clip).toBe(
       "/audio/en/alert.seatbelt_off_moving.warning.mp3",
     );
+  });
+});
+
+/**
+ * A manifest entry marked `ok` renders a [Listen] button, so the file it names must exist or the
+ * operator taps into a 404 — exactly the defect the Showable 1 validation caught. This pins the
+ * invariant for whoever flips the stub when B23 ships the clips.
+ */
+describe("the stub manifest never promises a clip it cannot play", () => {
+  it("every `ok` entry has its file on disk under public/", async () => {
+    const { existsSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const missing = STUB_AUDIO_MANIFEST.filter((e) => e.status === "ok").filter(
+      (e) => !existsSync(join(process.cwd(), "public", e.path)),
+    );
+    expect(missing.map((e) => e.path)).toEqual([]);
   });
 });

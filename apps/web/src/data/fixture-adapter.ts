@@ -131,6 +131,17 @@ export class FixtureAdapter implements DataPort {
         this.push(
           this.event("operator.motion_lock_changed", { motion_locked: false, call_allowed: true, reason: "on_foot" }),
           this.event("anomaly.detected", anomaly, { tier: "caution" }),
+          // The anomaly also raises its own caution alert, so the Caution banner has a demo path:
+          // the store builds alerts from alert.raised only, and without this the tier is unreachable.
+          this.event("alert.raised", {
+            ...EVENT_PAYLOADS["alert.raised"],
+            alert_id: IDS.anomaly,
+            kind: "anomaly_machine",
+            tier: "caution",
+            needs_ack: false,
+            protocol_card_id: null,
+            escalate_at: null,
+          }),
           // The hazard carries the guardian alert's id in the envelope, so the takeover can pick it by alert id.
           this.event("guardian.hazard_near_operator", EVENT_PAYLOADS["guardian.hazard_near_operator"], { tier: "warning", alert_id: IDS.dispatch }),
           this.event("alert.raised", {
@@ -150,7 +161,21 @@ export class FixtureAdapter implements DataPort {
         );
         return;
       case 5: // Ledger: the checkpoint is published, then a tamper is detected.
-        this.push(this.event("ledger.checkpoint_published", EVENT_PAYLOADS["ledger.checkpoint_published"]), this.event("ledger.tamper_detected", EVENT_PAYLOADS["ledger.tamper_detected"], { tier: "critical" }));
+        this.push(
+          this.event("ledger.checkpoint_published", EVENT_PAYLOADS["ledger.checkpoint_published"]),
+          this.event("ledger.tamper_detected", EVENT_PAYLOADS["ledger.tamper_detected"], { tier: "critical" }),
+          // Tamper raises a critical alert: without it the critical takeover has no demo path and
+          // beat 5 silently left the previous warning on screen.
+          this.event("alert.raised", {
+            ...EVENT_PAYLOADS["alert.raised"],
+            alert_id: IDS.root,
+            kind: "ledger_tamper",
+            tier: "critical",
+            needs_ack: true,
+            protocol_card_id: null,
+            escalate_at: null,
+          }),
+        );
         return;
     }
   }

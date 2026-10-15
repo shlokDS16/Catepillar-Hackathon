@@ -2,8 +2,11 @@ import type { AudioManifest } from "@/data/types";
 
 /**
  * Stub AUDIO_MANIFEST until B23 writes packages/shared/src/audio/manifest.json (api-contracts §13).
- * Only the two demo-beat alerts are listed, so every other [Listen] stays hidden, as it should.
- * The clip files themselves land on main with B23; until then play() fails silently and the text stays.
+ * Only the demo-beat alerts are listed, so every other [Listen] stays hidden, as it should.
+ *
+ * Every entry is `missing` on purpose: no .mp3 exists under public/audio yet, and `clipFor` only
+ * matches `status === "ok"`, so [Listen] is hidden rather than rendered over a 404. B23 flips these
+ * to `ok` in the same commit that ships the clips.
  */
 export const STUB_AUDIO_MANIFEST: AudioManifest = (
   [
@@ -23,5 +26,5 @@ export const STUB_AUDIO_MANIFEST: AudioManifest = (
   provider: "sarvam",
   model: "bulbul:v3",
   text_sha256: "0".repeat(64),
-  status: "ok",
+  status: "missing",
 }));

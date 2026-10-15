@@ -25,14 +25,24 @@ const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 /** Served unhashed from public/ by scripts/copy-maplibre-worker.mjs; see that file for why. */
 const WORKER_URL = "/maplibre/maplibre-gl-worker.mjs";
 
-/** WebGL2 is MapLibre's requirement; on the server there is no canvas to ask. */
+/**
+ * WebGL2 is MapLibre's requirement; on the server there is no canvas to ask. Probed once per page:
+ * this function is a useSyncExternalStore snapshot, so probing per call would open a live WebGL
+ * context on every render until the browser's context cap evicts the map's own one. The probe
+ * context is released immediately.
+ */
+let webglProbe: boolean | null = null;
 function webglAvailable(): boolean {
   if (typeof document === "undefined") return false;
+  if (webglProbe !== null) return webglProbe;
   try {
-    return Boolean(document.createElement("canvas").getContext("webgl2"));
+    const gl = document.createElement("canvas").getContext("webgl2");
+    webglProbe = Boolean(gl);
+    gl?.getExtension("WEBGL_lose_context")?.loseContext();
   } catch {
-    return false;
+    webglProbe = false;
   }
+  return webglProbe;
 }
 
 /** A browser-only fact, read through useSyncExternalStore so the server render is not a mismatch. */
@@ -74,6 +84,9 @@ export function MapView({ data, me, anomalies = [], onSelectMachine, offline = f
       try {
         const maplibre = await import("maplibre-gl");
         if (cancelled) return;
+        // Re-entry (offline → online, WebGL probe settling) starts a fresh attempt, so a "failed"
+        // verdict from the previous map must not survive into this one.
+        setMapState("loading");
         maplibre.setWorkerUrl(WORKER_URL);
         const map = new maplibre.Map({
           container: node,
@@ -117,7 +130,14 @@ export function MapView({ data, me, anomalies = [], onSelectMachine, offline = f
 
   return (
     <div className="map-wrap" data-status={status}>
-      {status !== "failed" ? <div ref={container} className="map-canvas" aria-label={t("mapLabel")} role="application" /> : null}
+      {/*
+        The container is never unmounted: the Map instance holds this exact node, so taking it away
+        on a failure would leave a live map drawing into a detached element — and a style that
+        recovered afterwards would flip us to "live" over an empty frame. The plan simply covers it
+        (inset 0) until the basemap is up. For assistive tech the canvas is an image; the machine
+        list below the map is the keyboard and screen-reader path to the same facts.
+      */}
+      <div ref={container} className="map-canvas" role="img" aria-label={t("mapLabel")} />
       {status !== "live" ? (
         <div className="map-plan">
           <SitePlan data={data} me={me} machines={data.machines} reason={reason} />
@@ -126,7 +146,6 @@ export function MapView({ data, me, anomalies = [], onSelectMachine, offline = f
       {status === "live" ? (
         <div className="map-controls">
           <Button
-            size="dense"
             onClick={() => {
               if (me) mapRef.current?.flyTo({ center: [me.lon, me.lat], zoom: 17 });
             }}

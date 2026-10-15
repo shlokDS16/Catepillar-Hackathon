@@ -28,7 +28,9 @@
     "fixtureStatus": "Fixture {time} ×{speed}"
   },
   "start": {
-    "chooseLanguage": "Choose your language"
+    "chooseLanguage": "Choose your language",
+    "openOperator": "Open the operator cockpit",
+    "openFleet": "Open the fleet view"
   },
   "enums": {
     "safety": {
@@ -225,6 +227,9 @@
       "no_webgl": "Site plan: this device cannot draw the live map.",
       "tiles_blocked": "Site plan: map tiles did not load.",
       "offline": "Site plan: offline, last known positions."
-    }
+    },
+    "loadFailed": "Map data did not load.",
+    "retry": "Try again",
+    "machineList": "Machines on site"
   }
 }
