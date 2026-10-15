@@ -12,6 +12,15 @@
 > needs the phase-validator check and a deploy. Next: B5 (ledger) and Replay lanes. Subagent quota
 > has been flaky all day; lanes fall back to in-session work with the independent review deferred
 > to the push gate, disclosed each time.
+> **2026-10-12 gate run (all three independent reviews landed):** F12 code review CHANGES REQUIRED
+> (8, 2 High) and Showable 1 validation FAIL (4 blockers) — all applied in de2952d. backend-reviewer
+> FAILED 002c on a **security BLOCKER**: the dispatch kick parked the Vault service key in
+> `net.http_request_queue`, readable by every signed-in role; the queue's PUBLIC grant belongs to
+> `supabase_admin` and a `postgres` revoke is silently ignored, so **migration 002d removes the
+> secret from the request instead** (verified live). Standing constraint: nothing secret may transit
+> pg_net on this project; B15's dispatch function must authenticate the work, not the caller.
+> Also added: `.claude/agents/token-optimizer.md` (measured context-efficiency playbook) and rtk
+> wiring in CLAUDE.md.
 
 - **Updated:** 2026-09-23, session 2 (Opus 5.5, integrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)
