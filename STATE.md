@@ -39,6 +39,23 @@
 > `operator_id` for near-miss rows §2.10 hides from her, so verification and pseudonymity conflict;
 > a failed `ledger_queue` row is dropped silently while `ledger_verify` still reports ok; and the
 > tier→severity scale (caution→2 unreachable) is in no spec.
+>
+> **2026-10-13 session end. main = e504e06, pushed.** Merged since the deploy: **R2** (Investigate:
+> seven evidence renderers, order stamps, max_open, phase countdown), **B9 + 003c + 004b/004c**
+> (scenario engine: worker procedure with COMMIT per step, tick under try-lock, motion lock,
+> purge_run; ledger queue health), and the **training guide** (Solve-style animated "How practice
+> works" + docs/design/training-guidelines.md). 14 migrations applied; local = remote.
+> Gates: web vitest 166/166, shared+scripts 148/148, sqltest 7/7, tsc/lint/build green.
+> **Every one of the six independent reviews this session returned findings** — two security-grade
+> (the pg_net service-key leak, the forgeable ledger append guard), one scoring-integrity (evidence
+> readable off-clock during a freeze), one honesty (the guide taught that Investigate is untimed).
+> All fixed and verified. **Next up:** R3 (Decide) then R4 (Debrief) on the frontend; B10 (rule
+> detectors) then B10b/B11 on the backend; Showable 2 is R4 + the FM inbox/ledger UI.
+> **Waiting on Shlok:** (1) a Google Maps API key — research + exact steps are in the session log,
+> the plan is satellite 2D tiles under the existing MapLibre layers, offline paper plan unchanged;
+> (2) decision D15 in decisions.md. **Watch out:** the free-tier Supabase project auto-pauses after
+> ~a week idle (restore via the Management API takes ~4 min), and a pg_cron `worker` job now runs
+> every second on it.
 
 - **Updated:** 2026-09-23, session 2 (Opus 5.5, integrator)
 - **Product:** Spotter, an operator companion for Cat machines (spec v3 + D10: docs/specs/idea.md)
