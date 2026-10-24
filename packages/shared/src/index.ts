@@ -9,6 +9,7 @@ export * from "./contracts/replay";
 export * from "./contracts/lesson";
 export * from "./contracts/functions";
 export * from "./contracts/realtime";
+export * from "./contracts/frames";
 export * from "./contracts/evidence";
 export * from "./contracts/assumed";
 export * from "./contracts/explain";
