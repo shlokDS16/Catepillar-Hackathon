@@ -268,5 +268,45 @@
       "confirm": "Leave",
       "cancel": "Back"
     }
+  },
+  "guide": {
+    "title": "How practice works",
+    "open": "How practice works",
+    "entryTitle": "New to practice?",
+    "entryBody": "Four short steps, about a minute: what a practice does, and what is scored.",
+    "stepsLabel": "How practice works · step {n} of {total}",
+    "stepOf": "Step {n} of {total}",
+    "stepState": {
+      "done": "done",
+      "current": "this step",
+      "todo": "to come"
+    },
+    "back": "Back",
+    "next": "Next",
+    "skip": "Skip",
+    "done": "Got it",
+    "notSaved": "This phone could not remember that you have seen this. It may open again.",
+    "steps": {
+      "brief": {
+        "phase": "Brief",
+        "line": "First you are told what happened.",
+        "rule": "It is your own recorded event, rebuilt with simulated data. No clock runs in this part."
+      },
+      "investigate": {
+        "phase": "Investigate",
+        "line": "Then you open the evidence you need.",
+        "rule": "Which cards you open, and the order you open them in, are both scored. Some cards do not matter."
+      },
+      "decide": {
+        "phase": "Decide",
+        "line": "Then you choose what to do.",
+        "rule": "Every step has its own clock, and your choices are scored. A step with no answer counts as missed."
+      },
+      "debrief": {
+        "phase": "Debrief",
+        "line": "At the end you see your path next to the safest one.",
+        "rule": "You get your scores, the rule to remember, and your event played back. Scores are for learning, not punishment."
+      }
+    }
   }
 }
