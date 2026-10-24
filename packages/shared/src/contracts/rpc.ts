@@ -6,7 +6,7 @@
 import { z } from "zod";
 import { AlertStatus, AppRole, Hash64, I18nText, Id, IncidentType, Lang, LatLon, MachineHealth, PpeItem,
   ProximityZone, RequestId, RunStatus, Speed, TaskStatus, TaskType, Ts } from "./enums";
-import { ActiveAlert, EtaFactor, GenericEvent, LedgerCheckResult } from "./events";
+import { ActiveAlert, EtaFactor, GenericEvent, LedgerCheckResult, LedgerQueueHealth } from "./events";
 import { ReplayDebriefResult } from "./replay";
 
 export const RpcErrorCode = z.enum(["forbidden", "not_found", "invalid_state", "ppe_missing",
@@ -44,8 +44,10 @@ export const PpeOverrideIn = z.object({ p_task_id: Id, p_reason: z.string().min(
   p_request_id: RequestId });
 export const PpeOverrideOut = z.object({ override_id: Id, valid_until: Ts });
 export const LedgerVerifyIn = z.object({ p_from: z.number().int().min(1).default(1), p_to: z.number().int().nullable().default(null) });
+// Internal consistency only. `chain_ok` is the chain verdict on its own; `ok` also requires a healthy
+// `queue` (003c), so a ledger write the drain dropped can no longer hide behind a green tick.
 export const LedgerVerifyOut = LedgerCheckResult.extend({ expected: Hash64.nullable(), stored: Hash64.nullable(),
-  head_seq: z.number().int(), head_hash: Hash64 });   // internal consistency only
+  head_seq: z.number().int(), head_hash: Hash64, chain_ok: z.boolean(), queue: LedgerQueueHealth });
 // Witness compare (N1, R2-2): the range comes from the fleet manager's Telegram message, typed by her;
 // the BROWSER recomputes from exported rows; ledger_recompute is a convenience check only.
 export const LedgerExportIn = z.object({ p_first_seq: z.number().int().min(1), p_last_seq: z.number().int().min(1) });

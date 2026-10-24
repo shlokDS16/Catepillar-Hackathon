@@ -291,6 +291,66 @@ begin
     'sent_text is never rewritten: it is what the fleet manager already has';
 end $$;
 
+-- ── 8c. A dropped ledger write is visible (migration 003c) ───────────────────────────────────────
+-- The drain marks a row it cannot write `error` and the pending index excludes it, so nothing retries
+-- it. Before 003c the chain of the rows that DID land still verified, so Verify answered ok while an
+-- incident was missing. Now the queue is part of the verdict — and it is NOT called a tamper.
+do $$
+declare h jsonb; res jsonb; v_tampers_before int; v_warn_before int;
+begin
+  -- a healthy queue: everything enqueued so far was written in section 4
+  h := private.ledger_queue_health();
+  assert (h ->> 'errored')::int = 0 and (h ->> 'pending')::int = 0, 'clean queue: ' || h::text;
+  assert not (h ->> 'stuck')::boolean, 'a clean queue is not stuck';
+  assert (h ->> 'stale_after_s')::int = 5, 'the lag bound is data-model §4.2''s 5 s';
+  assert ((public.ledger_verify(1, null)) ->> 'ok')::boolean, 'a clean queue does not spoil the verdict';
+
+  select count(*) into v_tampers_before from public.events where type = 'ledger.tamper_detected';
+  select count(*) into v_warn_before from public.events where type = 'system.warning';
+
+  -- a queue row the drain cannot write (its event is gone — exactly what `ledger_write_one` raises on)
+  insert into private.ledger_queue (idempotency_key, event_id, entry)
+  values ('ledger:poison:1', gen_random_uuid(), '{"event_id": null, "type": "sos.raised"}'::jsonb);
+  assert private.ledger_drain() = 0, 'the poison row writes no entry';
+  assert (select error is not null from private.ledger_queue where idempotency_key = 'ledger:poison:1'),
+    'the drain marked the row error';
+  assert private.ledger_drain() = 0, 'and never looks at it again (the pending index excludes it)';
+
+  h := private.ledger_queue_health();
+  assert (h ->> 'errored')::int = 1, 'one errored row: ' || h::text;
+  assert (h ->> 'stuck')::boolean, 'an errored row makes the queue stuck';
+  assert (h ->> 'oldest_errored_age_s') is not null, 'the errored row has an age';
+
+  res := public.ledger_verify(1, null);
+  assert not (res ->> 'ok')::boolean, 'a dropped write must break the verdict: ' || res::text;
+  assert (res ->> 'chain_ok')::boolean, 'the rows that were written still agree with each other';
+  assert res ->> 'reason' = 'queue_incomplete', 'reason is queue_incomplete, got ' || coalesce(res ->> 'reason', 'null');
+  assert (res ->> 'first_bad_seq') is null, 'a missing entry has no seq to point at';
+  assert (res -> 'queue' ->> 'errored')::int = 1, 'the result carries the queue counts';
+  assert (select count(*) from public.events where type = 'ledger.tamper_detected') = v_tampers_before,
+    'a dropped write is a pipeline fault, never a tamper alarm';
+  assert (select count(*) from public.events where type = 'system.warning') = v_warn_before + 1,
+    'the supervisor gets one system.warning';
+  assert (select payload ->> 'code' from public.events where type = 'system.warning' order by seq desc limit 1)
+       = 'ledger_queue_stalled', 'the warning names the condition';
+  assert (select (payload ->> 'value')::int from public.events where type = 'system.warning' order by seq desc limit 1) = 1,
+    'the warning carries the errored count';
+
+  delete from private.ledger_queue where idempotency_key = 'ledger:poison:1';
+
+  -- the other half of "stuck": a row still pending but older than the lag bound (a drain that stopped)
+  insert into private.ledger_queue (idempotency_key, event_id, entry, enqueued_at)
+  values ('ledger:slow:1', gen_random_uuid(), '{}'::jsonb, now() - interval '11 seconds');
+  h := private.ledger_queue_health();
+  assert (h ->> 'pending')::int = 1 and not ((h ->> 'errored')::int > 0), 'pending, not errored: ' || h::text;
+  assert (h ->> 'oldest_pending_age_s')::numeric >= 11, 'the pending row is 11 s old';
+  assert (h ->> 'stuck')::boolean, 'a pending row past the lag bound makes the queue stuck';
+  assert not ((private.ledger_queue_health(600)) ->> 'stuck')::boolean, 'a wider bound tolerates it';
+  assert (public.ledger_verify(1, null)) ->> 'reason' = 'queue_incomplete', 'a stalled drain is reported too';
+  delete from private.ledger_queue where idempotency_key = 'ledger:slow:1';
+  assert ((public.ledger_verify(1, null)) ->> 'ok')::boolean, 'and the verdict recovers when the queue drains';
+end $$;
+
 -- ── 9. RLS, column grants and the export gate ────────────────────────────────────────────────────
 set local role authenticated;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_ravi'), 'role', 'authenticated')::text, true);
