@@ -1,0 +1,402 @@
+/*
+ * "How practice works" — the guided introduction to a Replay (S5a entry, D10).
+ *
+ * Its own file rather than a block inside components.css: the Replay phases are being built on a
+ * parallel branch and both would touch the same lines. Colour, type, shape and the safety palette
+ * still come from tokens.css only; the figure choreography below is the one local exception, and
+ * it is explained where it is declared.
+ */
+
+/* ---------- The entry plate on /op/training ---------- */
+.guide-entry {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-3);
+  width: 100%;
+}
+.guide-entry > * {
+  margin: 0;
+}
+.guide-entry > p {
+  max-width: 48ch;
+}
+.guide-entry-action {
+  margin-top: var(--s-1);
+}
+/* The SOS plate floats over the bottom-right corner of every operator screen; a block button or a
+   wide plate footer would run under it, so the action keeps that corner clear. */
+.shell[data-role="operator"] .guide-entry-action {
+  padding-inline-end: calc(var(--hit-sos) + var(--s-4));
+}
+
+/* ---------- The sheet ---------- */
+.guide {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.guide > * {
+  margin: 0;
+}
+/*
+ * The SOS plate floats above every sheet, 96–204 px up from the bottom of the screen in the
+ * right-hand corner. The actions row keeps that corner clear on its own line; this padding lifts
+ * everything above it out of the band entirely, so no sentence is ever read through SOS.
+ * Measured at 375 px, which is where R1 hit the same thing.
+ */
+.shell[data-role="operator"] .guide {
+  /* The band runs from the nav up past the plate: --nav-h (80) + --s-4 (16) + --hit-sos (108).
+     Reserving only --hit-sos left the last child — the private-mode note, which has no inline
+     padding of its own — sitting ~64 px inside it. */
+  padding-block-end: calc(var(--nav-h) + var(--s-4) + var(--hit-sos));
+}
+/*
+ * Sheets reserve the SOS corner in their head by default, because most of them are short enough
+ * for the head to sit inside the SOS band. The guide is always the full 90 dvh, so its head is
+ * 500 px above the plate and that reservation only costs the title a third wrapped line — which
+ * then pushes the last step's text down into the band it was meant to protect.
+ */
+.shell[data-role="operator"] .sheet-body:has(.guide) .sheet-head {
+  padding-inline-end: 0;
+}
+
+/* The step rail: four words, the current one inverted in ink. It reports progress and is not a
+   control — Back / Next and the arrow keys move the sequence, and four 80 px targets would not
+   fit a 360 px row. */
+.guide-rail {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: auto;
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+}
+.guide-rail-step {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 0;
+  min-height: var(--s-7);
+  padding: var(--s-2) var(--s-1);
+  border-inline-end: var(--bw-hair) solid var(--rule-soft);
+  font-family: var(--ff-display);
+  font-size: var(--t-meta);
+  font-weight: var(--fw-title);
+  line-height: var(--lh-label);
+  letter-spacing: 0.02em;
+  text-align: center;
+  text-transform: uppercase;
+}
+.guide-rail-step:last-child {
+  border-inline-end: 0;
+}
+.guide-rail-step[data-state="current"] {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.guide-rail-step[data-state="done"] {
+  background: var(--surface-sunk);
+  color: var(--ink-2);
+}
+.guide-rail-step[data-state="todo"] {
+  color: var(--ink-3);
+}
+:lang(hi) .guide-rail-step,
+:lang(ta) .guide-rail-step {
+  text-transform: none;
+}
+
+/* The step itself: figure, then the heading, the one sentence and the honest line. */
+.guide-step {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.guide-step:focus-visible {
+  outline: var(--focus-w) solid var(--ink);
+  outline-offset: var(--focus-offset);
+}
+.guide-step > * {
+  margin: 0;
+}
+.guide-step-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.guide-step-head > h3 {
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.guide-step-icon {
+  flex: none;
+  width: var(--picto-lg);
+  height: var(--picto-lg);
+  padding: var(--s-2);
+  border: var(--bw) solid var(--ink);
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.guide-step-line {
+  max-width: 42ch;
+}
+.guide-step-rule {
+  max-width: 48ch;
+  color: var(--ink-2);
+  border-inline-start: var(--bw) solid var(--rule-soft);
+  padding-inline-start: var(--s-3);
+}
+
+.guide-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-4);
+  margin-top: var(--s-2);
+}
+/* Same reservation as .sheet-head: SOS floats above every sheet and owns that corner. */
+.shell[data-role="operator"] .guide-actions {
+  padding-inline-end: calc(var(--hit-sos) + var(--s-4));
+}
+/* Two buttons share the ~200 px strip left of SOS at 375 px. They keep the full 80 px target but
+   give up the wide default side padding, which is what decides whether the Hindi pair fits on one
+   row. Measured in the browser in both languages. */
+.guide-actions > .btn {
+  flex: 0 1 auto;
+  min-width: var(--hit);
+  padding-inline: var(--s-4);
+}
+.guide-count {
+  flex: none;
+  color: var(--ink-3);
+  white-space: nowrap;
+}
+
+/* From a tablet up the figure moves beside the words, so it stops being a tall band above two
+   lines of text and the whole step reads in one glance. Three rows: head, sentence, rule. */
+@media (min-width: 640px) {
+  .guide {
+    gap: var(--s-4);
+  }
+  .guide-step {
+    display: grid;
+    grid-template-columns: minmax(0, 5fr) minmax(0, 6fr);
+    /* The fourth row takes whatever the figure is taller by, so the three text rows stay stacked
+       together instead of being spread down the figure's height. */
+    grid-template-rows: auto auto auto 1fr;
+    column-gap: var(--s-6);
+    row-gap: var(--s-3);
+    align-items: start;
+  }
+  .guide-step > .guide-fig {
+    grid-column: 1;
+    grid-row: 1 / -1;
+    align-self: center;
+  }
+  .guide-step > :not(.guide-fig) {
+    grid-column: 2;
+  }
+}
+
+/* ---------- The four figures ---------- */
+/*
+ * Choreography timings live here, not in tokens.css: they are internal to these four drawings and
+ * are shared with nothing else, and tokens.css is a merge surface for every track. The carve-out
+ * in visual-language §5.1 allows the longer run because this is training content.
+ */
+.guide-fig {
+  --gf-step: 180ms; /* one beat; elements enter --gf-i beats apart */
+  --gf-enter: 420ms;
+  --gf-late: 1100ms; /* when the "result" half of a figure begins */
+  --gf-drain: 1600ms; /* the Decide countdown, linear */
+  display: block;
+  /* A diagram, not a hero: on a phone it shares the sheet with four rows of text and the row the
+     SOS plate owns, so it is capped well below the sheet's width. */
+  width: 100%;
+  max-width: calc(var(--hero-max) / 2);
+  height: auto;
+  aspect-ratio: 160 / 96;
+  background: var(--surface);
+  border: var(--bw) solid var(--ink);
+  color: var(--ink);
+}
+
+/* Shared parts. Stroke widths are SVG user units on a 160 × 96 box, like the pictograms. */
+.gf-plate {
+  fill: var(--surface);
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.gf-line,
+.gf-dot {
+  fill: var(--ink-3);
+}
+.gf-track {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2;
+}
+.gf-track-off {
+  stroke: var(--ink-3);
+  stroke-dasharray: 6 5;
+}
+
+/* Brief: the speaker sounds, then three lines write themselves left to right. */
+.gf-speaker {
+  fill: currentColor;
+}
+.gf-wave {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 2.5;
+  stroke-linecap: round;
+  animation: gf-appear var(--gf-enter) var(--ease) calc(var(--gf-i) * var(--gf-step)) both;
+}
+[data-figure="read"] .gf-line {
+  transform-box: fill-box;
+  transform-origin: left center;
+  animation: gf-wipe var(--gf-enter) var(--ease) calc(var(--gf-step) * 2 + var(--gf-i) * var(--gf-step)) both;
+}
+@keyframes gf-appear {
+  from {
+    opacity: 0;
+  }
+}
+@keyframes gf-wipe {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* Investigate: the stack fans into the grid, two cards are stamped, the distractor dims. */
+.gf-card {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gf-fan var(--gf-enter) var(--ease) calc(var(--gf-i) * var(--gf-step)) both;
+}
+.gf-card[data-dim] {
+  opacity: 0.32;
+  animation:
+    gf-fan var(--gf-enter) var(--ease) calc(var(--gf-i) * var(--gf-step)) both,
+    gf-dim var(--gf-enter) var(--ease) calc(var(--gf-late) + var(--gf-step) * 3) both;
+}
+@keyframes gf-fan {
+  from {
+    opacity: 0;
+    transform: var(--gf-from);
+  }
+}
+@keyframes gf-dim {
+  from {
+    opacity: 1;
+  }
+}
+.gf-stamp {
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: gf-stamp-in var(--dur-stamp) var(--ease) calc(var(--gf-late) + var(--gf-i) * var(--gf-step) * 2) both;
+}
+.gf-stamp rect {
+  fill: var(--ink);
+}
+/* The numeral's size is an SVG presentation attribute (user units), set on the element. */
+.gf-stamp text {
+  fill: var(--on-ink);
+  font-family: var(--ff-display);
+  font-weight: var(--fw-figure);
+}
+@keyframes gf-stamp-in {
+  from {
+    opacity: 0;
+    transform: scale(0.5);
+  }
+}
+
+/* Decide: the bar drains linearly and the choice lands before it empties. */
+.gf-fill {
+  fill: var(--ink);
+  transform-box: fill-box;
+  transform-origin: left center;
+  transform: scaleX(0.28);
+  animation: gf-drain var(--gf-drain) linear both;
+}
+@keyframes gf-drain {
+  from {
+    transform: scaleX(1);
+  }
+}
+.gf-pick rect {
+  fill: var(--ink);
+}
+.gf-pick path {
+  fill: none;
+  stroke: var(--surface);
+  stroke-width: 5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.gf-pick {
+  animation: gf-appear var(--dur-press) var(--ease) var(--gf-late) both;
+}
+
+/* Debrief: the safest route is already there, dashed; your route draws itself over it. */
+.gf-ideal {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: 2.5;
+  stroke-dasharray: 7 5;
+  stroke-linecap: round;
+}
+.gf-your {
+  fill: none;
+  stroke: currentColor;
+  stroke-width: 3.5;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  /* 300 is comfortably longer than the path, so the offset hides all of it at the start. */
+  stroke-dasharray: 300;
+  stroke-dashoffset: 0;
+  animation: gf-draw var(--gf-late) var(--ease) both;
+}
+@keyframes gf-draw {
+  from {
+    stroke-dashoffset: 300;
+  }
+}
+.gf-flag {
+  fill: currentColor;
+  animation: gf-appear var(--dur-press) var(--ease) var(--gf-late) both;
+}
+.gf-score {
+  fill: var(--ink);
+  transform-box: fill-box;
+  transform-origin: left center;
+  transform: scaleX(var(--gf-v));
+  animation: gf-fill-bar var(--dur-count) var(--ease) var(--gf-late) both;
+}
+@keyframes gf-fill-bar {
+  from {
+    transform: scaleX(0);
+  }
+}
+
+/* Beside the words from a tablet up, the figure has its own column and can take its full size. */
+@media (min-width: 640px) {
+  .guide-fig {
+    max-width: var(--hero-max);
+  }
+}
+
+/*
+ * Reduced motion is a hard stop, not a shortening: every figure element keeps its base style,
+ * which is already its finished state, and nothing autoplays. (visual-language §5, §5.1.)
+ */
+@media (prefers-reduced-motion: reduce) {
+  .guide-fig *,
+  .guide-fig {
+    animation: none !important;
+  }
+}
