@@ -56,9 +56,8 @@ export function EvidenceGrid({ cards, openOrder, maxOpen, onOpen }: Props) {
                   {stamp}
                 </span>
               ) : null}
-              <span className="sr-only">
-                {stamp !== null ? t("stamp", { n: stamp }) : locked ? t("limit") : t("notOpened")}
-              </span>
+              <span className="sr-only">{stamp !== null ? t("stamp", { n: stamp }) : locked ? null : t("notOpened")}</span>
+              {/* The visible note already carries the reason, so it is not repeated sr-only. */}
               {locked ? <span className="t-meta ev-plate-note">{t("limit")}</span> : null}
             </Plate>
           </li>

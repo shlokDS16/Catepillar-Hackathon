@@ -10,10 +10,10 @@ import { Button } from "@/components/ui/button";
 import { Plate } from "@/components/ui/plate";
 import { Sheet } from "@/components/ui/sheet";
 import type { Lang } from "@/data/types";
-import { canDecideNow } from "@/replay/evidence";
+import { canDecideNow, limitReached } from "@/replay/evidence";
 import { timerRuns } from "@/replay/timer";
 import { useReplayTimer } from "@/replay/use-replay-timer";
-import { useTimesUp } from "@/replay/use-times-up";
+import { TIMES_UP_MS, useTimesUp } from "@/replay/use-times-up";
 import type { EvidenceCard, ReplayScenario } from "@cat/shared";
 
 type Props = {
@@ -44,7 +44,9 @@ export function ReplayInvestigate({ scenario, openOrder, paused, attempt, onOpen
   const lang = useLocale() as Lang;
   const [viewing, setViewing] = useState<EvidenceCard | null>(null);
 
-  const { over, expire } = useTimesUp(onTimeout);
+  // `paused` blocks the hand-off: the machine refuses a phase change during a live-alert freeze,
+  // so firing it there would be dropped and leave the run stuck on the "Time's up" plate.
+  const { over, expire } = useTimesUp(onTimeout, TIMES_UP_MS, paused);
   const timer = useReplayTimer({
     budgetS: scenario.brief.time_budget_s,
     running: timerRuns({ phase: "investigate", paused, hidden: false }) && !over,
@@ -58,24 +60,38 @@ export function ReplayInvestigate({ scenario, openOrder, paused, attempt, onOpen
   const title = viewing ? localText(viewing.title, lang) : null;
 
   const open = (card: EvidenceCard) => {
-    onOpen(card.id); // the machine records the first open and enforces max_open
+    // The sheet follows what the machine accepted, never the tap: if the run is frozen or the
+    // open limit is spent, the card stays shut rather than being readable but unrecorded.
+    if (paused || (!openOrder.includes(card.id) && limitReached(openOrder, maxOpen))) return;
+    onOpen(card.id);
     setViewing(card);
   };
 
+  // The live region is mounted for the whole phase and starts empty: a role="status" node that
+  // appears together with its text is never announced (timer-bar.tsx gets this right), so
+  // "Time's up" has to arrive as a change inside a region that was already there.
+  const announce = (
+    <p className="replay-announce" role="status">
+      {over ? t("timesUp") : ""}
+    </p>
+  );
+
   if (over) {
     return (
-      <Plate as="section" rule="heavy" className="replay-timesup">
-        <p className="t-title" role="status">
-          {t("timesUp")}
-        </p>
-        <p className="t-body">{t("timesUpBody")}</p>
-      </Plate>
+      <>
+        {announce}
+        <Plate as="section" rule="heavy" className="replay-timesup">
+          <p className="t-title">{t("timesUp")}</p>
+          <p className="t-body">{t("timesUpBody")}</p>
+        </Plate>
+      </>
     );
   }
 
   return (
     // The phase name, not "Evidence cards": the grid inside already carries that label.
     <section className="replay-investigate" aria-label={phase("investigate")}>
+      {announce}
       <ReplayTimerBar timer={timer}>
         <p className="t-body replay-timer-lead">{t("lead")}</p>
       </ReplayTimerBar>

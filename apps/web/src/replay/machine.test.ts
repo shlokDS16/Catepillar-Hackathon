@@ -104,6 +104,21 @@ describe("INVESTIGATE", () => {
     expect(s.step).toBe(1);
     expect(s.openOrder).toEqual([]);
   });
+  it("records nothing while the run is frozen by a live alert", () => {
+    // The review found the grid still readable during a freeze: cards could be studied with the
+    // clock stopped, max_open bypassed and openOrder empty, so the process score (D10) saw none
+    // of it. The reducer already refused the event; the UI is now inert to match. This pins the
+    // reducer half of that contract.
+    let s = investigating();
+    s = replayReduce(s, { type: "pause" });
+    expect(s.paused).toBe(true);
+    const frozen = replayReduce(s, { type: "open_card", cardId: cardIds[0] });
+    expect(frozen.openOrder).toEqual([]);
+    // ...and the run continues normally once the operator resumes.
+    const resumed = replayReduce(replayReduce(frozen, { type: "resume" }), { type: "open_card", cardId: cardIds[0] });
+    expect(resumed.openOrder).toEqual([cardIds[0]]);
+  });
+
   it("ignores open_card and decide_now outside INVESTIGATE", () => {
     expect(replayReduce(loaded(), { type: "open_card", cardId: cardIds[0] }).openOrder).toEqual([]);
     expect(replayReduce(deciding(), { type: "investigate_timeout" }).step).toBe(1);

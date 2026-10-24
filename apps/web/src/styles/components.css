@@ -1082,7 +1082,9 @@
   -webkit-tap-highlight-color: transparent;
   transition: background-color var(--dur-press) var(--ease);
 }
-.ev-plate:active {
+/* A locked plate must not answer the finger: press feedback on something that cannot open reads
+   as a broken control, not a refused one. The dashed, dimmed state is the whole message. */
+.ev-plate:not([aria-disabled="true"]):active {
   background: var(--surface-sunk);
   box-shadow: inset 0 var(--bw) 0 0 var(--ink);
 }

@@ -65,8 +65,8 @@ export function TrendChart({ card, eventTime }: { card: TrendCard; eventTime: st
   return (
     <div className="trend">
       <ul className="trend-lanes">
-        {lanes.map((lane) => (
-          <Lane key={lane.metric} lane={lane} flag={flag} />
+        {lanes.map((lane, i) => (
+          <Lane key={i} lane={lane} flag={flag} />
         ))}
       </ul>
       <div className="trend-axis t-meta text-ink-3">

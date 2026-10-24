@@ -153,7 +153,13 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
         </Plate>
       ) : null}
 
-      <div className="replay-phase" key={phase} ref={phaseRef} tabIndex={-1}>
+      {/*
+        `inert` while paused: the reducer refuses open_card during a freeze, so without this the
+        operator could read every card with the clock stopped, bypass max_open, and leave
+        openOrder empty — the process score (D10) would silently see nothing. Same mechanism the
+        motion lock uses, and it removes the block from the tab order too.
+      */}
+      <div className="replay-phase" key={phase} ref={phaseRef} tabIndex={-1} inert={state.paused || undefined}>
         {phase === "loading" ? <Plate loading className="min-h-hit-sos" aria-label={t("loading")} /> : null}
 
         {phase === "load_failed" ? (

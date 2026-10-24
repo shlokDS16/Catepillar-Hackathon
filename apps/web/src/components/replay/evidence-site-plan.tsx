@@ -45,10 +45,10 @@ export function EvidenceSitePlan({ card }: { card: MapSnapshotCard }) {
         })}
         {trail.length > 1 ? <path d={path(trail)} className="plan-trail" /> : null}
         {track.length > 1 ? <path d={path(track)} className="plan-track" /> : null}
-        {track.map((p) => {
+        {track.map((p, i) => {
           const xy = toXY(p);
           return (
-            <rect key={`${p.lat},${p.lon}`} x={xy.x - u / 2} y={xy.y - u / 2} width={u} height={u} className="plan-machine" />
+            <rect key={i} x={xy.x - u / 2} y={xy.y - u / 2} width={u} height={u} className="plan-machine" />
           );
         })}
         {/* The flag is drawn, not typed: a ⚑ glyph is not guaranteed in our display font. */}
