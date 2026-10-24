@@ -75,3 +75,16 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 ## 2026-09-23 — D13: Gemini model id gemini-3.6-flash (Track B B0, measured)
 - `gemini-2.5-flash` returns 404 "no longer available to new users" on our key; the API's suggested replacement `gemini-3.6-flash` is listed for the key. B1 freezes `GEMINI_MODEL = "gemini-3.6-flash"`, env-overridable. Chain order unchanged (D9: Groq A → Gemini → Groq B).
 - Also from B0: the role-level statement_timeout backstop (N4) is unavailable (`postgres` is not superuser); bounded work per step plus the 2-min role timeout carries the guarantee. COMMIT probe PASS, so the worker-procedure design stands.
+
+## 2026-10-12 — D14: nothing secret transits pg_net (measured, forced)
+- `net.http_request_queue` and `net._http_response` carry a PUBLIC grant made by `supabase_admin`, and schema `net` grants USAGE to `anon` and `authenticated`. The `postgres` role cannot revoke any of it: a revoke by a non-grantor is silently ignored (measured — the ACL is byte-identical after a revoke that reports success). Migration 002c's attempt was therefore a no-op hidden by `exception when others`.
+- Consequence, found by the B5-era backend review: the dispatch kick was parking the Vault `supabase_secret_key` in that queue, where any signed-in user could read it.
+- **Decision:** the queue is public, so nothing sensitive may enter it. Migration 002d sends `{dispatch_id}` with `Content-Type` only. Every future pg_net call carries no credential, and the receiving Edge Function authenticates the WORK — it loads the row with its own key, acts only while `status = 'queued'`, and stays idempotent (B15).
+
+## 2026-10-12 — D15 (PROPOSED, awaiting Shlok): ledger export vs near-miss pseudonymity
+- The Merkle root can only be reproduced from every row's exact canonical bytes, so `ledger_export` currently returns `operator_id` for near-miss (`non_punitive`) rows — the very rows data-model §2.10 hides from the fleet manager. Any FM who clicks Verify defeats the pseudonymity the near-miss mode promises operators.
+- **Proposed:** `ledger_export` returns `entry_hash`, `prev_hash` and `seq` for EVERY row (enough to recompute the chain and the Merkle root, so "human-verifiable" survives intact) but the canonical field values only for rows the caller may see. A fleet manager can then still prove the ledger is unbroken and matches the published witness line; she simply cannot read the contents of a row she was never entitled to read. The cost is that she cannot prove a hidden row's content matches its hash — which is the correct trade, since that proof is exactly the disclosure we refuse.
+- Alternative if Shlok prefers: leave export as is and treat the access gate as the control, recording that an FM verification necessarily discloses near-miss identities.
+
+## 2026-10-12 — D16: incident severity scale 1-5 (B5, documented after the fact)
+- B5 derives `incidents.severity` from the event tier: critical 5, warning 4, caution 2, info/none 1, with 3 reserved for the `incident.reported` fallback. No spec defined this scale; it is deterministic and hashed into the canonical entry, so it is recorded here rather than changed. `caution → 2` is currently unreachable (no `ledger = true` event type defaults to caution) and is kept for future types.
