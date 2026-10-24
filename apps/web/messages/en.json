@@ -267,6 +267,87 @@
       "body": "Your answers will be lost.",
       "confirm": "Leave",
       "cancel": "Back"
+    },
+    "investigate": {
+      "gridLabel": "Evidence cards",
+      "lead": "Open the cards you need. Not all of them matter.",
+      "secondsLeft": "{s} s left",
+      "secondsUnit": "s left",
+      "opened": "{n, plural, =0 {No cards opened} one {# card opened} other {# cards opened}}",
+      "openedOf": "{n} of {max} opened",
+      "stamp": "Opened {n}",
+      "notOpened": "Not opened",
+      "limit": "Limit reached",
+      "decideNow": "Decide now",
+      "openOneFirst": "Open at least one card",
+      "timesUp": "Time's up",
+      "timesUpBody": "Moving on with the cards you opened.",
+      "cardTitle": "Evidence",
+      "cardNote": "From your recorded event · simulated"
+    },
+    "evidence": {
+      "trend": {
+        "before": "{s} s before",
+        "flag": "Event {time}",
+        "laneLabel": "{metric} across the window",
+        "noData": "No readings"
+      },
+      "metric": {
+        "speed_kmh": "Speed",
+        "pitch_deg": "Pitch",
+        "roll_deg": "Roll",
+        "seatbelt": "Seatbelt",
+        "hydraulic_temp_c": "Hydraulic temperature",
+        "rpm": "Engine rpm"
+      },
+      "value": {
+        "speed_kmh": "{v} km/h",
+        "pitch_deg": "{v}°",
+        "roll_deg": "{v}°",
+        "seatbelt": "{v}",
+        "hydraulic_temp_c": "{v} °C",
+        "rpm": "{v} rpm"
+      },
+      "belt": {
+        "on": "On",
+        "off": "Off"
+      },
+      "wind": {
+        "north": "N",
+        "from": "From the {dir}",
+        "speed": "{kmh} km/h",
+        "gusts": "gusts {kmh} km/h",
+        "noGust": "no gusts recorded",
+        "arrowLabel": "Wind from the {dir}"
+      },
+      "map": {
+        "label": "Site plan: zones, your trail and the machine track",
+        "trail": "Your trail",
+        "track": "Machine track",
+        "flag": "Where the event happened"
+      },
+      "fault": {
+        "codeType": "Code type: {type}"
+      },
+      "protocol": {
+        "loading": "Loading the card…",
+        "failed": "Could not load the protocol card."
+      },
+      "weather": {
+        "temperature": "Temperature",
+        "wbgt": "WBGT",
+        "wbgtNote": "Wet-bulb globe temperature: heat, humidity, sun and wind together.",
+        "degrees": "{c}°C",
+        "noWbgt": "Not measured"
+      },
+      "shift": {
+        "hours": "{h} h on shift",
+        "band": {
+          "normal": "Normal alertness",
+          "post_lunch_dip": "After-lunch dip",
+          "night_trough": "Night trough"
+        }
+      }
     }
   }
 }

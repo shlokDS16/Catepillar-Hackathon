@@ -6,6 +6,7 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { takeoverQueue } from "@/alerts/selectors";
 import { PhaseRail } from "@/components/replay/phase-rail";
 import { ReplayBrief } from "@/components/replay/replay-brief";
+import { ReplayInvestigate } from "@/components/replay/replay-investigate";
 import { Button } from "@/components/ui/button";
 import { Plate } from "@/components/ui/plate";
 import { Sheet } from "@/components/ui/sheet";
@@ -166,7 +167,17 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
           <ReplayBrief scenario={scenario} attempt={state.attempt} onStart={() => dispatch({ type: "start" })} />
         ) : null}
 
-        {phase === "investigate" ? <Stub task="R2" /> : null}
+        {phase === "investigate" && scenario ? (
+          <ReplayInvestigate
+            scenario={scenario}
+            openOrder={state.openOrder}
+            paused={state.paused}
+            attempt={state.attempt}
+            onOpen={(cardId) => dispatch({ type: "open_card", cardId })}
+            onDecideNow={() => dispatch({ type: "decide_now" })}
+            onTimeout={() => dispatch({ type: "investigate_timeout" })}
+          />
+        ) : null}
         {phase === "decide" || phase === "submitting" ? <Stub task="R3" /> : null}
         {phase === "debrief" ? <Stub task="R4" /> : null}
       </div>
