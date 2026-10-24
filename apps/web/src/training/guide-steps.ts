@@ -66,17 +66,14 @@ export function isLastStep(index: number): boolean {
  * key is not ours, so the caller can tell "handled" from "let the browser have it".
  */
 export function stepForKey(index: number, key: string): number {
+  // Arrows only. PageUp/PageDown/Home/End belong to the sheet, which scrolls at 375 px, and
+  // taking them made a reachable panel unscrollable by keyboard. The caller additionally
+  // refuses any modified key, so Alt+Left still means Back.
   switch (key) {
     case "ArrowRight":
-    case "PageDown":
       return nextStep(index);
     case "ArrowLeft":
-    case "PageUp":
       return prevStep(index);
-    case "Home":
-      return 0;
-    case "End":
-      return GUIDE_STEP_COUNT - 1;
     default:
       return clampStep(index);
   }
@@ -91,3 +88,13 @@ export function railStateFor(stepIndex: number, currentIndex: number): GuideRail
   if (stepIndex === current) return "current";
   return "todo";
 }
+
+/**
+ * What the Investigate phase actually allows, shown in the guide's Investigate rule. Taken from
+ * the scenario the fixtures ship (replayScenario.brief.time_budget_s is the Investigate budget,
+ * per the contract comment, and investigate.max_open is the hard cap). When a scenario is loaded
+ * from the server these should come from it; until the guide is opened from inside a replay it
+ * describes the shape every scenario has.
+ */
+export const INVESTIGATE_BUDGET_S = 60;
+export const INVESTIGATE_MAX_OPEN = 4;

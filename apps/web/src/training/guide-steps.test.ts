@@ -57,13 +57,16 @@ describe("moving through the sequence", () => {
 });
 
 describe("keyboard movement", () => {
-  it("walks the sequence with the arrow keys and jumps with Home/End", () => {
+  it("walks the sequence with the arrow keys", () => {
     expect(stepForKey(1, "ArrowRight")).toBe(2);
     expect(stepForKey(1, "ArrowLeft")).toBe(0);
-    expect(stepForKey(1, "PageDown")).toBe(2);
-    expect(stepForKey(1, "PageUp")).toBe(0);
-    expect(stepForKey(1, "Home")).toBe(0);
-    expect(stepForKey(1, "End")).toBe(3);
+  });
+  it("leaves Page/Home/End to the sheet, which scrolls at 375 px", () => {
+    // Taking these made a scrollable panel unscrollable by keyboard; the arrows already reach
+    // every step, so the guide claims nothing it does not need.
+    for (const key of ["PageDown", "PageUp", "Home", "End"]) {
+      expect(stepForKey(1, key)).toBe(1);
+    }
   });
   it("returns the same step for a key it does not own, so the browser keeps it", () => {
     expect(stepForKey(2, "Tab")).toBe(2);

@@ -41,8 +41,14 @@ export function GuideEntry() {
    * (child effects first) and only when nothing else has claimed focus.
    */
   const actionRef = useRef<HTMLDivElement>(null);
+  const wasOpen = useRef(false);
   useEffect(() => {
-    if (open) return;
+    // Only on a true close. Without the previous-state guard this also ran on first paint, when
+    // activeElement is <body> for every visitor, so simply loading /op/training stole focus onto
+    // this button — defeating the skip link the effect exists to protect.
+    const justClosed = wasOpen.current && !open;
+    wasOpen.current = open;
+    if (!justClosed) return;
     const active = document.activeElement;
     if (active && active !== document.body) return;
     actionRef.current?.querySelector("button")?.focus();

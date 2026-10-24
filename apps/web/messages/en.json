@@ -295,7 +295,7 @@
       "investigate": {
         "phase": "Investigate",
         "line": "Then you open the evidence you need.",
-        "rule": "Which cards you open, and the order you open them in, are both scored. Some cards do not matter."
+        "rule": "Which cards you open, and the order you open them in, are both scored. You have {s} seconds and can open up to {n} cards."
       },
       "decide": {
         "phase": "Decide",

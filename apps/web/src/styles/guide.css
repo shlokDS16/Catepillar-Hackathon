@@ -46,7 +46,10 @@
  * Measured at 375 px, which is where R1 hit the same thing.
  */
 .shell[data-role="operator"] .guide {
-  padding-block-end: var(--hit-sos);
+  /* The band runs from the nav up past the plate: --nav-h (80) + --s-4 (16) + --hit-sos (108).
+     Reserving only --hit-sos left the last child — the private-mode note, which has no inline
+     padding of its own — sitting ~64 px inside it. */
+  padding-block-end: calc(var(--nav-h) + var(--s-4) + var(--hit-sos));
 }
 /*
  * Sheets reserve the SOS corner in their head by default, because most of them are short enough

@@ -7,6 +7,8 @@ import { GuideFigure } from "@/components/training/guide-figures";
 import { Button } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import {
+  INVESTIGATE_BUDGET_S,
+  INVESTIGATE_MAX_OPEN,
   GUIDE_STEPS,
   GUIDE_STEP_COUNT,
   isFirstStep,
@@ -60,19 +62,28 @@ export function GuideSheet({ open, onClose, persistNote }: GuideSheetProps) {
   // sheet is closed, or resetting to step 1 on the way out would steal focus back from the opener.
   const stepRef = useRef<HTMLDivElement>(null);
   const firstStep = useRef(true);
+  // Only an arrow-key move takes focus to the step block. When the operator pressed [Next], the
+  // button is where their focus belongs — moving it meant Tabbing back before every single step.
+  const moveFocus = useRef(false);
   useEffect(() => {
     if (!open) {
       firstStep.current = true;
+      moveFocus.current = false;
       return;
     }
     if (firstStep.current) {
       firstStep.current = false;
       return;
     }
+    if (!moveFocus.current) return;
+    moveFocus.current = false;
     stepRef.current?.focus();
   }, [index, open]);
 
-  const go = (to: number) => setIndex(to);
+  const go = (to: number, via: "key" | "button" = "button") => {
+    moveFocus.current = via === "key";
+    setIndex(to);
+  };
   const finish = () => {
     setIndex(0);
     onClose();
@@ -83,10 +94,11 @@ export function GuideSheet({ open, onClose, persistNote }: GuideSheetProps) {
       <div
         className="guide"
         onKeyDown={(e) => {
+          if (e.altKey || e.ctrlKey || e.metaKey) return; // Alt+Left is Back, Ctrl+Home is jump
           const to = stepForKey(index, e.key);
           if (to === index) return;
           e.preventDefault();
-          go(to);
+          go(to, "key");
         }}
       >
         <ol className="guide-rail" role="list" aria-label={t("stepsLabel", { n: index + 1, total: GUIDE_STEP_COUNT })}>
@@ -121,7 +133,12 @@ export function GuideSheet({ open, onClose, persistNote }: GuideSheetProps) {
             <p className="t-meta guide-count tnum">{t("stepOf", { n: index + 1, total: GUIDE_STEP_COUNT })}</p>
           </div>
           <p className="t-body guide-step-line">{t(`steps.${step.id}.line`)}</p>
-          <p className="t-meta guide-step-rule">{t(`steps.${step.id}.rule`)}</p>
+          {/* The Investigate rule names the real budget and open cap: telling an operator this
+              phase is untimed when it is not would be the one thing a training guide must never
+              do (idea.md section 3). The numbers come from the scenario the fixtures ship. */}
+          <p className="t-meta guide-step-rule">
+            {t(`steps.${step.id}.rule`, { s: INVESTIGATE_BUDGET_S, n: INVESTIGATE_MAX_OPEN })}
+          </p>
         </div>
 
         {/*
