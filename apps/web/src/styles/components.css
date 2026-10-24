@@ -978,6 +978,397 @@
   }
 }
 
+/* ---------- S5b Replay phase 2: Investigate (R2) ---------- */
+.replay-investigate,
+.replay-timesup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  align-items: flex-start;
+}
+.replay-investigate > *,
+.replay-timesup > * {
+  margin: 0;
+}
+.replay-investigate > .replay-timer,
+.replay-investigate > .ev-grid {
+  align-self: stretch;
+}
+/* The one primary action stays clear of the floating SOS plate in the bottom-right corner. */
+.replay-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-4);
+}
+.shell[data-role="operator"] .replay-actions {
+  padding-inline-end: calc(var(--hit-sos) + var(--s-4));
+}
+
+/* The countdown: ink, never a safety colour. Training urgency must not look like a live alarm. */
+.replay-timer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  width: 100%;
+}
+.replay-timer-track {
+  width: 100%;
+  height: var(--bar);
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+  overflow: hidden;
+}
+.replay-timer-fill {
+  display: block;
+  width: 100%;
+  height: 100%;
+  background: var(--ink);
+  transform: scaleX(var(--fill, 1));
+  transform-origin: left center;
+  /* Linear, one step per second. --dur-tick is 0 in reduced motion, so the bar steps. */
+  transition: transform var(--dur-tick) linear;
+}
+.replay-timer-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: var(--s-2) var(--s-4);
+}
+.replay-timer-figure {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+.replay-timer-lead {
+  flex: 1 1 20ch;
+  max-width: 48ch;
+}
+.replay-count {
+  font-variant-numeric: tabular-nums;
+}
+
+/* The grid: 2 columns on a phone, 3 from 1024 px (S5b). Every plate is at least 80 px high. */
+.ev-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+@media (min-width: 1024px) {
+  .ev-grid {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    gap: var(--hit-gap);
+  }
+}
+.ev-plate {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--s-2);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--hit);
+  height: 100%;
+  padding: var(--s-3);
+  padding-inline-end: var(--s-7);
+  font-family: var(--ff-body);
+  text-align: start;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+  transition: background-color var(--dur-press) var(--ease);
+}
+/* A locked plate must not answer the finger: press feedback on something that cannot open reads
+   as a broken control, not a refused one. The dashed, dimmed state is the whole message. */
+.ev-plate:not([aria-disabled="true"]):active {
+  background: var(--surface-sunk);
+  box-shadow: inset 0 var(--bw) 0 0 var(--ink);
+}
+.ev-plate[data-state="opened"] {
+  background: var(--surface-sunk);
+  border-width: var(--bw-heavy);
+}
+.ev-plate[aria-disabled="true"] {
+  background: transparent;
+  border-style: dashed;
+  border-color: var(--ink-3);
+  color: var(--ink-3);
+  cursor: not-allowed;
+}
+.ev-plate-title {
+  overflow-wrap: anywhere;
+}
+.ev-plate-note {
+  color: var(--ink-3);
+}
+.ev-mark {
+  width: var(--icon);
+  height: var(--icon);
+  flex: none;
+}
+/* The order stamp. A filled ink square, not a circled numeral: ①② is not guaranteed in the
+   display font, and a stencilled square is the house language anyway. */
+.ev-stamp {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-end: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-width: var(--s-6);
+  min-height: var(--s-6);
+  padding: 0 var(--s-1);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-family: var(--ff-display);
+  font-size: var(--t-label);
+  font-weight: var(--fw-title);
+  line-height: 1;
+}
+
+/* ---------- The seven evidence renderers (all ink on paper; no safety fills) ---------- */
+.ev-sheet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+/* The SOS plate floats above every sheet (z 40 over 20) and lands in the sheet's bottom-right
+   corner, where it covered the wind figure and the fault rows at 375 px (caught in the browser).
+   A sheet is anchored to the bottom of the viewport, so reserving the whole band the SOS can
+   occupy — the nav, the plate and its gap — is what keeps every reading tappable and visible. */
+.shell[data-role="operator"] .ev-sheet {
+  padding-block-end: calc(var(--nav-h) + var(--hit-sos));
+}
+@media (min-width: 1024px) {
+  /* The nav becomes a left rail there and the SOS sits --s-6 from the bottom. */
+  .shell[data-role="operator"] .ev-sheet {
+    padding-block-end: var(--hit-sos);
+  }
+}
+.ev-figures {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-5) var(--s-6);
+}
+.ev-figure {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  max-width: 34ch;
+}
+.ev-figure > p {
+  margin: 0;
+}
+
+/* telemetry_trend: one lane per series on a shared time axis, the event marked with a flag. */
+.trend {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.trend-lanes {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.trend-lane-head {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+  margin-bottom: var(--s-1);
+}
+.trend-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+  border: var(--bw-hair) solid var(--rule-soft);
+  background: var(--surface);
+}
+.trend-base {
+  stroke: var(--rule-soft);
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+.trend-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.trend-dot {
+  fill: var(--ink);
+}
+.trend-flag-pole {
+  stroke: var(--ink-2);
+  stroke-width: 1.5;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+.trend-flag-cloth {
+  fill: var(--ink);
+}
+.trend-axis {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-4);
+}
+
+/* map_snapshot: the same plan language as the live fallback, plus the machine track and the flag. */
+.plan-zone-name {
+  fill: var(--ink-2);
+  font-family: var(--ff-display);
+  text-transform: uppercase;
+}
+.plan-track {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-dasharray: 8 5;
+  vector-effect: non-scaling-stroke;
+}
+.plan-flag-pole {
+  stroke: var(--ink);
+  stroke-width: 2.5;
+  vector-effect: non-scaling-stroke;
+}
+.plan-flag-cloth {
+  fill: var(--ink);
+}
+.plan-key {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-4);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.plan-key > li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.plan-key-mark {
+  display: inline-block;
+  width: var(--s-5);
+  height: var(--bw-heavy);
+  background: var(--ink-2);
+}
+.plan-key-mark[data-mark="track"] {
+  background: repeating-linear-gradient(to right, var(--ink) 0 var(--s-2), transparent var(--s-2) var(--s-3));
+}
+.plan-key-mark[data-mark="flag"] {
+  width: var(--s-3);
+  height: var(--s-3);
+  background: var(--ink);
+  clip-path: polygon(0 0, 100% 50%, 0 100%);
+}
+
+/* wind: a compass arrow from `from_deg`, with the figures beside it. */
+.ev-wind {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-5);
+}
+.ev-compass {
+  width: var(--hit-lang);
+  height: var(--hit-lang);
+  flex: none;
+}
+.ev-compass-ring {
+  fill: none;
+  stroke: var(--rule-soft);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+/* Its size is an SVG attribute (user units in the 100 × 100 viewBox), not a CSS px literal. */
+.ev-compass-n {
+  fill: var(--ink-3);
+  font-family: var(--ff-display);
+  font-weight: var(--fw-title);
+}
+.ev-compass-arrow {
+  stroke: var(--ink);
+  stroke-width: 4;
+  stroke-linecap: round;
+  fill: var(--ink);
+}
+.ev-wind-read {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.ev-wind-read > p {
+  margin: 0;
+}
+
+/* fault_code: code · severity word · what it means. Some rows are distractors by design. */
+.ev-rows {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ev-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+  padding: var(--s-3);
+  border: var(--bw-hair) solid var(--rule-soft);
+}
+.ev-row > p {
+  margin: 0;
+}
+.ev-severity {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+/* protocol_card: the fixed card's steps, fetched by card_id. */
+.ev-protocol {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.ev-protocol > p {
+  margin: 0;
+}
+.ev-steps {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.ev-step {
+  display: flex;
+  align-items: flex-start;
+  gap: var(--s-3);
+}
+.ev-step-n {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  min-width: var(--s-6);
+  min-height: var(--s-6);
+  background: var(--ink);
+  color: var(--on-ink);
+  font-family: var(--ff-display);
+}
+
 /* An always-mounted live region: a node that appears together with its text is never announced,
    so the Replay pause message lives here and the visible plate stays purely visual. */
 .replay-announce {

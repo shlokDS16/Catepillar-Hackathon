@@ -6,6 +6,7 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { takeoverQueue } from "@/alerts/selectors";
 import { PhaseRail } from "@/components/replay/phase-rail";
 import { ReplayBrief } from "@/components/replay/replay-brief";
+import { ReplayInvestigate } from "@/components/replay/replay-investigate";
 import { Button } from "@/components/ui/button";
 import { Plate } from "@/components/ui/plate";
 import { Sheet } from "@/components/ui/sheet";
@@ -152,7 +153,13 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
         </Plate>
       ) : null}
 
-      <div className="replay-phase" key={phase} ref={phaseRef} tabIndex={-1}>
+      {/*
+        `inert` while paused: the reducer refuses open_card during a freeze, so without this the
+        operator could read every card with the clock stopped, bypass max_open, and leave
+        openOrder empty — the process score (D10) would silently see nothing. Same mechanism the
+        motion lock uses, and it removes the block from the tab order too.
+      */}
+      <div className="replay-phase" key={phase} ref={phaseRef} tabIndex={-1} inert={state.paused || undefined}>
         {phase === "loading" ? <Plate loading className="min-h-hit-sos" aria-label={t("loading")} /> : null}
 
         {phase === "load_failed" ? (
@@ -166,7 +173,17 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
           <ReplayBrief scenario={scenario} attempt={state.attempt} onStart={() => dispatch({ type: "start" })} />
         ) : null}
 
-        {phase === "investigate" ? <Stub task="R2" /> : null}
+        {phase === "investigate" && scenario ? (
+          <ReplayInvestigate
+            scenario={scenario}
+            openOrder={state.openOrder}
+            paused={state.paused}
+            attempt={state.attempt}
+            onOpen={(cardId) => dispatch({ type: "open_card", cardId })}
+            onDecideNow={() => dispatch({ type: "decide_now" })}
+            onTimeout={() => dispatch({ type: "investigate_timeout" })}
+          />
+        ) : null}
         {phase === "decide" || phase === "submitting" ? <Stub task="R3" /> : null}
         {phase === "debrief" ? <Stub task="R4" /> : null}
       </div>

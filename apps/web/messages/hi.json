@@ -267,6 +267,87 @@
       "body": "आपके जवाब मिट जाएँगे।",
       "confirm": "छोड़ें",
       "cancel": "वापस"
+    },
+    "investigate": {
+      "gridLabel": "सबूत के कार्ड",
+      "lead": "जो कार्ड चाहिए वही खोलें। सब ज़रूरी नहीं हैं।",
+      "secondsLeft": "{s} सेकंड बचे",
+      "secondsUnit": "सेकंड बचे",
+      "opened": "{n, plural, =0 {कोई कार्ड नहीं खोला} one {# कार्ड खोला} other {# कार्ड खोले}}",
+      "openedOf": "{max} में से {n} खोले",
+      "stamp": "खोला {n}",
+      "notOpened": "नहीं खोला",
+      "limit": "सीमा पूरी",
+      "decideNow": "अभी निर्णय लें",
+      "openOneFirst": "कम से कम एक कार्ड खोलें",
+      "timesUp": "समय समाप्त",
+      "timesUpBody": "आपके खोले हुए कार्डों के साथ आगे बढ़ रहे हैं।",
+      "cardTitle": "सबूत",
+      "cardNote": "आपकी दर्ज घटना से · नकली डेटा"
+    },
+    "evidence": {
+      "trend": {
+        "before": "{s} सेकंड पहले",
+        "flag": "घटना {time}",
+        "laneLabel": "{metric} का ग्राफ़",
+        "noData": "कोई रीडिंग नहीं"
+      },
+      "metric": {
+        "speed_kmh": "गति",
+        "pitch_deg": "झुकाव (आगे-पीछे)",
+        "roll_deg": "झुकाव (दाएँ-बाएँ)",
+        "seatbelt": "सीटबेल्ट",
+        "hydraulic_temp_c": "हाइड्रोलिक तापमान",
+        "rpm": "इंजन आरपीएम"
+      },
+      "value": {
+        "speed_kmh": "{v} किमी/घंटा",
+        "pitch_deg": "{v}°",
+        "roll_deg": "{v}°",
+        "seatbelt": "{v}",
+        "hydraulic_temp_c": "{v} °C",
+        "rpm": "{v} आरपीएम"
+      },
+      "belt": {
+        "on": "लगी",
+        "off": "खुली"
+      },
+      "wind": {
+        "north": "उ",
+        "from": "{dir} से",
+        "speed": "{kmh} किमी/घंटा",
+        "gusts": "झोंके {kmh} किमी/घंटा",
+        "noGust": "झोंके दर्ज नहीं",
+        "arrowLabel": "हवा {dir} से आ रही है"
+      },
+      "map": {
+        "label": "साइट प्लान: ज़ोन, आपका रास्ता और मशीन का रास्ता",
+        "trail": "आपका रास्ता",
+        "track": "मशीन का रास्ता",
+        "flag": "घटना यहाँ हुई"
+      },
+      "fault": {
+        "codeType": "कोड प्रकार: {type}"
+      },
+      "protocol": {
+        "loading": "कार्ड आ रहा है…",
+        "failed": "प्रोटोकॉल कार्ड नहीं खुला।"
+      },
+      "weather": {
+        "temperature": "तापमान",
+        "wbgt": "WBGT",
+        "wbgtNote": "गर्मी, नमी, धूप और हवा मिलाकर गर्मी का दबाव।",
+        "degrees": "{c}°C",
+        "noWbgt": "मापा नहीं गया"
+      },
+      "shift": {
+        "hours": "{h} घंटे शिफ़्ट में",
+        "band": {
+          "normal": "सामान्य चुस्ती",
+          "post_lunch_dip": "दोपहर के बाद सुस्ती",
+          "night_trough": "रात की सुस्त घड़ी"
+        }
+      }
     }
   }
 }
