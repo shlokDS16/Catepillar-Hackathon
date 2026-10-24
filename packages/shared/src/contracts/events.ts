@@ -49,9 +49,18 @@ export const TaskChange = z.object({ task_id: Id, status: TaskStatus, progress_p
   eta_p50_min: z.number().nullable(), eta_p90_min: z.number().nullable() });
 export const IncidentLogged = z.object({ incident_id: Id, seq: z.number().int(), incident_type: IncidentType,
   entry_hash: Hash64, ledger_queue_id: z.number().int() });
-export const LedgerCheckReason = z.enum(["seq_gap", "link_broken", "hash_mismatch", "anchor_mismatch", "witness_mismatch"]);
+// The first four are CHAIN verdicts: the rows that exist disagree with each other (tampering).
+// `queue_incomplete` is a different animal — a row that should exist was never written, so the chain is
+// short rather than wrong. It never raises the ledger_tamper alert (migration 003c).
+export const LedgerCheckReason = z.enum(["seq_gap", "link_broken", "hash_mismatch", "anchor_mismatch",
+  "witness_mismatch", "queue_incomplete"]);
+/** Health of private.ledger_queue as `ledger_verify` reports it (003c). `stuck` drives the verdict. */
+export const LedgerQueueHealth = z.object({ errored: z.number().int(), pending: z.number().int(),
+  oldest_pending_age_s: z.number().nullable(), oldest_errored_age_s: z.number().nullable(),
+  stale_after_s: z.number().int(), stuck: z.boolean() });
 export const LedgerCheckResult = z.object({ ok: z.boolean(), checked: z.number().int(),
-  first_bad_seq: z.number().int().nullable(), reason: LedgerCheckReason.nullable() });
+  first_bad_seq: z.number().int().nullable(), reason: LedgerCheckReason.nullable(),
+  queue: LedgerQueueHealth.optional() });
 export const LedgerCheckpoint = z.object({ root_id: Id, root_hex: Hash64, head_hash: Hash64,
   first_seq: z.number().int(), last_seq: z.number().int(), telegram_message_id: z.number().int().nullable() });
 export const LessonAssigned = z.object({ assignment_id: Id, lesson_code: z.string(), because_event_id: Id.nullable() });
@@ -65,7 +74,8 @@ export const IncidentReported = z.object({ incident_type: IncidentType, severity
   description: z.string(), non_punitive: z.boolean(), lat: z.number().nullable(), lon: z.number().nullable() });
 export const MotionLockChanged = z.object({ motion_locked: z.boolean(), call_allowed: z.boolean(),
   reason: z.enum(["moving", "parked", "on_foot", "state_unknown"]) });
-export const SystemWarning = z.object({ code: z.enum(["db_size_warning", "tick_overrun"]), value: z.number() });
+export const SystemWarning = z.object({ code: z.enum(["db_size_warning", "tick_overrun", "ledger_queue_stalled"]),
+  value: z.number() });
 export const FrameSeq = z.object({ frame_seq: z.number().int() });
 export const AnomalyRef = z.object({ anomaly_id: Id });
 
