@@ -37,6 +37,10 @@ Paste this into a fresh Claude Code session (model Opus, never Fable) opened in 
   timeouts; passes in isolation).
 
 ## Queue after session 4 (priority order)
+0. Brand rule (ec17112, asked by the landing lead): no Caterpillar model names anywhere (fixture now "22 t excavator");
+   a caution part is a pale tint, never a solid caution-yellow body with ink edges. Phase 4's 3D part colour must follow
+   the same rule (tint or outline for caution, never a full yellow body). That fix had no separate Opus review (2-line
+   string + CSS change, gate green: web 532, shared+scripts 170); include it in the phase 5 QA look.
 1. D17 phase 4: T10 paper-model 3D stage on desktop Home + T11 perf/a11y gate (study.md (e) phase 4; D17 rules: no
    WebGL on phones, reduced motion, Save-Data, or while moving; render on demand; no auto-rotate; parts list is the
    text twin). Add the Drawing/3D segmented control to the Bay stage then. One L3 lane; Opus review.
