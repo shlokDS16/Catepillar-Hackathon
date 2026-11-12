@@ -15,7 +15,7 @@ import type { AskResponse } from "@cat/shared";
 
 type ProposedAction = NonNullable<NonNullable<AskResponse["answer"]>["proposed_action"]>;
 type Phase = { kind: "idle" } | { kind: "reading" } | { kind: "done"; response: AskResponse } | { kind: "error" };
-type Photo = { name: string; path: string };
+type Photo = { name: string; path: string; blob: Blob };
 
 /**
  * S6 Ask Spotter (screens.md; A17, A18). Levels top to bottom: L1 rule plate and handover, L2 numbered
@@ -61,8 +61,8 @@ export function AskSheet({ open, onClose, onReview }: { open: boolean; onClose: 
     if (!file) return;
     setPhotoError(false);
     try {
-      await compressPhoto(file); // longest side <= 1,600 px; the fixture adapter uploads nothing
-      setPhoto({ name: file.name, path: `${userId ?? "00000000-0000-4000-8000-000000000000"}/${newRequestId()}.jpg` });
+      const blob = await compressPhoto(file); // longest side <= 1,600 px; kept for the upload, the fixture adapter uploads nothing
+      setPhoto({ name: file.name, path: `${userId ?? "00000000-0000-4000-8000-000000000000"}/${newRequestId()}.jpg`, blob });
     } catch {
       setPhoto(null);
       setPhotoError(true);
@@ -214,7 +214,7 @@ export function AskResult({ response, onReview }: { response: AskResponse; onRev
           {t("stepsTitle")}
         </h3>
         <ol className="ask-steps">
-          {answer.steps.map((s) => (
+          {answer.steps.slice(0, 3).map((s) => (
             <li key={s.text} className="t-body">
               {s.text}{" "}
               {citeNumbers(s.cited_ids, citations).map((n) => (
@@ -272,7 +272,7 @@ function RulePlate({ rule, citations }: { rule: { text: string; cited_id: string
 function ReviewButton({ onClick, children }: { onClick: () => void; children: ReactNode }) {
   const t = useTranslations("ask");
   return (
-    <Button variant="primary" block onClick={onClick} note={t("reviewNote")}>
+    <Button block onClick={onClick} note={t("reviewNote")}>
       {children}
     </Button>
   );

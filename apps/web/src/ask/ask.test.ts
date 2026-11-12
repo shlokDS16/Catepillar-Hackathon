@@ -1,5 +1,7 @@
-import { IDS, askAnsweredLeak } from "@cat/shared/fixtures";
+import { ASK_SUGGESTIONS, IDS, askAnsweredHeat, askAnsweredLeak, askAnsweredPrestart, pickAskFixture } from "@cat/shared/fixtures";
 import { describe, expect, it, vi } from "vitest";
+import en from "../../messages/en.json";
+import hi from "../../messages/hi.json";
 import { askViaFunctions, canAsk, citeNumbers, confidencePct, fitWithin, incidentFromProposal, isDemoAnswer, refusalCopyKey } from "@/ask/ask";
 import { buildPayload } from "@/safety/incident-sheet";
 
@@ -29,9 +31,9 @@ describe("A18 prefill", () => {
     expect(() => buildPayload(s, null)).toThrow(); // incomplete until the operator picks how serious
     expect(buildPayload({ ...s, severity: 3 }, null).p_incident_type).toBe("property_damage");
   });
-  it("an incident type A13 does not offer becomes manual; the note is cleaned and capped at 280", () => {
+  it("an incident type A13 does not offer leaves the kind for the operator; the note is cleaned and capped at 280", () => {
     const s = incidentFromProposal({ incident_type: "seatbelt_breach", description: "a\nb" + "x".repeat(400) }, "r");
-    expect(s.kind).toBe("manual");
+    expect(s.kind).toBeNull();
     expect(s.note.startsWith("a b")).toBe(true);
     expect(s.note.length).toBe(280);
   });
@@ -79,5 +81,30 @@ describe("askViaFunctions (the Supabase adapter's path; no ask function is deplo
       expect(out.refusal_reason).toBe("provider_down");
       expect(out.request_id).toBe(IDS.request);
     }
+  });
+});
+
+describe("suggested questions answer in every language", () => {
+  const want = [askAnsweredLeak, askAnsweredPrestart, askAnsweredHeat];
+  for (const [name, msgs] of [["en", en], ["hi", hi]] as const) {
+    it(`${name}: each of the 3 suggestions gets its intended fixture`, () => {
+      const list = msgs.ask.suggested as string[];
+      expect(list).toHaveLength(3);
+      list.forEach((question, i) => {
+        const r = pickAskFixture({ request_id: IDS.request, question, photo_path: null });
+        expect(r.status).toBe("answered");
+        expect(r.answer).toEqual(want[i].answer);
+      });
+    });
+  }
+  it("the message files and the fixture table agree", () => {
+    expect(ASK_SUGGESTIONS.map((s) => s.en)).toEqual(en.ask.suggested);
+    expect(ASK_SUGGESTIONS.map((s) => s.hi)).toEqual(hi.ask.suggested);
+  });
+  it("Hindi keywords route typed questions too", () => {
+    const q = (question: string) => pickAskFixture({ request_id: IDS.request, question, photo_path: null }).answer;
+    expect(q("हाइड्रोलिक तेल का रिसाव")).toEqual(askAnsweredLeak.answer);
+    expect(q("बहुत गर्मी है")).toEqual(askAnsweredHeat.answer);
+    expect(q("मशीन की जाँच कैसे करूँ")).toEqual(askAnsweredPrestart.answer);
   });
 });

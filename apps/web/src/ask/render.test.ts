@@ -1,4 +1,4 @@
-import { askAnsweredLeak, askAnsweredPrestart, askDegraded, askRateLimited } from "@cat/shared/fixtures";
+import { askAnsweredLeak, askAnsweredPrestart, askDegraded, askInjection, askPolicy, askRateLimited } from "@cat/shared/fixtures";
 import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
 import { NextIntlClientProvider } from "next-intl";
@@ -21,9 +21,9 @@ describe("AskResult render", () => {
   it("answered: rule plate with source, numbered steps with marks, citation and photo chips, handover, Review and log, SIM caption", () => {
     const text = strip(html(askAnsweredLeak));
     expect(text).toContain("Do not operate equipment with a known hydraulic leak.");
-    expect(text).toContain("Source: OSHA 3120, page 4");
+    expect(text).toContain("Source: Site safety manual (demo), page 4");
     expect(text).toContain("Talk to your supervisor");
-    expect(text).toContain("OSHA 3120 · page 4");
+    expect(text).toContain("Site safety manual (demo) · page 4");
     expect(text).toContain("Looks like: hydraulic leak · 72 %");
     expect(text).toContain("Review and log");
     expect(text).toContain("SIM");
@@ -46,6 +46,11 @@ describe("AskResult render", () => {
     const text = strip(html(askDegraded));
     expect(text).toContain("Backup model");
     expect(text).toContain("Steps");
+  });
+  it("refused and degraded carry the SIM caption; injection and policy copy render", () => {
+    for (const f of [askRateLimited, askDegraded, askInjection, askPolicy]) expect(strip(html(f))).toContain("SIM");
+    expect(strip(html(askInjection))).toContain("Spotter can't answer that. Ask your supervisor.");
+    expect(strip(html(askPolicy))).toContain("Spotter can't answer that. Ask your supervisor.");
   });
   it("renders in Hindi from the same fixture", () => {
     const text = strip(html(askAnsweredLeak, vi.fn(), hi, "hi"));

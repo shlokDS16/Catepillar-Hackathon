@@ -6,6 +6,7 @@ import { initialIncident, INCIDENT_KINDS, NOTE_MAX, type IncidentKind, type Inci
 
 export const QUESTION_MAX = 500;
 export const PHOTO_MAX_PX = 1600;
+export const PHOTO_MAX_BYTES = 15 * 1024 * 1024;
 
 type Refusal = NonNullable<AskResponse["refusal_reason"]>;
 /** Keys under `ask.refusal.*` in the message files. */
@@ -57,7 +58,7 @@ export async function askViaFunctions(invoke: Invoke, input: AskRequest): Promis
 
 /** A18: A13's draft from `proposed_action`. The model never sets severity or writes; the operator completes and confirms. */
 export function incidentFromProposal(action: { incident_type: string; description: string }, requestId: string): IncidentState {
-  const kind: IncidentKind = INCIDENT_KINDS.includes(action.incident_type as IncidentKind) ? (action.incident_type as IncidentKind) : "manual";
+  const kind: IncidentKind | null = INCIDENT_KINDS.includes(action.incident_type as IncidentKind) ? (action.incident_type as IncidentKind) : null;
   return { ...initialIncident(requestId), kind, note: action.description.replace(/[\u0000-\u001f\u007f]+/g, " ").slice(0, NOTE_MAX) };
 }
 
@@ -79,6 +80,7 @@ export const canAsk = (question: string, busy: boolean, offline: boolean) =>
 
 /** Client-side compress to a JPEG with the longest side at most 1,600 px (A17). Browser only. */
 export async function compressPhoto(file: File): Promise<Blob> {
+  if (file.size > PHOTO_MAX_BYTES) throw new Error("photo too large");
   const bmp = await createImageBitmap(file);
   const { width, height } = fitWithin(bmp.width, bmp.height);
   const canvas = document.createElement("canvas");
