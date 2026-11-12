@@ -50,6 +50,14 @@ export const mySnapshot = {
   machine: {
     id: IDS.machine, code: "EXC-007", model_name: "Cat 320", moving: true, speed_kmh: 6.2, health: "ok" as const,
     location: { lat: 21.1463, lon: 79.0882 }, seatbelt_fastened: false, parking_brake: false,
+    parts: [
+      { id: "boom_ram" as const, state: "caution" as const, note_key: "bay.note.boom_ram_drift" },
+      { id: "tracks" as const, state: "ok" as const, note_key: "bay.note.ok" },
+      { id: "engine" as const, state: "ok" as const, note_key: "bay.note.ok" },
+      { id: "cab" as const, state: "ok" as const, note_key: "bay.note.ok" },
+      { id: "bucket" as const, state: "ok" as const, note_key: "bay.note.ok" },
+      { id: "rear_sensor" as const, state: "ok" as const, note_key: "bay.note.ok" },
+    ],
   },
   operator_state: {
     on_foot: false, ppe: { helmet: true, vest: true }, location: { lat: 21.1463, lon: 79.0882 }, ts: T0,
