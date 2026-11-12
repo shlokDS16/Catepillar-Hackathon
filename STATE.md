@@ -1,5 +1,13 @@
 # STATE (source of truth; only the integrator/orchestrator edits this file)
 
+> **2026-11-12 session 4 (lead L0, Opus, 68 % weekly): PRODUCTION IS STALE.** https://spotter-five-brown.vercel.app
+> still serves 5bb9474 (session 2). Vercel created no deployment for any main push since 6668dd1 (18:00 IST); lane
+> previews still build. A production redeploy through the Vercel MCP was refused by the auto-mode check: Shlok must
+> redeploy main (Vercel > spotter > Deployments > Redeploy / Create Deployment from main) and check Settings > Git
+> (production branch, Ignored Build Step). Newest preview with all session 3 code: spotter-q2zs93bg5-shlok-goenkas-projects.vercel.app
+> (36ac9c4; previews are behind Vercel SSO, so judges cannot open them). In flight: D17 phase 2-3 lanes l2-bay-home,
+> l3-wait-fleet, l2-fm-detail.
+
 > **2026-11-12 session 3 (lead L0, Opus, 66 % -> ~68 % weekly): merged D17 Machine Bay phase 1 (0389806 drawing +
 > parts, d02084e honest band + shift tape) and Lane A judge fixes (a720218), and the D18 live path (4205ddd).** /director/live signs in as seeded demo users
 > (passwords only in the git-ignored .env); judges see fixtures. Next: D17 phases 2-5, then the demo video. Queue: docs/sessions/lead-handoff.md.
