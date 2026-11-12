@@ -75,7 +75,8 @@
   width: var(--s-6);
   height: var(--s-6);
 }
-.deb-belt[data-belt="off"] .picto {
+.deb-belt[data-belt="off"] .picto,
+.deb-belt[data-belt="unknown"] .picto {
   opacity: 0.45;
 }
 .deb-belt[data-belt="off"] > span {

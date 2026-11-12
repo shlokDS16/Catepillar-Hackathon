@@ -35,9 +35,10 @@ const M: ReenactModel = {
     { t_ms: 0, on: true },
     { t_ms: 15000, on: false },
   ],
-  beltDefault: "off",
+  beltDefault: "unknown",
   eventMs: 20000,
   responseMs: 28000,
+  responseClamped: false,
 };
 
 describe("stateAt", () => {
@@ -124,13 +125,34 @@ describe("buildReenactModel on the fixture (sparse data)", () => {
     expect(mid.speed_kmh).toBeCloseTo(6.2);
     expect(mid.trail).toHaveLength(2);
     expect(mid.wind).toEqual({ from_deg: 250, kmh: 12 });
-    expect(mid.seatbelt).toBe("off");
+    expect(mid.seatbelt).toBe("unknown");
   });
 
   it("clamps the stopwatch to the end when the response falls past it", () => {
     const s = replayScenario as ReplayScenario;
     const late = { ...s, reenactment: { ...s.reenactment, duration_ms: 60000, real_response_ms: 999999 } };
     expect(buildReenactModel(late).responseMs).toBe(60000);
+    expect(buildReenactModel(late).responseClamped).toBe(true);
+    expect(model.responseClamped).toBe(false);
+  });
+
+  it("never invents a seatbelt reading: unknown without a series, exact with one", () => {
+    expect(stateAt(model, 0).seatbelt).toBe("unknown");
+    expect(stateAt(M, 0).seatbelt).toBe("on");
+  });
+
+  it("survives an empty recording and a zero duration", () => {
+    const s = replayScenario as ReplayScenario;
+    const empty = {
+      ...s,
+      reenactment: { duration_ms: 0, trail: [], machine_track: [], wind: [], real_response_ms: null },
+    };
+    const st = stateAt(buildReenactModel(empty), 0);
+    expect(st.machine).toBeNull();
+    expect(st.trail).toEqual([]);
+    expect(st.wind).toBeNull();
+    expect(Number.isFinite(st.fraction)).toBe(true);
+    expect(stateAt({ ...M, durationMs: 0 }, 5).t).toBe(0);
   });
 });
 

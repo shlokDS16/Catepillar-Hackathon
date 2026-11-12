@@ -210,7 +210,7 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
         {phase === "submitting" ? (
           <ReplaySubmitting failed={state.submitFailed} onRetry={retrySubmit} />
         ) : null}
-                {phase === "debrief" && state.debrief && scenario ? (
+        {phase === "debrief" && state.debrief && scenario ? (
           <ReplayDebrief
             result={state.debrief}
             scenario={scenario}

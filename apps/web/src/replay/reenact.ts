@@ -18,7 +18,8 @@ export type Fix = { t_ms: number; lat: number; lon: number };
 export type TrackFix = Fix & { speed_kmh: number; pitch_deg: number };
 export type WindFix = { t_ms: number; from_deg: number; kmh: number };
 export type BeltFix = { t_ms: number; on: boolean };
-export type SeatbeltState = "on" | "off";
+/** "unknown" = the recording carries no seatbelt reading: shown as "No reading", never guessed. */
+export type SeatbeltState = "on" | "off" | "unknown";
 
 export type ReenactModel = {
   durationMs: number;
@@ -28,10 +29,17 @@ export type ReenactModel = {
   /** Seatbelt samples (step function). Empty means the recording has none: see `beltDefault`. */
   belt: BeltFix[];
   beltDefault: SeatbeltState;
-  /** The flag moment: the last recorded fix (the window the server builds ends at the event). */
+  /**
+   * The flag moment. ASSUMPTION (fallback): the last recorded fix; nothing in the contract says the
+   * window ends at the event. TODO(L1, additive): `reenactment.event_ms` (optional int) to say where
+   * the event sits, and `reenactment.machine_track[].seatbelt_fastened` (boolean | null, optional)
+   * for the belt. Prefer them here once the server sends them.
+   */
   eventMs: number;
   /** The stopwatch moment: when the operator responded, `eventMs + real_response_ms`; null if unknown. */
   responseMs: number | null;
+  /** True when `eventMs + real_response_ms` fell past the end and the marker was pulled back to it. */
+  responseClamped: boolean;
 };
 
 export type ReenactState = {
@@ -141,7 +149,7 @@ function beltFromCards(cards: readonly EvidenceCard[]): BeltFix[] {
 /**
  * Builds the model from a scenario. The flag sits at the last recorded fix and the stopwatch
  * `real_response_ms` after it (clamped to the end), so both always fall on the timeline. With no
- * seatbelt series the belt reads "off" throughout, which is what a seatbelt-breach replay is about.
+ * seatbelt series the belt is "unknown": a reading nobody recorded is never shown.
  */
 export function buildReenactModel(scenario: ReplayScenario): ReenactModel {
   const r = scenario.reenactment;
@@ -151,8 +159,19 @@ export function buildReenactModel(scenario: ReplayScenario): ReenactModel {
   const lastFix = Math.max(0, trail.at(-1)?.t_ms ?? 0, track.at(-1)?.t_ms ?? 0);
   const durationMs = Math.max(1, r.duration_ms, lastFix);
   const eventMs = clamp(lastFix, 0, durationMs);
-  const responseMs = r.real_response_ms === null ? null : clamp(eventMs + Math.max(0, r.real_response_ms), 0, durationMs);
-  return { durationMs, trail, track, wind, belt: beltFromCards(scenario.investigate.cards), beltDefault: "off", eventMs, responseMs };
+  const rawResponse = r.real_response_ms === null ? null : eventMs + Math.max(0, r.real_response_ms);
+  const responseMs = rawResponse === null ? null : clamp(rawResponse, 0, durationMs);
+  return {
+    durationMs,
+    trail,
+    track,
+    wind,
+    belt: beltFromCards(scenario.investigate.cards),
+    beltDefault: "unknown",
+    eventMs,
+    responseMs,
+    responseClamped: rawResponse !== null && rawResponse > durationMs,
+  };
 }
 
 /** Everything the Debrief shows at sim time `tMs` (clamped to the timeline). */

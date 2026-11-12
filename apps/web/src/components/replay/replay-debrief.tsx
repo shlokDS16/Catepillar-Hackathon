@@ -16,7 +16,7 @@ import type { ReplayDebriefResult, ReplayScenario } from "@cat/shared";
 type Props = {
   result: ReplayDebriefResult;
   scenario: ReplayScenario;
-  /** A live alert or a hidden page froze the run: the re-enactment stops until [Resume]. */
+  /** A live alert froze the run: the re-enactment stops until [Resume]. */
   paused: boolean;
   onPractiseAgain: () => void;
 };

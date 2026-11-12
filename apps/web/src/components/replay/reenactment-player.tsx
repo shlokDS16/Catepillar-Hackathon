@@ -19,7 +19,7 @@ import type { ReplayScenario } from "@cat/shared";
 
 type Props = {
   scenario: ReplayScenario;
-  /** A live alert or a hidden page: playback stops until the operator resumes. */
+  /** A live alert (or the screen's pause): playback stops until the operator resumes. */
   paused: boolean;
 };
 
@@ -40,6 +40,7 @@ function planBase(scenario: ReplayScenario, model: ReenactModel) {
  */
 export function ReenactmentPlayer({ scenario, paused }: Props) {
   const t = useTranslations("replay.debrief.player");
+  const tp = useTranslations("provenance");
   const model = useMemo(() => buildReenactModel(scenario), [scenario]);
   const { center, zones } = useMemo(() => planBase(scenario, model), [scenario, model]);
   const points = useMemo(
@@ -76,7 +77,11 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
                 {s.machineTrail.length > 1 ? <path d={path(s.machineTrail)} className="plan-track" /> : null}
                 {flagAt ? <PlanFlag at={toXY(flagAt)} u={u} passed={s.flagPassed} /> : null}
                 {operator ? <circle cx={operator.x} cy={operator.y} r={u * 0.38} className="plan-me" /> : null}
-                {machine && s.machine ? (
+                {machine && s.machine && model.track.length < 2 ? (
+                  // One fix only: no direction was recorded, so no arrow, just the evidence card's square.
+                  <rect x={machine.x - u / 2} y={machine.y - u / 2} width={u} height={u} className="plan-machine" />
+                ) : null}
+                {machine && s.machine && model.track.length >= 2 ? (
                   <g transform={`translate(${machine.x.toFixed(2)} ${machine.y.toFixed(2)}) rotate(${s.machine.heading_deg.toFixed(1)})`}>
                     <path
                       d={`M0 ${-u * 0.95} L${u * 0.62} ${u * 0.7} L0 ${u * 0.3} L${-u * 0.62} ${u * 0.7} Z`}
@@ -104,18 +109,18 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
           <dd className="t-label tnum">{t("timeValue", { now, total })}</dd>
         </div>
         <div>
-          <dt className="t-meta">{t("speed")}</dt>
+          <dt className="t-meta">{t("speed")} <span className="text-ink-3">{tp("assumed")}</span></dt>
           <dd className="t-label tnum">{s.speed_kmh === null ? t("none") : t("speedValue", { v: s.speed_kmh.toFixed(1) })}</dd>
         </div>
         <div>
-          <dt className="t-meta">{t("pitch")}</dt>
+          <dt className="t-meta">{t("pitch")} <span className="text-ink-3">{tp("assumed")}</span></dt>
           <dd className="t-label tnum">{s.pitch_deg === null ? t("none") : t("pitchValue", { v: s.pitch_deg.toFixed(1) })}</dd>
         </div>
         <div>
           <dt className="t-meta">{t("seatbelt")}</dt>
           <dd className="t-label deb-belt" data-belt={s.seatbelt}>
             <Pictogram name="seatbelt" shape="none" />
-            <span>{t(s.seatbelt === "on" ? "beltOn" : "beltOff")}</span>
+            <span>{s.seatbelt === "unknown" ? t("none") : t(s.seatbelt === "on" ? "beltOn" : "beltOff")}</span>
           </dd>
         </div>
         <div>
@@ -143,13 +148,13 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
         {responseS !== null ? (
           <li>
             <ClockGlyph passed={s.responsePassed} />
-            {t("legendResponse", { s: responseS })}
+            {model.responseClamped ? t("legendResponseEnd", { s: responseS }) : t("legendResponse", { s: responseS })}
           </li>
         ) : null}
       </ul>
 
       <div className="deb-controls">
-        <Button variant="primary" onClick={toggle} aria-pressed={player.playing}>
+        <Button variant="primary" onClick={toggle}>
           {player.playing ? t("pause") : player.ended ? t("playAgain") : t("play")}
         </Button>
         <Button onClick={player.restart}>
