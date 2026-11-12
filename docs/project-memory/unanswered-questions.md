@@ -32,3 +32,5 @@ Format: **[date]** - the question, why it matters, what would answer it.
   changed then. Agents may not trigger production deploys (auto-mode refused it). Action: Vercel > spotter >
   Deployments > Redeploy or Create Deployment from main; check Settings > Git (production branch = main, Ignored
   Build Step empty). Until then the newest preview (behind Vercel SSO) is spotter-q2zs93bg5-shlok-goenkas-projects.vercel.app.
+- RESOLVED 2026-11-12 (session 4): the next main push (e23dcfa) deployed to production READY, and later merges
+  deployed too. Cause unknown; if it recurs, Shlok redeploys main from the Vercel dashboard.
