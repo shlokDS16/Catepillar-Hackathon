@@ -62,7 +62,7 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
 
   return (
     <div className="deb-player">
-      <p className="t-meta deb-cap">{t("caption")}</p>
+      <p className="t-meta deb-cap">{t(model.eventExact ? "captionExact" : "caption")}</p>
 
       <div className="site-plan">
         <SitePlanFrame center={center} points={points} zones={zones} label={t("mapLabel")}>
