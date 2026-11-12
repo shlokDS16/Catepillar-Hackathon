@@ -297,7 +297,7 @@ export async function mountWordmark(canvas: HTMLCanvasElement, opts: WordmarkOpt
   const MX = (letters[WORD.indexOf("O")].cx / (GRID.w - 1) - 0.5) * GRID.width + 36;
   const MZ = 44;
 
-  const box: WordBox = { x: Math.max(box0.x, MX + 17), z: box0.z, h: Math.max(box0.h, 15), zFront: Math.min(GRID.depth / 2, MZ + 17) };
+  const box: WordBox = { x: Math.max(box0.x, MX + 19), z: box0.z, h: Math.max(box0.h, 15), zFront: Math.min(GRID.depth / 2, MZ + 19) };
 
   let renderer: THREE.WebGLRenderer;
   try {
@@ -402,7 +402,7 @@ export async function mountWordmark(canvas: HTMLCanvasElement, opts: WordmarkOpt
 
   /* The machine, parked on the O. */
   const exc = buildExcavator();
-  exc.group.scale.setScalar(3.2);
+  exc.group.scale.setScalar(3.6);
   const oi = WORD.indexOf("O");
   // Parked on the ground in front of the word, just right of the O, on the haul road: it never covers a top face.
   exc.group.position.set(MX, sampleHeight(hf, MX, MZ), MZ);
