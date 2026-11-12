@@ -1,8 +1,9 @@
-import { MySnapshotOut } from "@cat/shared";
+import { AnomalyDetected, MySnapshotOut } from "@cat/shared";
 import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, protocolCard, replayDebrief, replayScenario, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
 import { RpcError, type DataPort, type PortMessage } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
 import type { SiteMapData } from "@/map/site-map";
+import type { InboxItem } from "@/inbox/inbox";
 
 /**
  * The FixtureAdapter: every read answers from @cat/shared/fixtures, every RPC succeeds after a short
@@ -200,6 +201,37 @@ export class FixtureAdapter implements DataPort {
       trail: [...plan.trail.map((p) => ({ lat: p.lat, lon: p.lon })), me],
       machines: [{ id: IDS.anomaly, code: "EXC-014", lat: 21.1468, lon: 79.0879, moving: false, health: "fault" }],
     };
+  }
+
+  /**
+   * S7 rows. One per kind the Inbox has to show: a tamper (Critical), a blocked PPE start, a
+   * Guardian hazard and an idling anomaly (both with their sentence), a flood, a non-punitive
+   * near-miss (no operator), plus one handled, one resolved and one suppressed.
+   */
+  async inbox(): Promise<InboxItem[]> {
+    await wait(this.latencyMs);
+    const at = (hhmm: string) => `2026-09-24T${hhmm}:00.000+05:30`;
+    const row = (over: Partial<InboxItem> & Pick<InboxItem, "id" | "kind" | "tier" | "firstSeen">): InboxItem => ({
+      status: "open", needsAck: false, occurrences: 1, operatorName: null, machineCode: null, taskId: null,
+      taskBlocked: false, missing: [], dispatch: null, anomaly: null, nonPunitive: false, ...over,
+    });
+    const idle = AnomalyDetected.parse(EVENT_PAYLOADS["anomaly.detected"]);
+    const hydraulic = AnomalyDetected.parse({
+      ...EVENT_PAYLOADS["anomaly.detected"], anomaly_id: "f5f5f5f5-f5f5-4f5f-8f5f-f5f5f5f5f5f5", anomaly_type: "hydraulic_temp_drift", method: "ewma",
+      severity_score: 62, severity_tier: "warning", fuel_l: null, cost_inr: null, features: { value: 86, mean: 71 }, lat: 21.1468, lon: 79.0879,
+      explanation: { en: "EXC-014 hydraulic oil is at 86 °C, rising above its normal 71 °C.", hi: "EXC-014 का हाइड्रोलिक तेल 86 °C है, सामान्य 71 °C से ऊपर।" },
+    });
+    return [
+      row({ id: IDS.root, kind: "ledger_tamper", tier: "critical", firstSeen: at("09:41"), needsAck: true, dispatch: "telegram:sent" }),
+      row({ id: "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1", kind: "ppe_missing", tier: "caution", firstSeen: at("09:43"), needsAck: true, operatorName: "Ravi", machineCode: "EXC-007", taskId: IDS.task, taskBlocked: true, missing: ["vest"], dispatch: "telegram:delivered" }),
+      row({ id: IDS.dispatch, kind: "guardian_hazard", tier: "warning", firstSeen: at("09:47"), needsAck: true, operatorName: "Ravi", machineCode: "EXC-014", anomaly: hydraulic, dispatch: "telegram:sent" }),
+      row({ id: IDS.anomaly, kind: "idle_excess", tier: "caution", firstSeen: at("09:20"), occurrences: 3, machineCode: "EXC-007", anomaly: idle }),
+      row({ id: "a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2", kind: "alert_flood", tier: "caution", firstSeen: at("09:30"), needsAck: true, occurrences: 12 }),
+      row({ id: "a3a3a3a3-a3a3-4a3a-8a3a-a3a3a3a3a3a3", kind: "near_miss", tier: "caution", firstSeen: at("09:10"), nonPunitive: true }),
+      row({ id: IDS.alert, kind: "seatbelt_off_moving", tier: "warning", firstSeen: at("09:40"), status: "acknowledged", needsAck: true, operatorName: "Ravi", machineCode: "EXC-007", dispatch: "telegram:answered" }),
+      row({ id: "a4a4a4a4-a4a4-4a4a-8a4a-a4a4a4a4a4a4", kind: "proximity_zone", tier: "warning", firstSeen: at("08:55"), status: "resolved", needsAck: true, operatorName: "Meena", machineCode: "DMP-003" }),
+      row({ id: "a5a5a5a5-a5a5-4a5a-8a5a-a5a5a5a5a5a5", kind: "idle_excess", tier: "caution", firstSeen: at("08:30"), status: "suppressed", machineCode: "EXC-011" }),
+    ];
   }
 
   async pairMachine(input: { p_machine_code: string; p_request_id: string }) {

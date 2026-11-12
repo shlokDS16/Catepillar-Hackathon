@@ -1,5 +1,5 @@
-import { Stub } from "@/components/ui/stub";
+import { InboxScreen } from "@/components/inbox/inbox-screen";
 
 export default function Page() {
-  return <Stub task="F14" />;
+  return <InboxScreen />;
 }
