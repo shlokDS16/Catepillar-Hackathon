@@ -13,8 +13,8 @@
 .bay-svg .bay-dark > rect, .bay-svg .bay-dark-fill { fill: var(--ink-2); stroke: var(--ink); stroke-width: var(--bw); }
 .bay-svg .bay-glass { fill: var(--surface-sunk); stroke: var(--ink); stroke-width: var(--bw-hair); }
 .bay-svg .bay-line { fill: none; stroke: var(--ink); stroke-width: var(--bw); stroke-linecap: round; }
-.bay-svg .bay-thick { stroke-width: var(--s-1); }
-.bay-svg .bay-thicker { stroke-width: var(--s-2); }
+.bay-svg .bay-thick { stroke-width: var(--bw-heavy); }
+.bay-svg .bay-thicker { stroke-width: calc(var(--bw-heavy) * 2); }
 .bay-svg .bay-p > .bay-ram { fill: var(--ink-2); }
 
 /* Live state fills: a part is coloured only while it has a live state other than ok. */
@@ -40,6 +40,8 @@
   background: var(--surface); border: var(--bw) solid var(--ink); padding: var(--s-1) var(--s-2); max-width: 40%;
   font-family: var(--ff-body); font-size: var(--t-label); font-weight: var(--fw-title); line-height: var(--lh-label);
   animation: bay-tag-in 160ms linear both; }
+.bay-tag-text { display: flex; flex-direction: column; min-width: 0; }
+.bay-tag-state { font-size: var(--t-caption); }
 .bay-tag-n { background: var(--ink); color: var(--on-ink); min-width: var(--s-5); text-align: center; }
 .bay-tag[data-state="caution"] { background: var(--state-caution); color: var(--on-signal); }
 .bay-tag[data-state="warning"] { background: var(--state-warning); color: var(--on-signal); }
@@ -53,8 +55,12 @@
 .bay-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
 .bay-row { display: flex; align-items: center; gap: var(--s-3); min-height: var(--hit); box-sizing: border-box; padding: var(--s-2) var(--s-3);
   border-block-end: var(--bw-hair) solid var(--ink); background: var(--surface); }
-.bay-row[data-state] { border-inline-start: var(--stripe) solid var(--ink); }
+.bay-row[data-state] { border-inline-start: var(--bw-heavy) solid var(--ink); }
 .bay-row-n { min-width: var(--s-5); text-align: center; }
 .bay-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--s-1); }
 .bay-row .chip { flex: none; }
+@media (max-width: 480px) {
+  .bay-row { flex-wrap: wrap; }
+  .bay-row-main { flex-basis: calc(100% - var(--s-7)); }
+}
 .bay-row .chip[data-tone="clear"] { --mark-bg: var(--state-clear); }

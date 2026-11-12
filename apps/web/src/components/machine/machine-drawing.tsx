@@ -49,7 +49,7 @@ export function MachineDrawing({ parts = [], highlight, callouts, variant = "liv
   const rollers = [170, 215, 260, 305, 340];
   return (
     <div className={cx("bay-draw", className)} data-variant={variant} data-callouts={callouts}>
-      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t("drawingLabel")} className="bay-svg">
+      <svg viewBox={`0 0 ${W} ${H}`} role="img" aria-label={t(callouts === "numbers" ? "drawingLabelNumbered" : "drawingLabel")} className="bay-svg">
         <line className="bay-ground" x1="30" y1="323" x2="620" y2="323" />
         {Array.from({ length: 36 }, (_, k) => (
           <line key={k} className="bay-hatch" x1={40 + k * 16} y1="326" x2={30 + k * 16} y2="340" />
@@ -127,7 +127,10 @@ export function MachineDrawing({ parts = [], highlight, callouts, variant = "liv
                 style={{ left: `${(CALLOUT[id].tx / W) * 100}%`, top: `${(CALLOUT[id].ty / H) * 100}%` }}
               >
                 <span className="bay-tag-n tnum">{i + 1}</span>
-                <span className="bay-tag-name">{t(`part.${id}`)}</span>
+                <span className="bay-tag-text">
+                  <span className="bay-tag-name">{t(`part.${id}`)}</span>
+                  <span className="bay-tag-state t-caption">{t(`state.${state}`)}</span>
+                </span>
               </li>
             );
           })}

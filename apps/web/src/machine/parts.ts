@@ -18,10 +18,7 @@ export type MachinePartView = {
   state: PartState;
   /** i18n key (full path, "bay.note.*") for the one-line note. */
   noteKey: string;
-  derived: boolean;
 };
-
-const worse = (a: PartState, b: PartState): PartState => (PART_STATE_ORDER[a] >= PART_STATE_ORDER[b] ? a : b);
 
 /** Cab: belt off while moving is a warning, belt off while stopped a caution, otherwise ok. */
 export function cabState(machine: { moving: boolean; seatbelt_fastened: boolean | null }): { state: PartState; noteKey: string } {
@@ -40,13 +37,11 @@ export function machineParts(snapshot: Pick<Snapshot, "machine"> | null | undefi
   const given = new Map((machine.parts ?? []).map((p) => [p.id, p]));
   return PART_IDS.map((id, i): MachinePartView => {
     const p = given.get(id);
-    if (id === "cab") {
-      const d = cabState(machine);
-      if (!p || PART_STATE_ORDER[d.state] >= PART_STATE_ORDER[p.state]) {
-        return { id, n: i + 1, state: p ? worse(p.state, d.state) : d.state, noteKey: d.state === "ok" && p ? p.note_key : d.noteKey, derived: true };
-      }
-    }
-    return { id, n: i + 1, state: p?.state ?? "ok", noteKey: p?.note_key ?? "bay.note.ok", derived: false };
+    const given: { state: PartState; noteKey: string } = { state: p?.state ?? "ok", noteKey: p?.note_key ?? "bay.note.ok" };
+    if (id !== "cab") return { id, n: i + 1, ...given };
+    // The cab takes whichever of the given and the derived state is worse, with that side's note.
+    const d = cabState(machine);
+    return { id, n: i + 1, ...(d.state !== "ok" && PART_STATE_ORDER[d.state] >= PART_STATE_ORDER[given.state] ? d : given) };
   });
 }
 

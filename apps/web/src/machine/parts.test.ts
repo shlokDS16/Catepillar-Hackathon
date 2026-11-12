@@ -22,7 +22,7 @@ describe("machineParts", () => {
   });
   it("maps machine.parts for the non-cab parts", () => {
     const p = machineParts(snap({ parts: [{ id: "boom_ram", state: "caution", note_key: "bay.note.boom_ram_drift" }, { id: "tracks", state: "critical", note_key: "bay.note.ok" }] }));
-    expect(p.find((x) => x.id === "boom_ram")).toMatchObject({ state: "caution", noteKey: "bay.note.boom_ram_drift", derived: false });
+    expect(p.find((x) => x.id === "boom_ram")).toMatchObject({ state: "caution", noteKey: "bay.note.boom_ram_drift" });
     expect(p.find((x) => x.id === "tracks")?.state).toBe("critical");
     expect(p.find((x) => x.id === "engine")?.state).toBe("ok");
   });
@@ -32,7 +32,7 @@ describe("machineParts", () => {
     expect(cabState({ moving: true, seatbelt_fastened: true }).state).toBe("ok");
     expect(cabState({ moving: true, seatbelt_fastened: null }).state).toBe("ok");
     const cab = machineParts(snap({ moving: true, seatbelt_fastened: false })).find((x) => x.id === "cab");
-    expect(cab).toMatchObject({ state: "warning", noteKey: "bay.note.cab_belt_moving", derived: true });
+    expect(cab).toMatchObject({ state: "warning", noteKey: "bay.note.cab_belt_moving" });
   });
   it("never lets a cab entry in machine.parts hide a worse derived state, nor the reverse", () => {
     const worseDerived = machineParts(snap({ moving: true, seatbelt_fastened: false, parts: [{ id: "cab", state: "caution", note_key: "x" }] }));

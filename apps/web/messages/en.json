@@ -162,7 +162,8 @@
   "bay": {
     "title": "Your machine",
     "partsTitle": "Machine parts",
-    "drawingLabel": "Side view of the excavator, a drawing with six numbered parts",
+    "drawingLabel": "Side view of the excavator, a drawing",
+    "drawingLabelNumbered": "Side view of the excavator, a drawing with six numbered parts",
     "drawingNote": "A drawing, not a photo. Readings simulated (SIM).",
     "sim": "SIM · simulated reading",
     "part": {
@@ -181,6 +182,7 @@
     },
     "note": {
       "ok": "Nothing to report",
+      "generic": "Check at the next stop",
       "boom_ram_drift": "Boom ram drifts down slowly when held. Tell the technician.",
       "cab_belt_moving": "Seatbelt is off while the machine moves",
       "cab_belt_off": "Seatbelt is off"

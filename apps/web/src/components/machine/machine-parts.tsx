@@ -1,3 +1,4 @@
+import { useId } from "react";
 import { useTranslations } from "next-intl";
 import { Chip, type ChipTone } from "@/components/ui/chip";
 import { Mark, Pictogram } from "@/components/ui/pictogram";
@@ -18,10 +19,11 @@ function StateIcon({ state }: { state: PartState }) {
 
 export function MachineParts({ parts, variant = "live", className }: { parts: MachinePartView[]; variant?: "live" | "replay"; className?: string }) {
   const t = useTranslations("bay");
+  const hid = useId();
   if (parts.length === 0) return null;
   return (
-    <section className={cx("bay-parts", className)} aria-label={t("partsTitle")}>
-      <h2 className="t-title">{t("partsTitle")}</h2>
+    <section className={cx("bay-parts", className)} aria-labelledby={hid}>
+      <h2 id={hid} className="t-title">{t("partsTitle")}</h2>
       <ol className="bay-rows">
         {parts.map((p) => {
           const key = p.noteKey.replace(/^bay\./, "");
@@ -32,10 +34,10 @@ export function MachineParts({ parts, variant = "live", className }: { parts: Ma
               </span>
               <div className="bay-row-main">
                 <span className="t-label">{t(`part.${p.id}`)}</span>
-                <span className="t-meta text-ink-2">{t.has(key) ? t(key) : t("note.ok")}</span>
+                <span className="t-meta text-ink-2">{t.has(key) && !(key === "note.ok" && p.state !== "ok") ? t(key) : t(p.state === "ok" ? "note.ok" : "note.generic")}</span>
                 <span className="t-caption text-ink-3">{t("sim")}</span>
               </div>
-              <Chip tone={TONE[p.state]} word icon={<StateIcon state={p.state} />}>
+              <Chip tone={variant === "live" ? TONE[p.state] : "outline"} word icon={<StateIcon state={p.state} />}>
                 {t(`state.${p.state}`)}
               </Chip>
             </li>
