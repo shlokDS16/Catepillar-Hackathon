@@ -38,6 +38,12 @@ export interface LedgerVerifyResult {
   head_hash: string;
   first_seq: number | null;
   last_seq: number | null;
+  /**
+   * Near-miss rows the server sealed for the fleet manager (003d): their `entry_hash` is taken as given
+   * (the ids it covers are withheld), but their seq, link and place in the Merkle root are still checked.
+   * Optional so older fixtures of this shape stay valid.
+   */
+  sealed?: number;
 }
 
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -120,6 +126,7 @@ export async function verifyLedger(rows: readonly LedgerExportRow[]): Promise<Le
   const lastSeq = Number(sorted[sorted.length - 1]!.seq);
   const hashes: string[] = [];
   let previous: string | null = null;
+  let sealedCount = 0;
 
   for (let i = 0; i < sorted.length; i++) {
     const row = sorted[i]!;
@@ -130,7 +137,11 @@ export async function verifyLedger(rows: readonly LedgerExportRow[]): Promise<Le
     if (i > 0 && seq !== Number(sorted[i - 1]!.seq) + 1) {
       return fail(i, seq, "seq_gap", `seq jumped from ${sorted[i - 1]!.seq} to ${row.seq}`, rootSoFar, headSoFar, firstSeq, lastSeq);
     }
-    const keys = Object.keys(row.canonical_fields).sort();
+    const isSealed = row.canonical_fields.sealed === true;
+    if (isSealed && (row.canonical_fields.non_punitive !== true || row.canonical_fields.operator_id !== null || row.canonical_fields.reported_by !== null)) {
+      return fail(i, seq, "hash_mismatch", `row ${row.seq}: a sealed row must be non-punitive with null operator_id and reported_by`, rootSoFar, headSoFar, firstSeq, lastSeq);
+    }
+    const keys = Object.keys(row.canonical_fields).filter((k) => !(isSealed && k === "sealed")).sort();
     const want = [...CANONICAL_V1_FIELDS].sort();
     if (keys.length !== want.length || keys.some((k, n) => k !== want[n])) {
       return fail(i, seq, "hash_mismatch", `row ${row.seq} does not carry exactly the 20 canonical v1 fields`, rootSoFar, headSoFar, firstSeq, lastSeq);
@@ -149,6 +160,12 @@ export async function verifyLedger(rows: readonly LedgerExportRow[]): Promise<Le
       return fail(i, seq, "link_broken", `row ${row.seq}: prev_hash ${row.prev_hash} ≠ ${expectedPrev}`, rootSoFar, headSoFar, firstSeq, lastSeq);
     }
 
+    if (isSealed) {
+      hashes.push(row.entry_hash);
+      previous = row.entry_hash;
+      sealedCount++;
+      continue;
+    }
     let computed: string;
     try {
       computed = await entryHash(row.canonical_fields);
@@ -165,7 +182,7 @@ export async function verifyLedger(rows: readonly LedgerExportRow[]): Promise<Le
   return {
     ok: true, checked: sorted.length, first_bad_seq: null, reason: null, detail: null,
     root_hex: await merkleRoot(hashes), head_hash: hashes[hashes.length - 1]!,
-    first_seq: firstSeq, last_seq: lastSeq,
+    first_seq: firstSeq, last_seq: lastSeq, sealed: sealedCount,
   };
 }
 

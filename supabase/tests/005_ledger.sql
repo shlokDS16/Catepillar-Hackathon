@@ -375,6 +375,23 @@ begin
   assert (select count(*) from public.incidents where non_punitive) = 0, 'FM never sees a non-punitive row';
   assert (select count(*) from public.ledger_roots) = 1, 'FM sees the checkpoint';
   assert (select count(*) from public.ledger_export(1, 3)) = 3, 'FM may export the whole range';
+  -- 003d: near-miss rows are sealed for the FM: no clear operator id, a marker, hashes and links intact
+  assert (select count(*) from public.ledger_export(1, 3) e where (e.canonical_fields ->> 'non_punitive')::boolean) = 1,
+    'the range holds one near-miss row';
+  assert not exists (select 1 from public.ledger_export(1, 3) e
+                     where (e.canonical_fields ->> 'non_punitive')::boolean
+                       and (e.canonical_fields -> 'operator_id' <> 'null'::jsonb
+                            or e.canonical_fields -> 'reported_by' <> 'null'::jsonb
+                            or e.canonical_fields -> 'sealed' is distinct from 'true'::jsonb)),
+    'FM export seals operator_id and reported_by on non-punitive rows';
+  assert not exists (select 1 from public.ledger_export(1, 3) e
+                     where not (e.canonical_fields ->> 'non_punitive')::boolean and e.canonical_fields ? 'sealed'),
+    'punitive rows are exported whole, never sealed';
+  assert not exists (select 1 from public.ledger_export(1, 3) e
+    where (e.canonical_fields ->> 'non_punitive')::boolean
+      and (e.canonical_fields ->> 'seq' <> e.seq or e.canonical_fields ->> 'prev_hash' <> e.prev_hash)),
+    'sealed rows keep seq and prev_hash for the chain walk';
+  assert (public.ledger_verify(1, null)) ->> 'ok' = 'true', 'server verify still ok over the range with a near-miss row';
 end $$;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_trainer'), 'role', 'authenticated')::text, true);
 do $$

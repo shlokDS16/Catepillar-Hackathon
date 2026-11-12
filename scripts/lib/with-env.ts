@@ -31,10 +31,12 @@ if (task === "link") {
   r = spawnSync("supabase", ["link", "--project-ref", ref], opts);
 } else if (task === "migration-list") {
   r = spawnSync("supabase", ["migration", "list", "--linked"], opts);
+} else if (task === "db-push") {
+  r = spawnSync("supabase", ["db", "push", "--linked", "--yes"], opts);
 } else if (task === "gen-types") {
   r = spawnSync("supabase", ["gen", "types", "typescript", "--linked"], opts);
 } else {
-  console.error("usage: with-env <link | migration-list | gen-types>");
+  console.error("usage: with-env <link | migration-list | db-push | gen-types>");
   process.exit(2);
 }
 

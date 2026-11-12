@@ -89,6 +89,27 @@ describe("verifyLedger on exported rows (R2-2)", () => {
     expect(result.head_hash).toBe(GOLDEN_VECTOR_2_HASH);
   });
 
+  it("a sealed near-miss row (003d) keeps the chain and root intact without its ids", async () => {
+    const first = await exportRow({ ...GOLDEN_VECTOR_1, non_punitive: true });
+    const clear = [first, await exportRow({ ...GOLDEN_VECTOR_2, prev_hash: first.entry_hash })];
+    const full = await verifyLedger(clear);
+    const sealedRow: LedgerExportRow = {
+      ...clear[0]!,
+      canonical_fields: { ...clear[0]!.canonical_fields, operator_id: null, reported_by: null, sealed: true },
+    };
+    const result = await verifyLedger([sealedRow, clear[1]!]);
+    expect(result.ok).toBe(true);
+    expect(result.sealed).toBe(1);
+    expect(result.root_hex).toBe(full.root_hex);
+    expect(result.head_hash).toBe(full.head_hash);
+    // a broken link after a sealed row is still caught
+    const bad = await verifyLedger([sealedRow, { ...clear[1]!, prev_hash: ZERO_HASH, canonical_fields: { ...clear[1]!.canonical_fields, prev_hash: ZERO_HASH } }]);
+    expect(bad.reason).toBe("link_broken");
+    // a punitive row cannot hide behind the marker
+    const fake = await verifyLedger([{ ...clear[1]!, seq: "1", canonical_fields: { ...clear[1]!.canonical_fields, seq: "1", prev_hash: ZERO_HASH, operator_id: null, sealed: true }, prev_hash: ZERO_HASH }]);
+    expect(fake.ok).toBe(false);
+  });
+
   it("an edited row gives hash_mismatch at its seq", async () => {
     const rows = [await exportRow({ ...GOLDEN_VECTOR_1 }), await exportRow({ ...GOLDEN_VECTOR_2 })];
     rows[0]!.canonical_fields = { ...GOLDEN_VECTOR_1, description: "nothing happened" };
