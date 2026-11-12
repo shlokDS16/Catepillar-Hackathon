@@ -4,7 +4,7 @@ import { buildExcavator, type Pose } from "./excavator";
 import { buildHaulTruck } from "./truck";
 import { buildRocks, buildTerrain, terrainHeight } from "./terrain";
 import { cameraState } from "./camera-path";
-import { TRAIL_XZ, getRoute, ringLevel, truckF } from "./route";
+import { TRAIL_XZ, getRoute, ringLevelFor, truckF, truckProgress } from "./route";
 import { S2, S3, S5 } from "../shift";
 
 /*
@@ -96,9 +96,6 @@ const RINGS = [
   { r: 12, color: 0xff6a00 },
   { r: 6, color: 0xb3102a },
 ];
-
-/** Stage 5: how far back along the trail the replay rewinds (the machine's last stretch before the warning). */
-const REWIND_T = 0.82;
 
 /* Dig cycle keys: [time, boom, stick, bucket, yaw]. Solved so the teeth touch the floor in front. */
 const CYCLE: Array<[number, number, number, number, number]> = [
@@ -388,10 +385,10 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   const W: Key[] = [
     { pos: M(20, 3.0, -14), tgt: M(1.2, 2.0, 0.2), fov: 30, sx: 0.2, sy: -0.06, m: { sx: 0, sy: -0.15 } },
     { pos: [46, 18, -36], tgt: [-18, 5, 14], fov: 38, sx: 0.17, sy: -0.06, m: { sx: 0, sy: -0.15 } },
-    { pos: M(8, 4.6, -29), tgt: M(3.0, 3.0, 0.2), fov: 28, sx: 0.19, sy: -0.07, m: { sx: 0, sy: -0.15 } },
+    { pos: M(8, 4.6, -29), tgt: M(3.0, 3.0, 0.2), fov: 28, sx: 0.14, sy: -0.04, m: { sx: 0, sy: -0.15 } },
     { pos: [-8, 36, 70], tgt: [0, 0, 2], fov: 38, sx: 0.17, sy: -0.07, m: { sx: 0, sy: -0.14 } },
     { pos: [26, 38, 40], tgt: [-6, 0, -1], fov: 34, sx: 0.17, sy: -0.07, m: { sx: 0, sy: -0.15 } },
-    { pos: [34, 74, 78], tgt: [0, 0, 0], fov: 40, sx: 0.16, sy: -0.07, m: { sx: 0, sy: -0.14 } },
+    { pos: [28, 58, 64], tgt: [0, 0, 0], fov: 38, sx: 0.16, sy: -0.07, m: { sx: 0, sy: -0.14 } },
   ];
   const posCurve = new THREE.CatmullRomCurve3(W.map((k) => new THREE.Vector3(...k.pos)), false, "centripetal");
   const tgtCurve = new THREE.CatmullRomCurve3(W.map((k) => new THREE.Vector3(...k.tgt)), false, "centripetal");
@@ -487,12 +484,9 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     return lerp(0.55, 1, inout(win(ps[0], 0, 0.85)));
   }
 
-  /** Where the trail head is, 0..1: forward while stage 3 runs; in stage 5 it rewinds to REWIND_T, then redraws. */
+  /** Where the trail head is, 0..1. The machine stays parked at the end of the trail in stages 4 and 5: the stage 5 replay rewinds the truck (route.ts). */
   function trailT(): number {
-    if (ps[4] > 0) {
-      const rw = S5.rewind[1];
-      return ps[4] < rw ? lerp(1, REWIND_T, smoothstep(win(ps[4], 0, rw))) : lerp(REWIND_T, 1, smoothstep(win(ps[4], rw, 1)));
-    }
+    if (ps[3] > 0 || ps[4] > 0) return 1;
     return inout(win(ps[2], S3.draw[0], S3.draw[1]));
   }
 
@@ -573,7 +567,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
 
     // Trail draw. In stage 5 the trail rewinds with the machine.
     // It dims to a ghost under the rings, comes back for the rewind, and is a ghost again while it redraws.
-    const fade = Math.max(win(ps[3], 0, 0.2) * (1 - win(ps[4], 0, 0.2)), win(ps[4], S5.rewind[1], S5.rewind[1] + 0.07) * 0.7);
+    const fade = win(ps[3], 0, 0.2);
     trailMat.opacity = lerp(0.95, 0.3, fade);
     const count = Math.floor(t * TUBE_SEG) * RADIAL * 6;
     trailGeo.setDrawRange(0, count);
@@ -595,17 +589,19 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     (ticks.material as THREE.MeshBasicMaterial).opacity = 1;
 
     // Guardian rings and the haul truck.
-    const ringsOn = ps[3] > 0 && ps[4] < 0.6;
+    const truckQ = truckProgress(ps);
+    const ringsOn = truckQ !== null && ps[4] < 0.6;
     ringGroup.visible = ringsOn;
     truck.group.visible = ringsOn;
     let level = 0;
     pulsing = false;
     if (ringsOn) {
       const grow = quint(win(ps[3], 0, 0.3));
-      const out = 1 - win(ps[4], 0, 0.5);
+      // The rings keep their size through the replay and fade out once it ends.
+      const out = 1 - win(ps[4], S5.rewind[1], 0.6);
       const scale = Math.max(0.001, grow * (0.4 + 0.6 * out));
       // The truck rolls down the haul road, creeps in beside the machine, holds, then backs out (route.ts).
-      const f = truckF(ps[3]);
+      const f = truckF(truckQ as number);
       routeCurve.getPointAt(f, truckFront);
       routeCurve.getTangentAt(Math.min(0.999, f), tan);
       truck.group.position.copy(truckFront);
@@ -615,7 +611,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
       const slope = Math.atan2(truckFront.y - truckBack.y, Math.max(0.5, Math.hypot(truckFront.x - truckBack.x, truckFront.z - truckBack.z)));
       truck.group.rotation.z = slope;
       truck.spin((f * routeLen) / 0.8);
-      level = ringLevel(Math.hypot(truckFront.x - exc.group.position.x, truckFront.z - exc.group.position.z));
+      level = ringLevelFor(ps);
       for (let i = 0; i < RINGS.length; i++) {
         const active = level >= 1 && level - 1 === i;
         const u = ringU[i];
@@ -624,8 +620,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
         u.uGlow.value = active ? 0.9 : 0.2;
         u.uLine.value = active ? 1 : 0.5;
         if (dt > 0) pulses[i] = Math.max(0, pulses[i] - dt / 0.9);
-        u.uPulse.value = opts.reducedMotion ? 0 : pulses[i];
-        if (pulses[i] > 0) pulsing = true;
+        u.uPulse.value = animate ? pulses[i] : 0;
+        if (animate && pulses[i] > 0) pulsing = true;
       }
     }
     if (level !== lastRing) {

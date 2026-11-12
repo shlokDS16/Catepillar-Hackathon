@@ -1,5 +1,5 @@
 import * as THREE from "three";
-import { S4 } from "../shift";
+import { S4, S5 } from "../shift";
 import { roadPoint, terrainHeight } from "./terrain";
 
 /*
@@ -28,6 +28,9 @@ export const TRAIL_XZ: ReadonlyArray<readonly [number, number]> = [
   [0, 0], [10, -3], [22, -12], [28, -2], [21, 12], [7, 20], [-11, 22], [-25, 12],
   [-25, -8], [-11, -15], [-3, -6], [0, 0],
 ];
+
+/** How far inside or outside a ring radius a state change is aimed, in metres. */
+const MARGIN = 0.2;
 
 /** The excavator's rest position in stages 4 and 5 (the end of the trail), in world x and z. */
 export const MACHINE_XZ = [0, 0] as const;
@@ -111,8 +114,12 @@ function pchip(xs: number[], ys: number[], x: number, d0: number, dn: number): n
 /** How far the truck's front still has to go to its closest point, in metres, at stage 4 progress p. */
 export function truckToGo(p: number): number {
   const r = getRoute();
-  const e12 = r.eFor(RING_R[2]);
-  const e18 = r.eFor(RING_R[1]);
+  // Each crossing is aimed 0.2 m past its ring radius, on the side of the state it starts: inside 12 m by
+  // warnAt, outside 12 m by caution, so a threshold never sits on the radius (a centimetre of drift would flip it).
+  const e12in = r.eFor(RING_R[2] - MARGIN);
+  const e12out = r.eFor(RING_R[2] + MARGIN);
+  const e18in = r.eFor(RING_R[1] - MARGIN);
+  const e18out = r.eFor(RING_R[1] + MARGIN);
   const e26 = r.eFor(RING_R[0]);
   const eFar = r.eFor(40);
   const [inStart, closeFrom] = S4.truckIn;
@@ -121,12 +128,12 @@ export function truckToGo(p: number): number {
   if (p <= closeFrom) {
     // Approach: down the haul road, slowing to a creep as it nears the machine.
     const xs = [inStart, 0.22, 0.3, S4.warnAt, closeFrom];
-    const ys = [r.length, eFar, e18, e12, 0];
+    const ys = [r.length, eFar, e18in, e12in, 0];
     return pchip(xs, ys, p, 0, 0);
   }
   if (p <= backFrom) return 0;
   // Retreat: 12 m at S4.caution, 18 m at S4.clear, beyond the outer ring by the end of the band.
-  return pchip([backFrom, S4.caution, S4.clear, 1], [0, e12, e18, e26 + 3], p, 0, (e26 + 3 - e18) / (1 - S4.clear));
+  return pchip([backFrom, S4.caution, S4.clear, 1], [0, e12out, e18out, e26 + 3], p, 0, (e26 + 3 - e18out) / (1 - S4.clear));
 }
 
 /** The route parameter (0..1 by arc length) of the truck's front at stage 4 progress p. */
@@ -140,4 +147,33 @@ export function truckDistance(p: number): number {
   const r = getRoute();
   const v = r.curve.getPointAt(truckF(p));
   return Math.hypot(v.x - MACHINE_XZ[0], v.z - MACHINE_XZ[1]);
+}
+
+/** Smoothstep ease for the stage 5 truck rewind. */
+const smooth = (t: number) => t * t * (3 - 2 * t);
+
+/**
+ * Stage 4 progress at which the truck is drawn, or null while it is not on the pit floor. In stage 4 it is the
+ * stage's own p. In stage 5 the replay rewinds the truck, not the machine: the machine stays parked where it
+ * was, and the truck is wound back from the end of stage 4 to the warning moment (ledger entry 4, 10:44).
+ */
+export function truckProgress(ps: readonly number[]): number | null {
+  if ((ps[3] ?? 0) <= 0) return null;
+  const p5 = ps[4] ?? 0;
+  if (p5 <= 0) return ps[3];
+  const rw = S5.rewind[1];
+  if (p5 >= rw) return S4.warnAt;
+  return 1 + (S4.warnAt - 1) * smooth(p5 / rw);
+}
+
+/**
+ * The ring state the scene shows: the state of the replayed moment, never a state the record does not hold.
+ * Stage 4: from the truck's distance to the rings' centre. Stage 5: the same while the replay rewinds; neutral
+ * (0) once it ends and the shift fast-forwards, because no later entry is a proximity event.
+ */
+export function ringLevelFor(ps: readonly number[]): 0 | 1 | 2 | 3 | 4 {
+  const q = truckProgress(ps);
+  if (q === null) return 0;
+  if ((ps[4] ?? 0) >= S5.rewind[1]) return 0;
+  return ringLevel(truckDistance(q));
 }
