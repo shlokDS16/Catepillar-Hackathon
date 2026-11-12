@@ -62,7 +62,7 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
 
   return (
     <div className="deb-player">
-      <p className="t-meta text-ink-3">{t("caption")}</p>
+      <p className="t-meta deb-cap">{t("caption")}</p>
 
       <div className="site-plan">
         <SitePlanFrame center={center} points={points} zones={zones} label={t("mapLabel")}>
@@ -105,26 +105,26 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
 
       <dl className="deb-readouts" aria-label={t("readoutsLabel")}>
         <div>
-          <dt className="t-meta">{t("time")}</dt>
+          <dt className="t-caption">{t("time")}</dt>
           <dd className="t-label tnum">{t("timeValue", { now, total })}</dd>
         </div>
         <div>
-          <dt className="t-meta">{t("speed")} <span className="text-ink-3">{tp("assumed")}</span></dt>
+          <dt className="t-caption">{t("speed")} <span className="deb-assumed">{tp("assumed")}</span></dt>
           <dd className="t-label tnum">{s.speed_kmh === null ? t("none") : t("speedValue", { v: s.speed_kmh.toFixed(1) })}</dd>
         </div>
         <div>
-          <dt className="t-meta">{t("pitch")} <span className="text-ink-3">{tp("assumed")}</span></dt>
+          <dt className="t-caption">{t("pitch")} <span className="deb-assumed">{tp("assumed")}</span></dt>
           <dd className="t-label tnum">{s.pitch_deg === null ? t("none") : t("pitchValue", { v: s.pitch_deg.toFixed(1) })}</dd>
         </div>
         <div>
-          <dt className="t-meta">{t("seatbelt")}</dt>
+          <dt className="t-caption">{t("seatbelt")}</dt>
           <dd className="t-label deb-belt" data-belt={s.seatbelt}>
             <Pictogram name="seatbelt" shape="none" />
             <span>{s.seatbelt === "unknown" ? t("none") : t(s.seatbelt === "on" ? "beltOn" : "beltOff")}</span>
           </dd>
         </div>
         <div>
-          <dt className="t-meta">{t("wind")}</dt>
+          <dt className="t-caption">{t("wind")}</dt>
           <dd className="t-label tnum">
             {s.wind ? t("windValue", { kmh: Math.round(s.wind.kmh), deg: Math.round(s.wind.from_deg) }) : t("none")}
           </dd>
@@ -140,7 +140,7 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
         onToggle={toggle}
       />
 
-      <ul className="deb-legend t-meta text-ink-2">
+      <ul className="deb-legend t-meta">
         <li>
           <FlagGlyph passed={s.flagPassed} />
           {t("legendEvent", { time: clockLabel(model.eventMs) })}
@@ -160,7 +160,7 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
         <Button onClick={player.restart}>
           {t("restart")}
         </Button>
-        <span className="deb-speed t-label" aria-label={t("speedLabel")}>
+        <span className="deb-speed t-caption" aria-label={t("speedLabel")}>
           {t("tenX")}
         </span>
       </div>

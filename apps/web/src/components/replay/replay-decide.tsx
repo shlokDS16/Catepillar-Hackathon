@@ -185,16 +185,19 @@ export function ReplayDecide({
           ) : null}
 
           <ul className="dc-grid" aria-label={t("choicesLabel")}>
-            {def.choices.map((choice) => {
+            {def.choices.map((choice, index) => {
               const label = localText(choice.label, lang);
               const n = isOrder ? orderNumber(sequence, choice.id) : null;
               const chosen = isOrder ? n !== null : picked === choice.id;
+              // D14: a selected plate is outlined with a number badge, never an ink fill, so it
+              // cannot be mistaken for the one primary action. "Single" shows its list position.
+              const badge = isOrder ? n : chosen ? index + 1 : null;
               return (
                 <li key={choice.id}>
                   <Plate
                     as="button"
                     type="button"
-                    tone={chosen ? "ink" : "surface"}
+                    tone="surface"
                     className="dc-plate"
                     aria-pressed={chosen}
                     aria-disabled={(locked && !chosen) || undefined}
@@ -206,15 +209,13 @@ export function ReplayDecide({
                     >
                       {label.value}
                     </span>
+                    {badge !== null ? (
+                      <span className="dc-number tnum" aria-hidden="true">
+                        {badge}
+                      </span>
+                    ) : null}
                     {n !== null ? (
-                      <>
-                        <span className="dc-number tnum" aria-hidden="true">
-                          {n}
-                        </span>
-                        <span className="sr-only">
-                          {t("orderNumber", { n })}
-                        </span>
-                      </>
+                      <span className="sr-only">{t("orderNumber", { n })}</span>
                     ) : chosen ? (
                       <span className="sr-only">{t("chosen")}</span>
                     ) : null}
@@ -225,7 +226,7 @@ export function ReplayDecide({
           </ul>
 
           {isOrder ? (
-            <div className="replay-actions">
+            <div className="replay-actions" data-dock-safe="true">
               <Button
                 variant="primary"
                 disabled={!ready || locked}
