@@ -27,7 +27,7 @@ portal redesign study (docs). Decisions D14 (portal direction B), D15 (no calls)
 ## Queue (priority order)
 1. Portal B phase 2: Debrief on the ink theatre + plain words + [Listen] per section; no per-step feedback in Decide (D14).
 2. Portal B phase 3: learning loop (Home loop card, Training assignment list, Lesson route) so a replay is reachable from the UI.
-3. L1 B10b/B11: replay scoring server-side (must match the fixture scoring in apps/web/src/replay/fixture-scoring.ts and data-model §2.8); add additive contract fields reenactment.event_ms and machine_track[].seatbelt_fastened.
+3. L1 B10b/B11: replay scoring server-side (must match apps/web/src/replay/fixture-scoring.ts scoreReplay and data-model §2.8; weights chosen there because §2.8 gives none: procedure = 1/2 protocol Kendall pairs + 1/2 investigation, investigation = 1/2 net relevance + 1/2 order agreement with ideal; safety over safety-axis steps; efficiency = ms within time_limit_s; record them in §2.8 as the canonical weights); add additive contract fields reenactment.event_ms and machine_track[].seatbelt_fastened.
 4. Portal B phase 4: FM Inbox split view / mobile triage, FM map sizing fix, Ledger auto-verify on open.
 5. F11 Safety + A13, F17 Lessons, F20 Analytics (currently a stub), F19 Ask.
 6. Phase 5 QA across 360/375/768/1440, en/hi, reduced motion; then a demo video (video-studio skill).
