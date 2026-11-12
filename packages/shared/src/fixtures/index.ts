@@ -48,7 +48,7 @@ export const mySnapshot = {
   }],
   active_alerts: [{ ...alertRaisedPayload, status: "open" as const, first_seen: T1 }],
   machine: {
-    id: IDS.machine, code: "EXC-007", model_name: "Cat 320", moving: true, speed_kmh: 6.2, health: "ok" as const,
+    id: IDS.machine, code: "EXC-007", model_name: "22 t excavator", moving: true, speed_kmh: 6.2, health: "ok" as const,
     location: { lat: 21.1463, lon: 79.0882 }, seatbelt_fastened: false, parking_brake: false,
     parts: [
       { id: "boom_ram" as const, state: "caution" as const, note_key: "bay.note.boom_ram_drift" },
