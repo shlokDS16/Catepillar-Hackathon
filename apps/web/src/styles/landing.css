@@ -893,9 +893,6 @@
     position: relative;
     min-height: 100svh;
   }
-  .pin {
-    overflow: visible;
-  }
   .stage-close {
     height: auto;
     min-height: 100svh;
