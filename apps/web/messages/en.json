@@ -489,7 +489,7 @@
     "verifiedSealed": "{v} verified · {s} sealed, chain checked",
     "notRechecked": "Not re-checked in this browser",
     "chainIncomplete": "The export does not cover the whole ledger",
-    "rangeOut":"That range is not in the ledger.",
+    "rangeOut": "That range is not in the ledger.",
     "stoppedAt": "The check stopped at #{seq}. Nothing after it was verified.",
     "hashSr": "{label}: {hash}",
     "sealedCount": "{n} sealed",
@@ -768,6 +768,13 @@
       "title": "Start the shift.",
       "body": "The operator cockpit opens on a simulated shift you can drive yourself.",
       "foot": "Spotter is a student project. It is not affiliated with or endorsed by Caterpillar Inc."
+    },
+    "rail": {
+      "label": "Story progress",
+      "go": "Part {n} of 7"
+    },
+    "wipe": {
+      "band": "Operator cockpit · simulated shift"
     }
   }
 }
