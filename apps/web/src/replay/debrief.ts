@@ -71,3 +71,8 @@ export function reviewRows(result: ReplayDebriefResult, scenario: ReplayScenario
     };
   });
 }
+
+/** Clip id for a Debrief section [Listen]: one fixed, generic script per section (clips carry no per-operator numbers). */
+export function sectionClipId(section: string): string {
+  return `replay.debrief.${section}`;
+}
