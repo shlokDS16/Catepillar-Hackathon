@@ -115,4 +115,41 @@ describe.skipIf(!localUrl)("sos-escalator skip locked (local stack only)", () =>
       await a.end(); await b.end();
     }
   }, 60_000);
+
+  it("an operator ack racing an upgrade to critical cannot close the critical (007c/007d)", async () => {
+    const a = postgres(localUrl!, { max: 1, prepare: false, onnotice: () => {} });
+    const b = postgres(localUrl!, { max: 1, prepare: false, onnotice: () => {} });
+    const site = await a<{ id: string }[]>`insert into public.sites (code, name, site_type, location)
+      values ('SQLB12R', 'b12 race', 'quarry', extensions.ST_SetSRID(extensions.ST_MakePoint(79.0882, 21.1463), 4326)::extensions.geography) returning id`;
+    const hk = `seatbelt:-:race-${Date.now()}`;
+    const alert = await a<{ id: string }[]>`select private.raise_alert(null, 'seatbelt_off_moving', ${hk}, 'warning', ${site[0]!.id}, null, null, false) as id`;
+    try {
+      let upgraded: () => void;
+      let commit: () => void;
+      const ready = new Promise<void>((r) => { upgraded = r; });
+      const go = new Promise<void>((r) => { commit = r; });
+      const upgrade = a.begin(async (tx) => {                       // session A: the upgrade, uncommitted, row locked
+        await tx`select private.raise_alert(null, 'seatbelt_off_moving', ${hk}, 'critical', ${site[0]!.id}, null, null, false)`;
+        upgraded();
+        await go;
+      });
+      await ready;
+      // session B: an operator-role ack on the row A holds; it must wait, then see the critical and leave it open
+      const ack = b`select (private.ack_alert(${alert[0]!.id}, 'app', null, 'operator')).status as status`;
+      await new Promise((r) => setTimeout(r, 500));
+      commit!();
+      await upgrade;
+      expect((await ack)[0]!.status).toBe("open");
+      const row = await b<{ tier: string; status: string; n: number }[]>`select tier, status,
+        (select count(*)::int from public.dispatches where alert_id = ${alert[0]!.id}) as n from public.alerts where id = ${alert[0]!.id}`;
+      expect(row[0]).toMatchObject({ tier: "critical", status: "open" });
+      expect(row[0]!.n).toBeGreaterThanOrEqual(1);                   // the critical's immediate dispatch was planned (dry run)
+    } finally {
+      await a`delete from public.dispatches where alert_id = ${alert[0]!.id}`;
+      await a`delete from public.events where alert_id = ${alert[0]!.id}`;
+      await a`delete from public.alerts where id = ${alert[0]!.id}`;
+      await a`delete from public.sites where id = ${site[0]!.id}`;
+      await a.end(); await b.end();
+    }
+  }, 60_000);
 });

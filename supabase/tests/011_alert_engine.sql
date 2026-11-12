@@ -641,3 +641,41 @@ begin
   assert not exists (select 1 from public.dispatches d join public.alerts x on x.id = d.alert_id
                       where x.run_id = pg_temp.id('run') and d.status not in ('dry_run', 'suppressed')), 'still dry run only';
 end $$;
+
+-- ── 15. 007c: an operator ack after the alert was upgraded to critical (same transaction) changes nothing ─
+create temp table tc (k text primary key, v uuid not null) on commit drop;
+grant select on tc to authenticated;
+insert into tc values ('a', pg_temp.raise('seatbelt_off_moving', 'seatbelt:tc:UPG', 'warning', 'm1'));
+create or replace function pg_temp.tc() returns uuid language sql as $$ select v from tc where k = 'a' $$;
+grant execute on function pg_temp.tc() to authenticated;
+do $$
+begin
+  perform pg_temp.raise('seatbelt_off_moving', 'seatbelt:tc:UPG', 'critical', 'm1');     -- the upgrade lands first
+  -- the guard inside ack_alert's UPDATE holds even if the caller's earlier read saw a warning
+  assert (private.ack_alert(pg_temp.tc(), 'app', null, 'operator')).status = 'open', 'operator via ack_alert on a critical: status unchanged';
+  assert (select operator_ack_at is not null from public.alerts where id = pg_temp.tc()), 'only the sighting is recorded';
+  assert (select escalate_at is not null from public.alerts where id = pg_temp.tc());
+end $$;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_m1'), 'role', 'authenticated')::text, true);
+do $$
+begin
+  assert public.alert_ack(pg_temp.tc(), gen_random_uuid()) ->> 'status' = 'open', 'alert_ack on the upgraded alert: still open';
+end $$;
+reset role;
+do $$
+declare a uuid;
+begin
+  assert (select status from public.alerts where id = pg_temp.tc()) = 'open';
+  -- the rebuild lookup sees escalated alerts: an escalated alert is not duplicated by a lost-state re-fire
+  assert pg_get_functiondef('private.apply_findings(uuid,int,timestamptz,boolean,private.finding[],uuid,uuid)'::regprocedure) like '%''escalating'', ''escalated'') and a.kind <> ''sos'' limit 1%',
+    'apply_findings looks at escalated alerts too';
+  -- supervisor ack still works on it
+  assert (private.ack_alert(pg_temp.tc(), 'telegram', null, 'fleet_manager')).status = 'acknowledged';
+end $$;
+
+do $$
+begin
+  assert pg_get_functiondef('private.alert_dispatch_pending(uuid)'::regprocedure) ilike '%for update%', '007d: alert_dispatch_pending locks the row before it decides';
+  assert pg_get_functiondef('public.alert_ack(uuid,uuid)'::regprocedure) ilike '%for update%', '007c: alert_ack locks the alert before its checks';
+end $$;

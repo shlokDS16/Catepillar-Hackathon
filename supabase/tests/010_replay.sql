@@ -229,7 +229,6 @@ begin
   -- B1: list order must not carry the key
   assert (select count(*) from (select (x ->> 'id') in ('c_trend','c_map','c_card') f from jsonb_array_elements(sj #> '{investigate,cards}') with ordinality t(x, o) order by o limit 3) q where f) < 3, 'the first three cards are not all the relevant ones';
   assert (select count(*) from (select (x ->> 'id') in ('c_trend','c_map','c_card') f from jsonb_array_elements(sj #> '{investigate,cards}') with ordinality t(x, o) order by o desc limit 3) q where f) < 3, 'nor the last three';
-  assert sj #>> '{decide,steps,0,choices,0,id}' <> 'stop' and sj #>> '{decide,steps,1,choices,0,id}' <> 'belt', 'the best single choice is not listed first';
   assert (select count(*) from public.replay_scenarios) = 1, 'he can select the row';
   perform pg_temp.expect_err('select answer_key from public.replay_scenarios', 'permission denied%');
   perform pg_temp.expect_err('select * from public.replay_scenarios', 'permission denied%');
@@ -345,3 +344,23 @@ begin
     'snapshot assignment links the replay: ' || (snap ->> 'assignments');
 end $$;
 reset role;
+
+-- ── 8. 006c: the stored shuffle is unpredictable and unbiased ─────────────────────────────────────
+do $$
+declare i int; first_best int := 0; n_ch int; sid uuid; sj jsonb; exact_best int := 0; trials int := 200;
+begin
+  select id into sid from public.replay_scenarios where operator_id = pg_temp.id('op_ravi') limit 1;
+  select jsonb_array_length(scenario_json #> '{decide,steps,0,choices}') into n_ch from public.replay_scenarios where id = sid;
+  for i in 1..trials loop
+    perform private.finish_replay(sid);
+    select scenario_json into sj from public.replay_scenarios where id = sid;
+    if sj #>> '{decide,steps,0,choices,0,id}' = 'stop' then first_best := first_best + 1; end if;
+    if (select array_agg(c ->> 'id' order by o) from jsonb_array_elements(sj #> '{decide,steps,2,choices}') with ordinality t(c, o))
+         = array['park','belt','report','resume'] then exact_best := exact_best + 1; end if;
+  end loop;
+  assert first_best between 0.4 * trials / n_ch and 1.8 * trials / n_ch,
+    'the best single choice is first about 1/n of the time: ' || first_best::text || ' of ' || trials::text || ' with n = ' || n_ch::text;
+  assert first_best > 0, 'and it does sit first sometimes';
+  assert exact_best = 0, 'the exact best order of an order step is never shown';
+  assert (select scenario_json::text from public.replay_scenarios where id = sid) !~ '(seed|salt)', 'no seed in the stored scenario';
+end $$;

@@ -18,7 +18,7 @@ const root = repoRoot();
 const sql = connect({ quiet: true, warnings: true });
 const tests = readdirSync(join(root, "supabase", "tests")).filter((f) => f.endsWith(".sql") && f.includes(filter)).sort();
 let failed = 0;
-const migText = readFileSync(join(root, "supabase", "migrations", mig), "utf8");
+const migText = mig.split(",").map((m) => readFileSync(join(root, "supabase", "migrations", m), "utf8")).join(";\n");
 const migControl = transactionControl(migText);
 if (migControl) { console.log(`FAIL ${mig}
   refused: top-level "${migControl}" would escape the rollback`); process.exit(1); }
