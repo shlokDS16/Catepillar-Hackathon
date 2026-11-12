@@ -18,6 +18,73 @@ const LEADER_FALLBACK = [1, 0, 2];
 
 const clamp01 = (v: number) => Math.min(1, Math.max(0, v));
 
+export type WordmarkController = { setProgress(p: number): void; resize(): void; dispose(): void };
+export type WordmarkHost = {
+  enter(): Promise<void>;
+  setProgress(p: number): void;
+  resize(): void;
+  dispose(): void;
+};
+
+/**
+ * Owns the footer wordmark's lifetime: `enter()` mounts it the first time only (further calls do
+ * nothing, so leaving the footer and coming back never touches the canvas), progress changes are
+ * forwarded only when they moved, and any failure, a missing WebGL or a lost context puts the
+ * still back (`root.dataset.wm = "poster"`) so the plate is never blank. `dispose()` is for page unmount.
+ */
+export function createWordmarkHost(o: {
+  root: { dataset: Record<string, string | undefined> };
+  canvas: EventTarget;
+  canRun: () => boolean;
+  load: () => Promise<WordmarkController>;
+  onReady?: () => void;
+}): WordmarkHost {
+  let ctl: WordmarkController | null = null;
+  let started = false;
+  let disposed = false;
+  let last = -1;
+  const lost = () => {
+    o.root.dataset.wm = "poster";
+  };
+  return {
+    async enter() {
+      if (started || disposed) return;
+      started = true;
+      if (!o.canRun()) {
+        o.root.dataset.wm = "poster";
+        return;
+      }
+      o.canvas.addEventListener("webglcontextlost", lost);
+      try {
+        const c = await o.load();
+        if (disposed) {
+          c.dispose();
+          return;
+        }
+        ctl = c;
+        o.root.dataset.wm = "canvas";
+        o.onReady?.();
+      } catch {
+        o.root.dataset.wm = "poster";
+      }
+    },
+    setProgress(p) {
+      if (!ctl || Math.abs(p - last) <= 0.002) return;
+      last = p;
+      ctl.setProgress(p);
+    },
+    resize() {
+      ctl?.resize();
+    },
+    dispose() {
+      disposed = true;
+      o.canvas.removeEventListener("webglcontextlost", lost);
+      ctl?.dispose();
+      ctl = null;
+    },
+  };
+}
+
 /**
  * Scroll engine (landing v3 spec §3, §8.2 B1-B3): native scroll, one rAF per scroll burst, no
  * smoothing library. The five scene stages share one pinned view; the stage "bands" are empty
@@ -53,7 +120,8 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
     const ledgerEl = root.querySelector<HTMLElement>(".l-ledger");
     const proofEl = root.querySelector<HTMLElement>(".l-proof");
     const footEl = root.querySelector<HTMLElement>(".l-foot");
-    const heroEl = root.querySelector<HTMLElement>('.l-st[data-st="1"]');
+    const heroLinks = Array.from(root.querySelectorAll<HTMLAnchorElement>('.l-st[data-st="1"] a'));
+    let heroTab = true;
     const scrubSt = stEls[4] ?? null;
     const tape = findTape(root);
     const readouts = findReadouts(root);
@@ -69,9 +137,7 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
     const plateEl = root.querySelector<HTMLElement>(".l-plate");
     const wmCanvas = root.querySelector<HTMLCanvasElement>(".l-wm-canvas");
     let plateBox = { top: 0, h: 1 };
-    let wm: { setProgress(p: number): void; resize(): void; dispose(): void } | null = null;
-    let wmP = -1;
-    let wmToken = 0;
+    let wmHost: WordmarkHost | null = null;
     // Layout read once per measure, never per frame: label and plate offsets inside their stage block.
     let labelPos: Array<{ left: number; top: number }> = [];
     let platePos: { left: number; top: number } | null = null;
@@ -229,15 +295,16 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
       toggle(root, "tapeHide", hidden);
       toggle(root, "paper", navPaper);
       toggle(root, "navhide", y + 40 > footTop);
-      if (wm) {
+      if (wmHost) {
         // 0 when the plate's top reaches the bottom of the screen, 1 a little after it has fully arrived.
         const wp = clamp01((y + vh - plateBox.top) / (plateBox.h + vh * 0.4));
-        if (Math.abs(wp - wmP) > 0.002) {
-          wmP = wp;
-          wm.setProgress(wp);
-        }
+        wmHost.setProgress(wp);
       }
-      if (heroEl) heroEl.inert = curSt !== 1;
+      // The hero keeps its heading in the accessibility tree; only its two links leave the tab order.
+      if (heroLinks.length && heroTab !== (curSt === 1)) {
+        heroTab = curSt === 1;
+        heroLinks.forEach((a) => (a.tabIndex = heroTab ? 0 : -1));
+      }
       if (tape) tape.el.inert = hidden;
       apply();
     };
@@ -334,7 +401,7 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
     const onResize = () => {
       measure();
       ctl?.resize();
-      wm?.resize();
+      wmHost?.resize();
       request();
     };
     window.addEventListener("resize", onResize);
@@ -343,44 +410,30 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
     const onVis = () => syncRunning();
     document.addEventListener("visibilitychange", onVis);
 
-    // The 3D wordmark: mounted when the footer nears the viewport, disposed when it leaves. On phones and
-    // with no WebGL a still stands in (the CSS shows it from data-wm="poster"); nothing loads before that.
-    const unmountWm = () => {
-      wmToken++;
-      wm?.dispose();
-      wm = null;
-      wmP = -1;
-      if (root.dataset.wm === "canvas") root.dataset.wm = "poster";
-    };
-    const mountWm = async () => {
-      if (wm || !wmCanvas || phone.matches) return;
-      const token = ++wmToken;
-      if (!webglAvailable()) {
-        root.dataset.wm = "poster";
-        return;
-      }
-      try {
-        const { mountWordmark } = await import("@/components/landing/scene/wordmark");
-        const c = await mountWordmark(wmCanvas, { reducedMotion: reduced.matches, compact: phone.matches });
-        if (disposed || token !== wmToken) {
-          c.dispose();
-          return;
-        }
-        wm = c;
-        root.dataset.wm = "canvas";
-        measure();
-        request();
-      } catch {
-        root.dataset.wm = "poster";
-      }
-    };
+    // The 3D wordmark mounts ONCE, when the footer first nears the viewport, and stays mounted: it has no
+    // render loop (one frame per setProgress or resize), so it costs nothing while idle. Disposing it and
+    // mounting again would reuse a canvas whose context was force-lost. Phones, no WebGL and any failure
+    // leave the still in place (the CSS shows it from data-wm="poster").
+    const wordmark = wmCanvas
+      ? createWordmarkHost({
+          root,
+          canvas: wmCanvas,
+          canRun: () => !phone.matches && webglAvailable(),
+          load: async () => {
+            const { mountWordmark } = await import("@/components/landing/scene/wordmark");
+            return mountWordmark(wmCanvas, { reducedMotion: reduced.matches, compact: phone.matches });
+          },
+          onReady: () => {
+            measure();
+            request();
+          },
+        })
+      : null;
+    wmHost = wordmark;
     const wio = plateEl
       ? new IntersectionObserver(
           (entries) => {
-            for (const e of entries) {
-              if (e.isIntersecting) void mountWm();
-              else unmountWm();
-            }
+            if (entries.some((e) => e.isIntersecting)) void wordmark?.enter();
           },
           { rootMargin: "700px 0px" },
         )
@@ -423,7 +476,7 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
       ro.disconnect();
       io.disconnect();
       wio?.disconnect();
-      wm?.dispose();
+      wmHost?.dispose();
       ticks.forEach((a) => a.removeEventListener("click", onTick));
       if (hasIdle) window.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId);

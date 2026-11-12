@@ -1275,7 +1275,7 @@
   display: grid;
   grid-template-columns: minmax(0, 500px) minmax(0, 1fr);
   /* max-content, not auto: on short screens the rows must keep their text and let the pin overflow rather than squash the roles. */
-  grid-template-rows: max-content max-content max-content max-content minmax(0, 1fr);
+  grid-template-rows: max-content max-content max-content max-content auto;
   column-gap: 56px;
   align-content: center;
   max-width: 1440px;
@@ -2260,6 +2260,55 @@ li[data-role="3"] > .l-role {
     grid-template-columns: 1fr;
     gap: 32px;
     padding: 28px 16px 40px;
+  }
+}
+
+/* Stage 2 at desktop sizes: the plate sits bottom left, under the copy, so it never covers the machine
+   (the machine is framed in the right of the screen) or its leader lines. */
+@media (min-width: 768px) {
+  .l-st[data-st="2"] .l-copy {
+    justify-content: flex-start;
+    bottom: auto;
+  }
+
+  .l-st[data-st="2"] .l-readout {
+    top: auto;
+    right: auto;
+    left: 64px;
+    bottom: 156px;
+    width: min(452px, 34vw);
+    min-width: 400px;
+    display: grid;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .l-st[data-st="2"] .l-ro-head {
+    grid-column: 1 / -1;
+  }
+
+  .l-st[data-st="2"] .l-ro-big {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0;
+    min-width: 150px;
+  }
+
+  .l-st[data-st="2"] .l-ro-what {
+    margin: 4px 0 0;
+    text-align: left;
+  }
+
+  .l-st[data-st="2"] .l-ro-rows {
+    align-content: center;
+    border-left: 1px solid var(--frame-rule);
+    padding-block: 10px;
+  }
+}
+
+@media (min-width: 768px) and (max-width: 1099px) {
+  .l-st[data-st="2"] .l-readout {
+    left: 32px;
+    width: min(452px, 52vw);
   }
 }
 

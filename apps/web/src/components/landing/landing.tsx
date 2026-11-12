@@ -201,7 +201,7 @@ export async function Landing() {
                   <p className="l-sub">{t("s2.body")}</p>
                 </Mask>
               </div>
-              <Readout stage={2} labels={roLabels} msgs={roMsgs} values={settledValues(2, 0.9)} />
+              <Readout stage={2} name={t("s2.title")} labels={roLabels} msgs={roMsgs} values={settledValues(2, 0.9)} />
               <ul className="l-callouts">
                 {(["c1", "c2", "c3"] as const).map((k, i) => (
                   <li key={k} className="callout rv" style={{ "--a": S2.callouts[i], "--b": S2.callouts[i] + 0.08 } as Style}>
@@ -233,7 +233,7 @@ export async function Landing() {
                   <p className="l-sub">{t("s3.body")}</p>
                 </Mask>
               </div>
-              <Readout stage={3} labels={roLabels} msgs={roMsgs} values={settledValues(3, 1)} />
+              <Readout stage={3} name={t("s3.title")} labels={roLabels} msgs={roMsgs} values={settledValues(3, 1)} />
               {strip(3)}
             </div>
 
@@ -260,7 +260,7 @@ export async function Landing() {
                   </ul>
                 </Mask>
               </div>
-              <Readout stage={4} labels={roLabels} msgs={roMsgs} values={settledValues(4, 0.62)} />
+              <Readout stage={4} name={t("s4.title")} labels={roLabels} msgs={roMsgs} values={settledValues(4, 0.62)} />
               <svg className="l-leaders" aria-hidden="true" focusable="false">
                 <g className="leader" data-leader="truck">
                   <polyline />

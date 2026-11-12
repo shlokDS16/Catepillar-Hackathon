@@ -1039,9 +1039,9 @@
     },
     "ro": {
       "sim": "Simulated readout",
-      "boom": "Boom",
-      "stick": "Stick",
-      "bucket": "Bucket",
+      "boom": "Boom, from horizontal",
+      "stick": "Stick, to boom",
+      "bucket": "Bucket, to stick",
       "phase": "Phase",
       "phases": {
         "dig": "Dig",
@@ -1082,7 +1082,7 @@
       "simTitle": "What is simulated",
       "sim": "Everything on this page runs on demo data: the shift, the machine readings, the ledger hashes and the app screens. No real site, operator or customer appears.",
       "madeTitle": "How it is made",
-      "made": "The quarry and the lettering are built in code from our terrain function, and so is the excavator. No stock photos, no generated images."
+      "made": "The quarry, the terrain under the lettering and the excavator are built in code; the letters come from the type and our terrain function. No stock photos, no generated images."
     }
   },
   "training": {

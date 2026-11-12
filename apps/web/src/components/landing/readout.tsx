@@ -192,11 +192,11 @@ function Head({ title, mark }: { title: string; mark: string }) {
 }
 
 /** One plate. `stage` picks the layout; the values are the server-render settled ones. */
-export function Readout({ stage, labels, msgs, values, children }: { stage: 2 | 3 | 4; labels: RoLabels; msgs: RoMsgs; values: RoValues; children?: ReactNode }) {
+export function Readout({ stage, name, labels, msgs, values, children }: { stage: 2 | 3 | 4; /** The stage title: with the label it makes the plate's name unique. */ name: string; labels: RoLabels; msgs: RoMsgs; values: RoValues; children?: ReactNode }) {
   const tx = roText(values, msgs);
   const tone = toneOf(values.ring);
   return (
-    <aside className="l-readout" data-ro-stage={stage} aria-label={labels.sim}>
+    <aside className="l-readout" data-ro-stage={stage} aria-label={`${labels.sim}: ${name}`}>
       {stage === 2 ? (
         <>
           <Head title={labels.sim} mark={labels.simMark} />
