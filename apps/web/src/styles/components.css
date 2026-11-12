@@ -446,6 +446,13 @@
 .strip-cap[data-conn="live"] {
   color: var(--on-frame);
 }
+.strip > .chip.ms-auto {
+  /* The connection chip may shrink and wrap on a 360 px strip instead of widening the page (QA1). */
+  min-width: 0;
+  flex: 0 1 auto;
+  white-space: normal;
+  text-align: end;
+}
 .shell-body {
   display: flex;
   flex-direction: column;

@@ -247,7 +247,7 @@ function Next({ lessonCode, onPractiseAgain }: { lessonCode: string | null; onPr
   return (
     <div className="deb-next">
       {lessonCode ? (
-        <Button variant="primary" href={`/op/training/lesson/${lessonCode}`}>
+        <Button variant="primary" href={`/op/training/lesson/${lessonCode}`} prefetch={false}>
           {lessonTitle ? t("lessonNamed", { title: lessonTitle }) : t("lesson")}
         </Button>
       ) : null}
