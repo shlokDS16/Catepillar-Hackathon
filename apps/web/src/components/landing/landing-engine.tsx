@@ -118,6 +118,8 @@ export function LandingEngine() {
         return;
       }
       const hasIds = a.some((p) => p.id);
+      // Read every label rect first, then write the polylines: one layout, not three.
+      const rects = labels.map((el) => el?.getBoundingClientRect());
       leaders.forEach((g, i) => {
         const p = hasIds ? a.find((q) => q.id === LEADER_ID[i]) : a[LEADER_FALLBACK[i]];
         const el = labels[i];
@@ -127,7 +129,8 @@ export function LandingEngine() {
           g.style.setProperty("--vis", "0");
           return;
         }
-        const r = el.getBoundingClientRect();
+        const r = rects[i];
+        if (!r) return;
         const ax = p.x + cr.left - pr.left;
         const ay = p.y + cr.top - pr.top;
         const lx = r.left - pr.left - 8;
@@ -146,7 +149,8 @@ export function LandingEngine() {
       if (!raf) raf = requestAnimationFrame(frame);
     };
 
-    const syncRunning = () => ctl?.setRunning(visible && !document.hidden && !still);
+    let lost = false;
+    const syncRunning = () => ctl?.setRunning(!lost && visible && !document.hidden && !still);
 
     const webglAvailable = () => {
       try {
@@ -185,6 +189,7 @@ export function LandingEngine() {
           },
           // A lost context leaves a black canvas: bring the posters back.
           onLost: () => {
+            lost = true;
             root.dataset.gl = "off";
             ctl?.setRunning(false);
           },

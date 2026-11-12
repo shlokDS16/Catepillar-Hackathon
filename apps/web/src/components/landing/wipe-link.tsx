@@ -76,9 +76,11 @@ export function WipeLink({
     top.textContent = band ?? "";
     const dock = document.createElement("div");
     dock.className = "wipe-dock";
+    const rail = document.createElement("div");
+    rail.className = "wipe-rail";
     const paper = document.createElement("div");
     paper.className = "wipe-paper";
-    host.append(circle, top, dock, paper);
+    host.append(circle, top, dock, rail, paper);
     hostRef.current = host;
     document.body.appendChild(host);
 

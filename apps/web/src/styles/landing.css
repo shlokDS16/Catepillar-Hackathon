@@ -373,6 +373,7 @@
 }
 
 .l-callouts {
+  isolation: isolate;
   position: absolute;
   right: var(--gutter);
   top: 50%;
@@ -1015,6 +1016,22 @@
   line-height: var(--dg-h);
 }
 
+/* An ink scrim behind the right-hand callouts, like the copy's on the left, so the labels read over
+   the bright bench and tracks. */
+.l-callouts::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: calc(var(--s-6) * -1) calc(var(--gutter) * -1) calc(var(--s-6) * -1) calc(var(--s-6) * -1);
+  background: radial-gradient(
+    ellipse at 70% 50%,
+    color-mix(in srgb, var(--ink) 72%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 55%, transparent) 55%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
 /* Stage progress rail: seven ticks on the right edge, desktop only. */
 .l-rail {
   position: fixed;
@@ -1187,14 +1204,22 @@
 
 .wipe-band {
   top: 0;
-  height: 56px;
+  box-sizing: border-box;
+  height: calc(var(--strip-h) + var(--safe-t) + var(--bw-hair)); /* the portal status band: 80 px plate + padding + rule, safe area included */
+  padding-top: var(--safe-t);
   border-bottom: var(--bw-hair) solid var(--frame-rule);
 }
 
 .wipe-dock {
   bottom: 0;
-  height: 64px;
+  box-sizing: border-box;
+  height: var(--dock-total); /* the portal's phone dock, home-indicator inset included */
   border-top: var(--bw-hair) solid var(--frame-rule);
+}
+
+/* From 1024 px the portal has no dock: the rail runs down the start edge and the band sits to its right. */
+.wipe-rail {
+  display: none;
 }
 
 .wipe[data-step="open"] .wipe-band,
@@ -1207,8 +1232,8 @@
   position: absolute;
   left: 0;
   right: 0;
-  top: 56px;
-  bottom: 64px;
+  top: calc(var(--strip-h) + var(--safe-t) + var(--bw-hair));
+  bottom: var(--dock-total);
   background: var(--paper);
   clip-path: inset(50% 0 50% 0);
   transition: clip-path 360ms var(--ease-inout);
@@ -1216,6 +1241,34 @@
 
 .wipe[data-step="open"] .wipe-paper {
   clip-path: inset(0);
+}
+
+@media (min-width: 1024px) {
+  .wipe-dock {
+    display: none;
+  }
+  .wipe-rail {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: var(--rail-w);
+    background: var(--frame);
+    border-right: var(--bw-hair) solid var(--frame-rule);
+    opacity: 0;
+    transition: opacity 120ms linear;
+  }
+  .wipe[data-step="open"] .wipe-rail {
+    opacity: 1;
+  }
+  .wipe-band {
+    left: var(--rail-w);
+  }
+  .wipe-paper {
+    left: var(--rail-w);
+    bottom: 0;
+  }
 }
 
 /* Still mode (posters): the scene alone, no copy. */
@@ -1270,6 +1323,13 @@
   .callout-t {
     opacity: 1;
     transform: none;
+  }
+  /* data-now and data-paper are not driven here, so the static rail carries its own ink plate and
+     reads over both the scene and the paper. */
+  .l-rail ol {
+    padding: var(--s-2) 0;
+    background: var(--frame);
+    color: var(--on-frame);
   }
   .stage[data-stage="6"] {
     --p: 1;
