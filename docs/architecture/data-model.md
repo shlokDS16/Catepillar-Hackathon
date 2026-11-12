@@ -379,6 +379,9 @@ org-wide breaker (≤ 20 asks/min across all users).
 **consents** (OP own via `consent_set`; FM select). Near-miss mode (PA-8): FM's policy on `incidents`
 excludes `non_punitive = true` rows and so does the trainer's (003f: no direct `incidents` read for the
 trainer); `events` carrying a near miss never reach the FM, site or trainer routes (`private.event_visible`).
+**An injury is never sealed** (003h): `non_punitive = true` is refused with `validation` and a hint for `first_aid`, `sos`
+and any severity 5 report (trigger on `events`, check `incidents_harm_never_sealed`); `incident_log` inherits it through
+`emit_event`. Severity 5 is the injury level; there is no `injury` incident type.
 `near_miss_list()` is trainer-only and returns sealed rows as (day, severity, incident_type) only: no
 pseudonym, id, seq, time of day or free text (003g; the earlier pseudonym was withdrawn because one punitive
 row links it to a name). `ledger_export` seals near-miss rows to {v, seq, prev_hash, non_punitive, sealed} for
