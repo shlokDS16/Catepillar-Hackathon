@@ -1,0 +1,254 @@
+/*
+ * /fm/ledger (S9, F15). Site Signage: ink rules, no radius, no shadow. The only colour is the
+ * match / mismatch state on the two result plates (Plate tone). Everything else is ink on paper.
+ */
+
+.ledger {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  --dur-link: 260ms;
+}
+@media (prefers-reduced-motion: reduce) {
+  .ledger {
+    --dur-link: 0ms;
+  }
+}
+.ledger h1,
+.ledger h2,
+.ledger h3,
+.ledger p {
+  margin: 0;
+}
+.ledger-sub {
+  font-weight: var(--fw-title);
+}
+
+.ledger-plates {
+  display: grid;
+  gap: var(--s-4);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1024px) {
+  .ledger-plates {
+    grid-template-columns: 1fr 1fr;
+  }
+}
+.ledger-plate {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.ledger-plate-verdict {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--ff-display);
+  font-size: var(--t-title);
+  font-weight: var(--fw-title);
+  line-height: var(--lh-title);
+}
+.ledger-plate .hash-pair {
+  margin-top: var(--s-2);
+}
+
+/* ---------- Compare panel ---------- */
+.ledger-compare {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.ledger-field {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+.ledger-input {
+  font-family: var(--ff-mono);
+  font-size: var(--t-body);
+  color: var(--ink);
+  background: var(--surface);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  padding: var(--s-2) var(--s-3);
+  width: 100%;
+  min-height: var(--hit-dense);
+}
+.ledger-input[aria-invalid="true"] {
+  border-style: dashed;
+}
+textarea.ledger-input {
+  resize: vertical;
+  overflow-wrap: anywhere;
+}
+.ledger-range {
+  display: flex;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.ledger-range .ledger-field {
+  flex: 1 1 120px;
+  max-width: 200px;
+}
+.ledger-error {
+  font-weight: var(--fw-label);
+}
+
+/* ---------- Side-by-side hashes ---------- */
+.hash-pair {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.hash-grid {
+  display: grid;
+  gap: var(--s-1) var(--s-4);
+  grid-template-columns: 1fr;
+}
+@media (min-width: 1024px) {
+  .hash-grid {
+    grid-template-columns: auto repeat(4, max-content);
+    align-items: start;
+  }
+  .hash-chunk[data-side="published"] {
+    grid-row: 1;
+  }
+  .hash-chunk[data-side="computed"] {
+    grid-row: 2;
+  }
+  .hash-chunk {
+    grid-column: calc(var(--c) + 2);
+  }
+  .hash-rowlabel {
+    grid-column: 1;
+    display: block;
+  }
+  .hash-rowlabel[data-side="published"] {
+    grid-row: 1;
+  }
+  .hash-rowlabel[data-side="computed"] {
+    grid-row: 2;
+  }
+  .hash-chunklabel {
+    display: none;
+  }
+}
+.hash-rowlabel {
+  display: none;
+  align-self: center;
+  max-width: 16ch;
+  color: var(--ink-2);
+}
+.hash-chunklabel {
+  display: block;
+  color: var(--ink-2);
+}
+.hash-chunk {
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+}
+.hash-groups {
+  display: flex;
+  gap: var(--s-2);
+  font-family: var(--ff-mono);
+  font-size: var(--t-body);
+  line-height: 1.6;
+}
+.hash-g {
+  padding: 0 2px;
+  border: var(--bw) solid transparent;
+}
+.hash-g[data-diff="true"] {
+  border-color: var(--ink);
+}
+.hash-c {
+  position: relative;
+}
+.hash-c[data-first="true"] {
+  font-weight: 800;
+  text-decoration: underline;
+}
+.hash-c[data-first="true"]::after {
+  content: "\25B2";
+  position: absolute;
+  left: 50%;
+  top: 100%;
+  transform: translate(-50%, -0.35em);
+  font-size: 0.6em;
+}
+.hash-leaves {
+  color: var(--ink-2);
+}
+
+/* ---------- Entries table ---------- */
+.ledger-table-wrap {
+  overflow-x: auto;
+}
+.ledger-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: var(--t-meta);
+}
+.ledger-table th,
+.ledger-table td {
+  text-align: start;
+  padding: var(--s-2) var(--s-3);
+  border-bottom: var(--bw-hair) solid var(--rule-soft);
+  white-space: nowrap;
+}
+.ledger-table th {
+  border-bottom: var(--bw) solid var(--ink);
+  font-weight: var(--fw-label);
+}
+.ledger-table td.num,
+.ledger-table td.hash {
+  font-family: var(--ff-mono);
+}
+.ledger-table td[colspan] {
+  white-space: normal;
+  color: var(--ink-2);
+}
+.ledger-table tr[data-bad="true"] td {
+  background: var(--surface-sunk);
+  font-weight: var(--fw-label);
+  border-bottom: var(--bw) solid var(--ink);
+}
+.ledger-table tr[data-sealed="true"] td {
+  color: var(--ink-2);
+}
+.ledger-table tr:focus-visible {
+  outline-offset: -2px;
+}
+
+/* The hash chain: a 1 px link line from a row's hash up to the previous row's, drawn on hover or
+   focus in 260 ms. Ink only; it states a fact (this hash is built on that one), not a state. */
+.ledger-table td.hash {
+  position: relative;
+}
+.ledger-table td.hash::before {
+  content: "";
+  position: absolute;
+  left: calc(var(--s-3) + 0.5ch);
+  bottom: 100%;
+  height: 100%;
+  width: var(--bw-hair);
+  background: var(--ink);
+  transform: scaleY(0);
+  transform-origin: bottom;
+  transition: transform var(--dur-link) var(--ease);
+  pointer-events: none;
+}
+.ledger-table tbody tr:first-child td.hash::before {
+  display: none;
+}
+.ledger-table tbody tr:hover td.hash::before,
+.ledger-table tbody tr:focus td.hash::before,
+.ledger-table tbody tr:focus-within td.hash::before {
+  transform: scaleY(1);
+}
+
+.ledger-footer {
+  color: var(--ink-2);
+  max-width: 70ch;
+}

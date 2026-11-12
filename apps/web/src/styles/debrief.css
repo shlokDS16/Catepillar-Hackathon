@@ -1,0 +1,312 @@
+/* ---------- S5b Replay phase 4: Debrief (R4). Its own file, like guide.css, so parallel lanes do not collide. ---------- */
+.deb {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  align-self: stretch;
+  width: 100%;
+}
+.deb-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  border-top: var(--bw-heavy) solid var(--ink);
+  padding-top: var(--s-4);
+}
+.deb-section > h2,
+.deb-rule > * {
+  margin: 0;
+}
+.deb-player {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.deb-player > p {
+  margin: 0;
+}
+.plan-wind-ring {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.plan-wind-arrow {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vector-effect: non-scaling-stroke;
+}
+.plan-flag[data-passed="false"] .plan-flag-cloth {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2;
+  vector-effect: non-scaling-stroke;
+}
+.deb-readouts {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3) var(--s-4);
+  margin: 0;
+}
+@media (min-width: 640px) {
+  .deb-readouts {
+    grid-template-columns: repeat(5, minmax(0, 1fr));
+  }
+}
+.deb-readouts > div {
+  border-left: var(--bw) solid var(--ink);
+  padding-left: var(--s-3);
+}
+.deb-readouts dt {
+  color: var(--ink-3);
+}
+.deb-readouts dd {
+  margin: 0;
+}
+.deb-belt {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.deb-belt .picto {
+  width: var(--s-6);
+  height: var(--s-6);
+}
+.deb-belt[data-belt="off"] .picto,
+.deb-belt[data-belt="unknown"] .picto {
+  opacity: 0.45;
+}
+.deb-belt[data-belt="off"] > span {
+  text-decoration: line-through;
+  text-decoration-thickness: var(--bw);
+}
+.deb-scrub {
+  box-sizing: border-box;
+  min-height: var(--hit);
+  display: flex;
+  align-items: center;
+  padding: 0 var(--s-3);
+  touch-action: pan-y;
+  cursor: pointer;
+  user-select: none;
+}
+.deb-rail {
+  position: relative;
+  width: 100%;
+  height: var(--s-4);
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+}
+.deb-rail-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--ink);
+}
+.deb-thumb {
+  position: absolute;
+  top: calc(var(--s-3) * -1);
+  width: var(--s-2);
+  height: var(--s-6);
+  margin-left: calc(var(--s-1) * -1);
+  background: var(--ink);
+  border: var(--bw) solid var(--paper);
+  box-sizing: border-box;
+}
+.deb-mark {
+  position: absolute;
+  width: var(--s-5);
+  height: var(--s-5);
+  margin-left: calc(var(--s-5) / -2);
+  pointer-events: none;
+}
+.deb-mark[data-kind="flag"] {
+  bottom: calc(100% + var(--s-1));
+}
+.deb-mark[data-kind="clock"] {
+  top: calc(100% + var(--s-1));
+}
+.deb-glyph {
+  width: var(--s-5);
+  height: var(--s-5);
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 2;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  vertical-align: middle;
+}
+.deb-glyph[data-passed="true"] {
+  fill: var(--ink);
+}
+.deb-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2) var(--s-5);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.deb-legend > li {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.deb-controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--hit-gap);
+}
+.deb-speed {
+  border: var(--bw) solid var(--ink);
+  padding: var(--s-1) var(--s-3);
+  font-variant-numeric: tabular-nums;
+}
+.deb-scores {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 640px) {
+  .deb-scores {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+}
+.deb-score {
+  display: grid;
+  gap: var(--s-2);
+}
+.deb-score-figure {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+}
+.deb-bar {
+  display: block;
+  height: var(--s-4);
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+}
+.deb-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--ink);
+}
+.deb-trace,
+.deb-trace-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.deb-trace h3,
+.deb-trace p {
+  margin: 0;
+}
+.deb-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.deb-chip {
+  box-sizing: border-box;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-height: var(--hit-dense);
+  padding: var(--s-1) var(--s-3);
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  font-size: var(--t-meta);
+}
+button.deb-chip {
+  cursor: pointer;
+}
+.deb-chip .picto {
+  width: var(--s-5);
+  height: var(--s-5);
+}
+.deb-chip[data-kind="relevant"] {
+  background: var(--ink);
+  color: var(--surface);
+  --mark-bg: var(--ink);
+}
+.deb-chip[data-kind="relevant"] .picto rect {
+  fill: var(--surface);
+}
+.deb-chip[data-kind="irrelevant"] {
+  background: transparent;
+}
+.deb-chip[data-kind="missed"] {
+  border-style: dashed;
+  background: transparent;
+}
+.deb-chip[aria-pressed="true"] {
+  outline: var(--focus-w) solid var(--ink);
+  outline-offset: 2px;
+}
+.deb-chip-word {
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  font-weight: 700;
+}
+.deb-why {
+  min-height: var(--s-6);
+}
+.deb-decisions {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.deb-decision {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  border-left: var(--bw-heavy) solid var(--ink);
+  padding-left: var(--s-4);
+}
+.deb-decision > p,
+.deb-decision-head > p {
+  margin: 0;
+}
+.deb-decision-head {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.deb-decision-head .picto {
+  width: var(--s-5);
+  height: var(--s-5);
+  flex: none;
+}
+.deb-tag {
+  font-weight: 700;
+}
+.deb-rule {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  align-items: flex-start;
+  padding: var(--s-5);
+}
+.deb-rule-text {
+  margin: 0;
+}
+.deb-next {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hit-gap);
+}

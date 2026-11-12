@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { fixtureAdapter } from "@/components/chrome/providers";
 import { Button } from "@/components/ui/button";
 import { Plate } from "@/components/ui/plate";
@@ -11,7 +11,9 @@ const BEATS: Array<{ beat: Beat; label: string }> = [
   { beat: 2, label: "Beat 2 · seatbelt off on a slope (warning + motion lock)" },
   { beat: 3, label: "Beat 3 · Guardian: EXC-014 hydraulic drift (on foot)" },
   { beat: 4, label: "Beat 4 · replay ready + lesson assigned" },
-  { beat: 5, label: "Beat 5 · ledger checkpoint, then tamper" },
+  { beat: 5, label: "Beat 5 · ledger checkpoint, then tamper (edit: chain breaks)" },
+  { beat: 6, label: "Ledger · tamper with re-hash (chain intact, Telegram does not match)" },
+  { beat: 7, label: "Ledger · reset to intact" },
 ];
 
 /**
@@ -21,6 +23,10 @@ const BEATS: Array<{ beat: Beat; label: string }> = [
  */
 export function DirectorPanel() {
   const [log, setLog] = useState<string[]>([]);
+  const [witnessLine, setWitnessLine] = useState("");
+  useEffect(() => {
+    void import("@/ledger/fixtures").then((m) => m.witnessLineFor()).then(setWitnessLine);
+  }, []);
   const play = (beat: Beat, label: string) => {
     fixtureAdapter().broadcastBeat(beat);
     setLog((l) => [`${new Date().toLocaleTimeString("en-IN", { hour12: false })} · ${label}`, ...l].slice(0, 30));
@@ -44,6 +50,10 @@ export function DirectorPanel() {
           </Button>
         ))}
       </div>
+      <section aria-label="Telegram checkpoint line (fixtures)" className="flex flex-col gap-2">
+        <h2 className="t-label">Telegram checkpoint line for /fm/ledger (fixtures)</h2>
+        <textarea readOnly rows={3} value={witnessLine} className="t-mono t-meta w-full border-2 border-ink bg-surface p-2" />
+      </section>
       <section aria-label="Response log" className="flex flex-col gap-2">
         <h2 className="t-label">Log</h2>
         {log.length === 0 ? <p className="t-meta text-ink-3">Nothing sent yet.</p> : null}

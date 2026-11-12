@@ -8,6 +8,9 @@
 > Wave 1 (started): L1 ledger_export privacy migration (new 003d), L3 landing (dossier), L2 R3 Decide,
 > L2 F14 Inbox. Queue next: L1 B10 → B10b/B11 → B15; L2 R4 → F15 → F10/F11 → F17/F20/F19;
 > L3 Replay re-enactment polish → demo video. Supabase ACTIVE_HEALTHY.
+> **NO CALLS (Shlok, 2026-11-12):** no Twilio call, SMS, Telegram or SOS trigger by anyone, ever (a friend's
+> number is among the demo phones). DEMO_SUPERVISOR_PHONE removed from Vercel production; SOS_LIVE unset
+> everywhere; Supabase functions DRY_RUN=true.
 > Progress: R3 Decide merged (ebedff0), F14 Inbox merged (69f6141), both after Opus review fixes; web
 > 194 tests, build green, deployed. Running: L3 landing, L2 R4 Debrief (stateAt(t) design), L2 F10 Task,
 > F15 Ledger in review, L1 privacy rework. PRIVACY FINDING (Opus backend review, proven live then rolled
