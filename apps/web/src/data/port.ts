@@ -33,6 +33,7 @@ import type {
 import type { AppEvent, ClockTick, MachineDelta, Snapshot } from "@/data/types";
 import type { Connectivity } from "@/data/reducer";
 import type { SiteMapData } from "@/map/site-map";
+import type { InboxItem } from "@/inbox/inbox";
 
 type In<T> = z.input<T extends z.ZodType ? T : never>;
 type Out<T> = z.output<T extends z.ZodType ? T : never>;
@@ -65,6 +66,9 @@ export type DataPort = {
   protocolCard(id: string): Promise<ProtocolCard | null>;
   /** Zones, the operator's trail and the other machines (S4). Mine comes from the snapshot. */
   siteMap(): Promise<SiteMapData>;
+
+  /** Fleet-manager Inbox rows (S7): alerts joined with operator, machine, dispatch line and anomaly. */
+  inbox(): Promise<InboxItem[]>;
 
   pairMachine(input: In<typeof PairMachineIn>): Promise<Out<typeof PairMachineOut>>;
   consentSet(input: In<typeof ConsentSetIn>): Promise<void>;
