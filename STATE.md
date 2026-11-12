@@ -1,32 +1,16 @@
 # STATE (source of truth; only the integrator/orchestrator edits this file)
 
-> **FINAL BUILD WINDOW 2026-11-12 (Shlok confirmed directly to the lead).** Plan:
-> docs/sessions/team-plan-2026-11-12.md; implementer rules: docs/sessions/lane-rules.md.
-> Lead L0 = "Caterpillar Hackathon Spotter resumption" (Opus) runs ALL lanes (L1 backend too: the old
-> Track B session stood down, Fable + 622k context). Budget: stop spawning at 92 % weekly, hard stop
-> 96 % (51 % at start). No Fable. Agents on branches lane/l1-*, lane/l2-*, lane/l3-*; only L0 merges.
-> Wave 1 (started): L1 ledger_export privacy migration (new 003d), L3 landing (dossier), L2 R3 Decide,
-> L2 F14 Inbox. Queue next: L1 B10 → B10b/B11 → B15; L2 R4 → F15 → F10/F11 → F17/F20/F19;
-> L3 Replay re-enactment polish → demo video. Supabase ACTIVE_HEALTHY.
-> **NO CALLS (Shlok, 2026-11-12):** no Twilio call, SMS, Telegram or SOS trigger by anyone, ever (a friend's
-> number is among the demo phones). DEMO_SUPERVISOR_PHONE removed from Vercel production; SOS_LIVE unset
-> everywhere; Supabase functions DRY_RUN=true.
-> Progress (55 % weekly at daad7ea): MERGED + deployed after Opus review fixes: R3 Decide, F14 Inbox, F15
-> Ledger, R4 Debrief (stateAt(t) re-enactment; seatbelt shows "No reading" without data), F10 Task. Web 259
-> tests green. Lead merge gate script: scratchpad gate.sh (pushes only when typecheck, lint, tests, build pass).
-> In flight: L1 privacy branch lane/l1-ledger-privacy (003d, 003e, 003f applied to the DB; 003g in progress:
-> near_miss_list trainer-only, sealed rows = day/severity/type only). Three Opus reviews found and proved
-> near-miss de-anonymisation paths (export brute force; events_read/broadcast; my_snapshot definer bypass;
-> trainer join via pairings; linkable pseudonym in near_miss_list). NOT merged to main until a PASS.
-> L3 landing on lane/l3-landing: review CHANGES REQUIRED (CTA blocked at 1440, 5.5 s ink veil after CTA,
-> ledger demo hashes 7 not 20 fields, WebGL context leak), fixes in progress. Browser QA running.
-> NEW REQUEST (Shlok): redesign the inside portal too; first study the simulation + learning guide. Opus
-> ui-ux-lead study running on branch design/portal-study -> docs/design/portal-redesign-study.md with 2-3
-> directions + mockups; Shlok picks before any build. New L2 screens paused until then.
-> Queue after that: L1 B10 detectors (after privacy merges), F15 adapt to verified_with_sealed + np=,
-> contract fields reenactment.event_ms + machine_track[].seatbelt_fastened (L1), F11, F17, F20, F19.
-> Realtime partitions exist through 2026-11-15; run scripts/b0/realtime-wake.ts after that.
-> Lead context passed 450k: hand over to a fresh lead session at the design-direction decision.
+> **FINAL BUILD WINDOW 2026-11-12: lead L0 session ended at main 3bf6519 (63 % weekly, Fable 8 %).**
+> Live: https://spotter-five-brown.vercel.app (SOS dry-run; no calls: D15). NEXT SESSION: paste the prompt in
+> docs/sessions/lead-handoff.md into a fresh Opus session in the main folder; its Queue lists what is left
+> (F19 Ask, final judge + phase-validator review, demo video, open non-blocking items). Merge only via
+> `bash scripts/lead/gate.sh <branch> "<msg>"`. Decisions D14-D16 in decisions.md. Secrets were printed into one
+> local subagent transcript (timeline 2026-11-12): Shlok decides on rotation.
+> Built this window: landing v1+v2; portal direction B phases 1-4 (chrome, Debrief theatre, learning loop, FM);
+> map redesign; animated lessons; R3, R4, F10, F11, F14, F15/F15b, F20; backend near-miss privacy 003d-003j, B10
+> detectors 005-005c, B10b replay + scoring 006-006c, B12 alert engine 007-007d (dry-run escalator job live).
+> Tests at 3bf6519: web 406, shared+scripts 158 (+2 local-stack skipped), sqltest 14/14 against the shared DB.
+> Realtime partitions: run scripts/b0/realtime-wake.ts before SQL tests after 2026-11-15.
 
 > **RESUMED 2026-10-11 (Shlok: "continue building").** Single-folder mode per AGENTS.md (work on
 > branch tracks in this repo; old ../spotter-track-* worktrees are read-only history). Supabase

@@ -78,8 +78,9 @@ Only the integrator ticks this section, from docs/sessions/track-b.md and track-
 - [x] B9 scenario engine + 003c/004b/004c: worker procedure (COMMIT per step), tick under try-lock 4210002, motion lock, requeue, purge_run; ledger queue health surfaced in ledger_verify: merged 0ac9cda. Measured on the real cron: 8 sim hours in 8.11 wall min at 60x, zero catch-up suppressions, 29782/29782 frames, tick p95 231 ms. Review FAIL fixed: purge_run orphaned queue rows (permanent red ledger), cab state never aged out (an hour-old parked machine authorised a call), the drain blocked the 1 s worker
 ### Showable milestones (build-protocol.md)
 - [~] Showable 1 (≈ H3-4): fixture-driven cockpit, alerts, SOS, map, EN/HI — all code merged on main (F01-F08, F12). phase-validator run 2026-10-12: FAIL → 4 blockers fixed in de2952d (audio stub marked `missing` so no [Listen] over a 404; beats 3/5 raise their caution + critical alerts; landing page leads into /op and /fm; deploy). **Deployed and verified live 2026-10-12** at https://spotter-five-brown.vercel.app (landing → /op, /op/map basemap + plan fallback, hi locale, worker asset 200). Re-validation of the milestone still due. Non-blocking follow-ups recorded: training routes 404 from the loop card, SOS sheet shows wall-clock beside fixture time, root-level vitest picks up stale worktree copies.
-- [ ] Showable 2 (≈ H8-9): + Replay 4 phases, FM inbox + ledger UI
+- [x] Showable 2: Replay 4 phases, FM inbox + ledger UI (2026-11-12, deployed)
 - [ ] Showable 3 (≈ H11-12): live data, real Telegram + Twilio (Shlok's OK)
+- [x] 2026-11-12 final window: portal B phases 1-4, map redesign, animated lessons, F10/F11/F20, landing v2, B10/B10b/B12 + privacy 003d-003j (see STATE.md)
 ### Integration checkpoints
 - [x] Contracts frozen and merged to main (contracts-v1.0.0, f9f4a3f)
 - [ ] Track F switched from the fixture adapter to live data

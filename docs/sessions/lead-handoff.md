@@ -19,11 +19,10 @@ sheet (near-miss wording true to the backend, harm never sealed, demo failure vi
 never sealed at the source), lesson seeds matching the web lessons. sqltest 13/13 (twice), web 404 tests.
 
 ## In flight at handoff
-- lane/l2-qa2: fixes for docs QA wave 2 (map marker focus ring, Debrief readouts frozen during playback, "Right steps"
-  label vs "3 of 3 right", landing stage-3 digits wrap at 375, Hindi gaps, lows). Merge through the gate when pushed.
+Nothing. All lane branches are merged (main 3bf6519); QA wave 2 fixes and 003j landed.
 
 ## Queue (priority order)
-1. Merge lane/l2-qa2 (gate). Then a short QA re-run of the routes it touched.
+1. A short QA re-run of the routes the QA2 fixes touched (map focus ring, Debrief readouts, landing stage 3, Hindi).
 2. F19 Ask Spotter (S6): fixtures first; refusal copy; A18 opens a prefilled A13 (docs/design/frontend-tasks.md:59).
 3. Final Opus judge-style review of the whole site (judge-simulator agent) + phase-validator against CHECKLIST P4/P5.
 4. Demo video (video-studio / ultrademo skill): landing → operator Home → Replay end to end → Lesson → FM Inbox/Ledger.
