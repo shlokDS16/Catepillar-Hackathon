@@ -8,12 +8,13 @@ import {
   CONDITION_ORDER, biasLine, conditionsPresent, evidenceValue, fmtMin, groupsFor, maxMinutes, modelBeats, parseRows, pickDefault,
   totalN, weightedMae, type BiasLine, type EvidenceLite, type Group, type WeatherKey,
 } from "@/analytics/analytics";
-import { DEMO_EVIDENCE, DEMO_ROWS } from "@/analytics/fixtures";
 import { BarGroup, BarPatterns, Swatch, type BarRow } from "./bar-group";
 
-type Props = { rows?: unknown[]; evidence?: EvidenceLite[] };
+/** `demo` = fixture rows: always labelled "Simulated demo data". `live` = organiser rows from `v_task_analytics`. */
+type Props = { rows: unknown[]; evidence: EvidenceLite[]; source: "demo" | "live" };
 
-export function AnalyticsScreen({ rows: rawRows = DEMO_ROWS, evidence = DEMO_EVIDENCE }: Props) {
+export function AnalyticsScreen({ rows: rawRows, evidence, source }: Props) {
+  const demo = source === "demo";
   const t = useTranslations("analytics");
   const tt = useTranslations("enums.task");
   const rows = useMemo(() => parseRows(rawRows), [rawRows]);
@@ -25,7 +26,7 @@ export function AnalyticsScreen({ rows: rawRows = DEMO_ROWS, evidence = DEMO_EVI
   const titleId = useId();
 
   const bias = (b: BiasLine) =>
-    b.kind === "unknown" ? t("bias.unknown") : b.kind === "exact" ? t("bias.exact") : t(`bias.${b.kind}`, { m: b.minutes });
+    b.kind === "unknown" ? t("bias.unknown") : b.kind === "exact" || b.kind === "flat" ? t(`bias.${b.kind}`) : t(`bias.${b.kind}`, { m: b.minutes });
 
   const seriesRows = (g: Group): BarRow[] => [
     { key: "actual", label: t("series.actual"), value: g.actual, text: fmtMin(g.actual) ?? "", pattern: "solid" },
@@ -39,10 +40,10 @@ export function AnalyticsScreen({ rows: rawRows = DEMO_ROWS, evidence = DEMO_EVI
       <div className="an-head">
         <h1 id={titleId} className="t-title">{t("title")}</h1>
         <p className="t-meta an-meta">
-          {t("meta", { n: totalN(groups) })} <span className="t-mono">n = {totalN(groups)}</span>
+          {t(demo ? "metaDemo" : "meta", { n: totalN(groups) })}
         </p>
         <div className="an-chips">
-          <Chip tone="meta">{t("organiserFields")}</Chip>
+          {demo ? <Chip tone="outline">{t("demoChip")}</Chip> : <Chip tone="meta">{t("organiserFields")}</Chip>}
           <Chip tone="meta">{t("simulatedOps")}</Chip>
         </div>
       </div>
@@ -63,18 +64,14 @@ export function AnalyticsScreen({ rows: rawRows = DEMO_ROWS, evidence = DEMO_EVI
         <p className="plate an-empty t-body" role="status">{t("noTasks")}</p>
       ) : (
         <>
-          {verdict ? (
-            <p className="an-verdict t-body" data-beats={verdict.model < verdict.organiser || undefined}>
-              <Mark kind={verdict.model < verdict.organiser ? "check" : "info"} />
-              <span>
-                {t(verdict.model < verdict.organiser ? "verdict.beats" : "verdict.notBeats", {
-                  ours: fmtMin(verdict.model) ?? "", organiser: fmtMin(verdict.organiser) ?? "",
-                })}
-              </span>
-            </p>
-          ) : (
-            <p className="an-verdict t-body"><Mark kind="info" /><span>{t("verdict.none")}</span></p>
-          )}
+          <p className="an-verdict t-body">
+            <Mark kind="info" />
+            <span>
+              {verdict
+                ? t("verdict.some", { ours: fmtMin(verdict.model) ?? "", organiser: fmtMin(verdict.organiser) ?? "", n: verdict.n })
+                : t("verdict.none")}
+            </span>
+          </p>
 
           <ol className="an-groups">
             {groups.map((g) => (
@@ -84,15 +81,9 @@ export function AnalyticsScreen({ rows: rawRows = DEMO_ROWS, evidence = DEMO_EVI
                   <span className="t-mono t-meta">n = {g.n}</span>
                   {g.few ? <span className="t-meta an-few">{t("few", { n: g.n })}</span> : null}
                 </div>
-                <p className="sr-only">
-                  {t("groupSr", {
-                    task: tt(g.task), n: g.n, actual: fmtMin(g.actual) ?? t("noData"),
-                    organiser: fmtMin(g.organiser) ?? t("noData"), ours: fmtMin(g.model) ?? t("noData"),
-                  })}
-                </p>
                 <BarGroup rows={seriesRows(g)} max={max} dim={g.few} noData={t("noData")} />
                 <p className="an-takeaway t-body">
-                  {t("takeaway", { organiser: bias(biasLine(g.biasOrganiser)), ours: bias(biasLine(g.biasModel)) })}
+                  {t("takeaway", { organiser: bias(biasLine(g.biasOrganiser, g.maeOrganiser)), ours: bias(biasLine(g.biasModel, g.maeModel)) })}
                 </p>
                 {modelBeats(g) === false ? <p className="t-meta an-honest">{t("notBetter")}</p> : null}
               </li>
@@ -106,11 +97,11 @@ export function AnalyticsScreen({ rows: rawRows = DEMO_ROWS, evidence = DEMO_EVI
                 <tr>
                   <th scope="col">{t("col.task")}</th>
                   <th scope="col">n</th>
+                  <th scope="col">{t("col.maeOrganiser")}</th>
+                  <th scope="col">{t("col.maeOurs")}</th>
                   <th scope="col">{t("series.actual")}</th>
                   <th scope="col">{t("series.organiser")}</th>
                   <th scope="col">{t("series.model")}</th>
-                  <th scope="col">{t("col.maeOrganiser")}</th>
-                  <th scope="col">{t("col.maeOurs")}</th>
                 </tr>
               </thead>
               <tbody>
@@ -118,11 +109,11 @@ export function AnalyticsScreen({ rows: rawRows = DEMO_ROWS, evidence = DEMO_EVI
                   <tr key={g.task} data-few={g.few || undefined}>
                     <th scope="row">{tt(g.task)}</th>
                     <td>{g.n}</td>
+                    <Num v={g.maeOrganiser} na={t("noData")} />
+                    <Num v={g.maeModel} na={t("noData")} />
                     <Num v={g.actual} na={t("noData")} />
                     <Num v={g.organiser} na={t("noData")} />
                     <Num v={g.model} na={t("noData")} />
-                    <Num v={g.maeOrganiser} na={t("noData")} />
-                    <Num v={g.maeModel} na={t("noData")} />
                   </tr>
                 ))}
               </tbody>
@@ -131,7 +122,7 @@ export function AnalyticsScreen({ rows: rawRows = DEMO_ROWS, evidence = DEMO_EVI
         </>
       )}
 
-      <p className="t-meta an-source">{t("source")}</p>
+      <p className="t-meta an-source">{t(demo ? "sourceDemo" : "source")}</p>
       <EvidenceCard evidence={evidence} />
     </section>
   );
@@ -177,7 +168,6 @@ function ConditionSelector({ present, value, onChange }: { present: WeatherKey[]
             data-on={sel || undefined}
             onClick={() => onChange(c)}
           >
-            
             <span>{t(`cond.${c}`)}</span>
             {!on ? <span className="t-meta an-seg-none">{t("noTasksShort")}</span> : null}
           </button>
@@ -190,6 +180,7 @@ function ConditionSelector({ present, value, onChange }: { present: WeatherKey[]
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
 function EvidenceCard({ evidence }: { evidence: EvidenceLite[] }) {
+  const evId = useId();
   const t = useTranslations("analytics.ev");
   const no = t("none");
   const get = (k: string, type?: string) => evidenceValue(evidence, k, type);
@@ -199,7 +190,6 @@ function EvidenceCard({ evidence }: { evidence: EvidenceLite[] }) {
       {e ? (
         <>
           <BarGroup rows={[{ key: label, label, value: e.value, text: pct(e.value), pattern: "solid" }]} max={1} noData={no} />
-          <span className="sr-only">{pct(e.value)}</span>
           {e.n !== null ? <span className="t-mono t-meta">n = {e.n}</span> : null}
         </>
       ) : <span className="t-meta an-ev-none">{no}</span>}
@@ -219,12 +209,11 @@ function EvidenceCard({ evidence }: { evidence: EvidenceLite[] }) {
       </>
     );
   };
-  const etaN = get("eta.mae.model")?.n ?? null;
   const rag1 = get("rag.hit_at_5");
   const rag2 = get("rag.faithfulness");
   return (
-    <section className="plate an-evidence" data-rule="heavy" aria-labelledby="ev-title">
-      <h2 id="ev-title" className="t-title">{t("title")}</h2>
+    <section className="plate an-evidence" data-rule="heavy" aria-labelledby={evId}>
+      <h2 id={evId} className="t-title">{t("title")}</h2>
       <div className="an-ev-grid">
         <div className="an-ev-block">
           <h3 className="t-label">{t("detection")}</h3>
@@ -241,7 +230,6 @@ function EvidenceCard({ evidence }: { evidence: EvidenceLite[] }) {
             ? pair({ l: t("maeOurs"), e: get("eta.mae.model"), p: "hatch" }, { l: t("maeOrganiser"), e: get("eta.mae.organiser"), p: "outline" }, (v) => `${fmtMin(v)} min`)
             : <p className="t-meta an-ev-none">{no}</p>}
           <ul className="an-ev-list">{meter(t("p90"), get("eta.p90_coverage"))}</ul>
-          {etaN !== null ? <p className="t-mono t-meta">n = {etaN}</p> : null}
         </div>
         <div className="an-ev-block">
           <h3 className="t-label">{t("impact")}</h3>

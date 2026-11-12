@@ -992,7 +992,7 @@
   },
   "analytics": {
     "title": "Task time: estimate vs actual",
-    "meta": "held-out test tasks",
+    "meta": "held-out test tasks · n = {n}",
     "organiserFields": "Organiser fields",
     "simulatedOps": "Simulated operators and sites",
     "legend": "Chart legend",
@@ -1020,16 +1020,15 @@
       "short": "{m} min short",
       "over": "{m} min over",
       "exact": "on target",
-      "unknown": "not available"
+      "unknown": "not available",
+      "flat": "no average lean"
     },
     "takeaway": "Organiser estimate is {organiser}; ours is {ours}.",
     "notBetter": "Our estimate is not closer than the organiser's here.",
     "verdict": {
-      "beats": "Across these tasks our P50 misses by {ours} min on average, the organiser estimate by {organiser} min.",
-      "notBeats": "Across these tasks our P50 misses by {ours} min on average, the organiser estimate by {organiser} min. We do not beat it here.",
-      "none": "Not enough data to compare the two estimates."
+      "none": "Not enough tasks (10 or more per group) to compare the two estimates.",
+      "some": "Groups with 10 or more tasks (n = {n}): our P50 misses by {ours} min on average, the organiser estimate by {organiser} min. No interval yet, so this is not a significance claim."
     },
-    "groupSr": "{task}, {n} tasks. Actual {actual} minutes, organiser estimate {organiser} minutes, our P50 {ours} minutes.",
     "tableCaption": "Mean minutes and mean absolute error, {cond}",
     "col": {
       "task": "Task type",
@@ -1061,6 +1060,9 @@
       "ask": "Ask Spotter",
       "hit5": "Hit at 5",
       "faith": "Faithfulness"
-    }
+    },
+    "metaDemo": "Simulated demo data · n = {n}",
+    "demoChip": "Simulated demo data",
+    "sourceDemo": "Simulated demo data: these rows are generated for the demo, not organiser task times. Weather labels follow Open-Meteo categories."
   }
 }

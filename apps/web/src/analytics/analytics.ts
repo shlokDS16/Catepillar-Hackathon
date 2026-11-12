@@ -76,22 +76,24 @@ export function maxMinutes(groups: Group[]): number {
   return m > 0 ? m : 1;
 }
 
-export type BiasLine = { kind: "short" | "over" | "exact"; minutes: number } | { kind: "unknown" };
+export type BiasLine = { kind: "short" | "over" | "exact" | "flat"; minutes: number } | { kind: "unknown" };
+/** "On target" needs a small absolute error as well as a small mean error: errors can cancel on average. */
+export const ON_TARGET_MAE = 1;
 
 /**
  * `bias = mean(estimate − actual)` in minutes (api-contracts §14): negative means the estimate ran short,
  * positive means it ran over. Rounded to whole minutes; |bias| below half a minute reads as "exact".
  */
-export function biasLine(bias: number | null): BiasLine {
+export function biasLine(bias: number | null, mae: number | null = null): BiasLine {
   if (bias === null || !Number.isFinite(bias)) return { kind: "unknown" };
   const m = Math.round(Math.abs(bias));
-  if (m === 0) return { kind: "exact", minutes: 0 };
+  if (m === 0) return mae !== null && mae < ON_TARGET_MAE ? { kind: "exact", minutes: 0 } : { kind: "flat", minutes: 0 };
   return { kind: bias < 0 ? "short" : "over", minutes: m };
 }
 
-/** One decimal at most, for chart labels and the table; null stays null. */
+/** One decimal everywhere (chart labels, table, verdict); null stays null. */
 export function fmtMin(v: number | null): string | null {
-  return v === null || !Number.isFinite(v) ? null : String(Math.round(v * 10) / 10);
+  return v === null || !Number.isFinite(v) ? null : v.toFixed(1);
 }
 
 /** Does the model beat the organiser on mean absolute error in this group? null when either is missing. */
@@ -100,14 +102,15 @@ export function modelBeats(g: Group): boolean | null {
   return g.maeModel < g.maeOrganiser;
 }
 
-/** n-weighted mean MAE across groups that have both values (the headline). */
+/** n-weighted mean MAE across groups with both values; groups with n < MIN_N are excluded (the headline). */
 export function weightedMae(groups: Group[]): { organiser: number; model: number; n: number } | null {
   let n = 0, o = 0, m = 0;
   for (const g of groups) {
+    if (g.few) continue;
     if (g.maeOrganiser === null || g.maeModel === null) continue;
     n += g.n; o += g.maeOrganiser * g.n; m += g.maeModel * g.n;
   }
-  return n === 0 ? null : { organiser: o / n, model: m / n, n };
+  return n < MIN_N ? null : { organiser: o / n, model: m / n, n };
 }
 
 /** Evidence metrics: a missing key is "Not computed yet", never a zero. */

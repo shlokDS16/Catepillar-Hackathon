@@ -35,8 +35,11 @@ describe("bias (mean estimate minus actual, minutes)", () => {
     expect(biasLine(1.6)).toEqual({ kind: "over", minutes: 2 });
   });
   it("under half a minute reads exact; null is unknown, never exact", () => {
-    expect(biasLine(0.4)).toEqual({ kind: "exact", minutes: 0 });
-    expect(biasLine(-0.49)).toEqual({ kind: "exact", minutes: 0 });
+    expect(biasLine(0.4, 0.6)).toEqual({ kind: "exact", minutes: 0 });
+    expect(biasLine(-0.49, 0.8)).toEqual({ kind: "exact", minutes: 0 });
+    // errors that cancel on average are not "on target"
+    expect(biasLine(0.1, 9)).toEqual({ kind: "flat", minutes: 0 });
+    expect(biasLine(0.1)).toEqual({ kind: "flat", minutes: 0 });
     expect(biasLine(null)).toEqual({ kind: "unknown" });
     expect(biasLine(Number.NaN)).toEqual({ kind: "unknown" });
   });
@@ -57,6 +60,8 @@ describe("null handling", () => {
   });
   it("max scale ignores nulls and never returns 0", () => {
     expect(maxMinutes(groupsFor(rows, "hot"))).toBe(96.3);
+    expect(fmtMin(50)).toBe("50.0");
+    expect(fmtMin(7)).toBe("7.0");
     expect(maxMinutes([])).toBe(1);
   });
   it("drops rows without task type, condition or n; accepts nullable measures", () => {
@@ -72,8 +77,11 @@ describe("null handling", () => {
   });
   it("weighted MAE skips groups missing either side", () => {
     const w = weightedMae(groupsFor(rows, "hot"))!;
-    expect(w.n).toBe(42 + 31 + 55 + 6);
-    expect(w.model).toBeLessThan(w.organiser);
+    // excludes grading (n = 6, few) and demolition (model MAE null)
+    expect(w.n).toBe(42 + 31 + 55);
+    expect(w.organiser).toBeCloseTo(889.5 / 128, 6);
+    expect(w.model).toBeCloseTo(527.3 / 128, 6);
+    expect(weightedMae(groupsFor(rows, "rain"))?.n).toBe(41);
     expect(weightedMae([])).toBeNull();
   });
   it("evidence: a missing key is null, per-type rows are matched by details.type", () => {

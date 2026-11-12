@@ -49,38 +49,42 @@ function Rect({ pattern, x, width, y, h }: { pattern: BarPattern; x: string; wid
 }
 
 /**
- * Horizontal grouped bars on one shared scale (`max`). Bars are SVG rects sized in percent; the printed values
- * sit in an HTML column of equal row height so Indic text and numbers stay crisp at 360 px.
- * `dim` draws the group at 40 % ink (few tasks).
+ * Horizontal grouped bars on one shared scale (`max`). Each row is an SVG bar whose width is a share of the
+ * plot minus a fixed label gutter, followed by its value 8 px after the bar end (HTML text: Indic scripts and
+ * numbers stay crisp). A null value is a 24 px dashed stub with the "no data" note, never a bar.
+ * `dim` draws the group at 40 % ink (few tasks). Screen readers get the label and value of each row.
  */
 export function BarGroup({
   rows, max, dim = false, noData, caption, children,
 }: {
   rows: BarRow[]; max: number; dim?: boolean; noData: string; caption?: string; children?: ReactNode;
 }) {
-  const h = rows.length * BAR_ROW_H;
   return (
     <div className="bg" data-dim={dim || undefined}>
-      <div className="bg-plot">
-        <svg className="bg-svg" width="100%" height={h} role="presentation" aria-hidden="true" focusable="false">
-          <line x1="0" x2="0" y1="0" y2={h} strokeWidth="2" style={{ stroke: "var(--ink)" }} />
-          {rows.map((r, i) => {
-            const y = i * BAR_ROW_H + GAP / 2;
-            const bh = BAR_ROW_H - GAP;
-            if (r.value === null) {
-              return <line key={r.key} x1="2" x2="40%" y1={y + bh / 2} y2={y + bh / 2} strokeWidth="2" strokeDasharray="4 5" style={{ stroke: "var(--ink-3)" }} />;
-            }
-            const pct = Math.max(0, Math.min(100, (r.value / max) * 100));
-            return <Rect key={r.key} pattern={r.pattern} x="1" width={`${pct}%`} y={y} h={bh} />;
-          })}
-        </svg>
-        <ul className="bg-vals t-mono" aria-hidden="true" style={{ ["--rh" as string]: `${BAR_ROW_H}px` }}>
-          {rows.map((r) => (
-            <li key={r.key} data-null={r.value === null || undefined}>
-              {r.value === null ? noData : r.text}
-            </li>
-          ))}
-        </ul>
+      <ul className="sr-only">
+        {rows.map((r) => (
+          <li key={r.key}>{r.label}: {r.value === null ? noData : r.text}</li>
+        ))}
+      </ul>
+      <div className="bg-plot" aria-hidden="true" style={{ ["--rh" as string]: `${BAR_ROW_H}px` }}>
+        {rows.map((r) => {
+          const bh = BAR_ROW_H - GAP;
+          const share = r.value === null ? 0 : Math.max(0, Math.min(1, r.value / max));
+          return (
+            <div className="bg-row" key={r.key}>
+              {r.value === null ? (
+                <svg className="bg-bar" width="24" height={BAR_ROW_H} focusable="false">
+                  <line x1="2" x2="24" y1={BAR_ROW_H / 2} y2={BAR_ROW_H / 2} strokeWidth="2" strokeDasharray="4 4" style={{ stroke: "var(--ink-3)" }} />
+                </svg>
+              ) : (
+                <svg className="bg-bar" height={BAR_ROW_H} focusable="false" style={{ width: `calc((100% - 6.5rem) * ${share})`, minWidth: 3 }}>
+                  <Rect pattern={r.pattern} x="1" width="calc(100% - 2px)" y={GAP / 2} h={bh} />
+                </svg>
+              )}
+              <span className="bg-val t-mono" data-null={r.value === null || undefined}>{r.value === null ? noData : r.text}</span>
+            </div>
+          );
+        })}
       </div>
       {caption ? <p className="bg-cap t-meta">{caption}</p> : null}
       {children}
