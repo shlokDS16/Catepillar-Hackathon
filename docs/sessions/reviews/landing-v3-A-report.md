@@ -68,3 +68,25 @@ I also looked at the 1440 frames S1 0, S3 .8 and S4 .45 (truck on the 12 m ring 
 
 - Widen `Anchor.id` to include `"truck"`, and read `getReadout()`.
 - Use `poster-N-m` on phones, `contours.svg#map`, and the `use.dim/.lit` styling from the mockup.
+
+## Fixes (review landing-v3-A-review.md)
+
+Commit: see the head of `lane/l2-landing-v3-a` after e29e014. Counts: tsc and eslint clean, 547 tests passed (15 in `scene/timeline.test.ts`), build green.
+
+- **H1, fixed.** The replay no longer moves the machine toward a parked truck. The machine stays parked at the trail end in stages 4 and 5. Stage 5 rewinds the truck instead, from the end of stage 4 back to the warning moment. The ring state comes from the pure `ringLevelFor(ps)` in `route.ts`: it is the replayed state while the replay rewinds, and neutral (0) after it. `onRing`, the glow and `getReadout().ring` all use it, so no state appears without a ledger entry. Tests: "stage 5 ring state equals the replayed truck distance", "the replay ends on the warning of ledger entry 4, then neutral", "the replay starts where stage 4 ended". These would have failed on e29e014.
+- **M1, fixed by the same change.** Entry 4 (10:44) happened with the machine parked, so the replay ends at the truck's warning pose (S4 p .45, clock 10:44). `REWIND_T` is deleted. Deviation from spec A3: the machine's trail no longer rewinds. The truck and the rings are what rewind.
+- **M2, fixed.** Crossings are aimed 0.2 m past the radius: 11.8 m at `warnAt`, 12.2 m at `caution`, 17.8 and 18.2 m for the 18 m ring. Tests: WARNING at .45 with at least 0.15 m margin, CAUTION at .43, CAUTION at .80 with at least 0.15 m margin, clear at .90.
+- **M3, fixed.**
+  - Fine lines now trace a smoothed copy of the ground (about 3 m) and use the bench-line class `cm`. The metre-scale speckle (class `cf`) is gone, so O, both Ts, S, P, E and R carry the same kind of bright flowing line.
+  - Line length per letter box: S .64, P .56, O .45, T .41, T .45, E .54, R .52. The ratio is 1.57 and the file is 57.5 KB gzip.
+  - I compared the 1440 preview against all seven letters (`A-footer-contours.png`) and they read as one drawing. The legend wording "every 1.6 m" is still B's to change.
+  - The contours.svg is regenerated and deterministic.
+- **L1, not done.** Widening `SceneAnchor.id` and dropping the cast breaks typecheck in this branch's old `landing-engine.tsx`. Once B's merged engine is the base, it is a one-line change: lead, say so and I will do it.
+- **L2, fixed.** Ring pulses are off on compact devices (`animate` false), so they no longer keep frames rendering. The report no longer claims the dig cycle stops: it still runs at 30 fps in S1, S2 and S4 on phones.
+- **L3, fixed.** The two weak tests are replaced by the ring-state tests above, which use the actual stage 5 truck position.
+- **L4, not fixed.** `nearestM` starts at 67 m at the top of the haul road. The truck is far up the road there. Starting it nearer would change the route. The lead should decide.
+- **L5, fixed.** `poster-2` has the machine centred in the right 62%, and `poster-5` is re-framed closer (and now shows the truck and the replay rings). All posters were re-rendered, at most 23 KB each.
+- **L6, partly fixed.** The environment-variable knobs are gone and the file is shorter. The road style patch and the road's floor x values are unchanged.
+- **L7, for the lead.**
+
+Exports B uses: none changed. `SceneController`, `SceneReadout`, `getReadout`, `getAnchors` (4 points) and `shift.ts` are as before. Not changed in this commit: `route.ts` gained exports `truckProgress` and `ringLevelFor`, and `REWIND_T` was an internal constant.

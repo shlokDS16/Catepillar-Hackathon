@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
-import { S2, S4, shiftClock } from "../shift";
+import { S4, S5 } from "../shift";
 import { ARRIVE, LEAVE, cameraState } from "./camera-path";
-import { RING_R, ringLevel, truckDistance } from "./route";
+import { RING_R, ringLevel, ringLevelFor, truckDistance, truckProgress } from "./route";
 
 /* The stage 4 truck route and the camera path are pure, so the beats in shift.ts are checked here without WebGL. */
 
@@ -103,14 +103,36 @@ describe("camera path (spec 8.1 A1)", () => {
   });
 });
 
-describe("tape beats against the scene (spec 12.4)", () => {
-  it("the shift clock is 10:44 at the warning beat of stage 4 ... within the stage 4 range", () => {
-    const { minutes } = shiftClock([1, 1, 1, S4.warnAt, 0]);
-    expect(Math.abs(minutes - 644)).toBeLessThan(5);
+describe("ring state is never a state the record does not hold (review H1, M2)", () => {
+  const ps4 = (p: number) => [1, 1, 1, p, 0];
+  const ps5 = (p: number) => [1, 1, 1, 1, p];
+
+  it("stage 4 at the warning beat is WARNING with margin, and one step earlier is CAUTION", () => {
+    expect(ringLevelFor(ps4(S4.warnAt))).toBe(3);
+    expect(RING_R[2] - truckDistance(S4.warnAt)).toBeGreaterThanOrEqual(0.15);
+    expect(ringLevelFor(ps4(S4.warnAt - 0.02))).toBe(2);
   });
 
-  it("the seatbelt window of stage 2 is inside the band", () => {
-    expect(S2.seatbeltOff[0]).toBeGreaterThan(ARRIVE - 1e-9);
-    expect(S2.seatbeltOff[1]).toBeLessThan(LEAVE + 1e-9);
+  it("stage 4 at the caution beat is CAUTION with margin, and at clear it is below caution", () => {
+    expect(ringLevelFor(ps4(S4.caution))).toBe(2);
+    expect(truckDistance(S4.caution) - RING_R[2]).toBeGreaterThanOrEqual(0.15);
+    expect(ringLevelFor(ps4(S4.clear))).toBeLessThanOrEqual(1);
+  });
+
+  it("stage 5 ring state equals the replayed truck distance, never an invented one", () => {
+    for (let p = 0.001; p < S5.rewind[1]; p += 0.005) {
+      const q = truckProgress(ps5(p)) as number;
+      expect(ringLevelFor(ps5(p))).toBe(ringLevel(truckDistance(q)));
+    }
+  });
+
+  it("the replay ends on the warning of ledger entry 4, then the ring state is neutral", () => {
+    expect(ringLevelFor(ps5(S5.rewind[1] - 0.001))).toBe(3);
+    for (let p = S5.rewind[1]; p <= 1; p += 0.01) expect(ringLevelFor(ps5(p))).toBe(0);
+  });
+
+  it("the replay starts where stage 4 ended", () => {
+    expect(ringLevelFor(ps5(0.0001))).toBe(ringLevelFor(ps4(1)));
+    expect(truckProgress(ps5(0.0001)) as number).toBeCloseTo(1, 2);
   });
 });

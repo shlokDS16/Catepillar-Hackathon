@@ -32,11 +32,11 @@ const STEP = 0.6;
 const BASE = 0.8; // contour levels sit at BASE + n * UNIT
 const MINOR = 1.6;
 const MAJOR = 8;
-const KMAX = Number(process.env.CONTOUR_KMAX ?? 8); // the finest tier halves the minor interval eight times: 0.00625 m
+const KMAX = 8; // the finest tier halves the minor interval eight times: 0.00625 m
 const UNIT = MINOR / 2 ** KMAX;
-const TARGET_SPACING = Number(process.env.CONTOUR_SPACING ?? 1.25); // metres between lines the tiers aim for
-const TOLERANCE = Number(process.env.CONTOUR_TOL ?? 0.24); // Douglas-Peucker, metres (0.4 of a grid cell)
-const COARSE = Number(process.env.CONTOUR_COARSE ?? 1);
+const TARGET_SPACING = 1.25; // metres between lines the tiers aim for
+const TOLERANCE = 0.24; // Douglas-Peucker, metres (0.4 of a grid cell)
+const COARSE = 1;
 const MAX_GZIP = 75 * 1024;
 
 const nx = Math.round((X1 - X0) / STEP) + 1;
@@ -44,12 +44,17 @@ const nz = Math.round((Z1 - Z0) / STEP) + 2;
 const H = new Float32Array(nx * nz);
 for (let j = 0; j < nz; j++) for (let i = 0; i < nx; i++) H[j * nx + i] = terrainHeight(X0 + i * STEP, Z0 + j * STEP);
 
-/* Smoothed slope (m per m), so the interval changes in broad zones, not cell by cell. */
+/*
+ * Fine lines trace a smoothed copy of the ground (about 3 m), not its raw metre-scale roughness. On the flat
+ * floor the raw field is speckle; the smoothed one gives long flowing lines like the bench lines on the faces,
+ * so every letter reads as the same kind of drawing. The interval is chosen from the smoothed slope.
+ */
 const G = new Float32Array(nx * nz);
+const Hs = blur(blur(H, 3), 3);
 for (let j = 1; j < nz - 1; j++) {
   for (let i = 1; i < nx - 1; i++) {
-    const gx = (H[j * nx + i + 1] - H[j * nx + i - 1]) / (2 * STEP);
-    const gz = (H[(j + 1) * nx + i] - H[(j - 1) * nx + i]) / (2 * STEP);
+    const gx = (Hs[j * nx + i + 1] - Hs[j * nx + i - 1]) / (2 * STEP);
+    const gz = (Hs[(j + 1) * nx + i] - Hs[(j - 1) * nx + i]) / (2 * STEP);
     G[j * nx + i] = Math.hypot(gx, gz);
   }
 }
@@ -108,10 +113,10 @@ function link(key: number, s: number) {
   if (a) a.push(s);
   else adj.set(key, [s]);
 }
-function addSeg(n: number, ea: number, eb: number) {
+function addSeg(n: number, ea: number, eb: number, smooth: number) {
   const s = segA.length;
-  const ka = n * KEY + ea;
-  const kb = n * KEY + eb;
+  const ka = (n * 2 + smooth) * KEY + ea;
+  const kb = (n * 2 + smooth) * KEY + eb;
   segA.push(ka);
   segB.push(kb);
   link(ka, s);
@@ -121,13 +126,15 @@ function addSeg(n: number, ea: number, eb: number) {
 for (let j = 0; j < nz - 1; j++) {
   for (let i = 0; i < nx - 1; i++) {
     const n0 = j * nx + i;
-    const v0 = H[n0];
-    const v1 = H[n0 + 1];
-    const v2 = H[n0 + nx + 1];
-    const v3 = H[n0 + nx];
+    const tier = tierOf(i, j);
+    const sm = tier >= 1 ? 1 : 0; // fine tiers trace the smoothed ground
+    const F = sm ? Hs : H;
+    const v0 = F[n0];
+    const v1 = F[n0 + 1];
+    const v2 = F[n0 + nx + 1];
+    const v3 = F[n0 + nx];
     const lo = Math.min(v0, v1, v2, v3);
     const hi = Math.max(v0, v1, v2, v3);
-    const tier = tierOf(i, j);
     const stepN = 2 ** (KMAX - Math.max(0, tier));
     const thin = tier < 0 ? 2 ** -tier : 1; // keep every thin-th minor line
     let n = Math.ceil((lo - BASE) / UNIT / stepN) * stepN;
@@ -142,18 +149,18 @@ for (let j = 0; j < nz - 1; j++) {
       const L = BASE + n * UNIT;
       const c = (v0 >= L ? 1 : 0) | (v1 >= L ? 2 : 0) | (v2 >= L ? 4 : 0) | (v3 >= L ? 8 : 0);
       switch (c) {
-        case 1: case 14: addSeg(n, e3, e0); break;
-        case 2: case 13: addSeg(n, e0, e1); break;
-        case 3: case 12: addSeg(n, e3, e1); break;
-        case 4: case 11: addSeg(n, e1, e2); break;
-        case 6: case 9: addSeg(n, e0, e2); break;
-        case 7: case 8: addSeg(n, e3, e2); break;
+        case 1: case 14: addSeg(n, e3, e0, sm); break;
+        case 2: case 13: addSeg(n, e0, e1, sm); break;
+        case 3: case 12: addSeg(n, e3, e1, sm); break;
+        case 4: case 11: addSeg(n, e1, e2, sm); break;
+        case 6: case 9: addSeg(n, e0, e2, sm); break;
+        case 7: case 8: addSeg(n, e3, e2, sm); break;
         case 5: {
-          if ((v0 + v1 + v2 + v3) / 4 >= L) { addSeg(n, e0, e1); addSeg(n, e2, e3); } else { addSeg(n, e3, e0); addSeg(n, e1, e2); }
+          if ((v0 + v1 + v2 + v3) / 4 >= L) { addSeg(n, e0, e1, sm); addSeg(n, e2, e3, sm); } else { addSeg(n, e3, e0, sm); addSeg(n, e1, e2, sm); }
           break;
         }
         case 10: {
-          if ((v0 + v1 + v2 + v3) / 4 >= L) { addSeg(n, e3, e0); addSeg(n, e1, e2); } else { addSeg(n, e0, e1); addSeg(n, e2, e3); }
+          if ((v0 + v1 + v2 + v3) / 4 >= L) { addSeg(n, e3, e0, sm); addSeg(n, e1, e2, sm); } else { addSeg(n, e0, e1, sm); addSeg(n, e2, e3, sm); }
           break;
         }
         default: break;
@@ -163,24 +170,26 @@ for (let j = 0; j < nz - 1; j++) {
 }
 
 function point(key: number): [number, number] {
-  const n = Math.floor(key / KEY);
-  const edge = key - n * KEY;
+  const nk = Math.floor(key / KEY);
+  const n = Math.floor(nk / 2);
+  const F = nk - n * 2 === 1 ? Hs : H;
+  const edge = key - nk * KEY;
   const node = edge >> 1;
   const i = node % nx;
   const j = (node - i) / nx;
   const L = BASE + n * UNIT;
-  const va = H[node];
+  const va = F[node];
   const vertical = (edge & 1) === 1;
-  const vb = vertical ? H[node + nx] : H[node + 1];
+  const vb = vertical ? F[node + nx] : F[node + 1];
   const t = (L - va) / (vb - va);
   const x = X0 + (i + (vertical ? 0 : t)) * STEP;
   const z = Z0 + (j + (vertical ? t : 0)) * STEP;
   return [x - X0, z - Z0];
 }
 
-function chains(): Array<{ n: number; pts: Array<[number, number]> }> {
+function chains(): Array<{ n: number; smooth: boolean; pts: Array<[number, number]> }> {
   const seen = new Uint8Array(segA.length);
-  const out: Array<{ n: number; pts: Array<[number, number]> }> = [];
+  const out: Array<{ n: number; smooth: boolean; pts: Array<[number, number]> }> = [];
   const other = (key: number, s: number) => {
     const list = adj.get(key);
     if (!list) return -1;
@@ -206,7 +215,8 @@ function chains(): Array<{ n: number; pts: Array<[number, number]> }> {
       }
     }
     void other;
-    out.push({ n: Math.floor(keys[0] / KEY), pts: keys.map(point) });
+    const nk = Math.floor(keys[0] / KEY);
+    out.push({ n: Math.floor(nk / 2), smooth: nk - Math.floor(nk / 2) * 2 === 1, pts: keys.map(point) });
   }
   return out;
 }
@@ -296,7 +306,8 @@ const LZ0 = (158 + 20) / 2.4;
 const LZ1 = (438 + 20) / 2.4;
 
 for (const ch of chains()) {
-  const cls = classify(ch.n);
+  // Smoothed fine lines are drawn in the bench-line class, so flat and steep ground carry the same kind of line.
+  const cls = ch.smooth ? "cm" : classify(ch.n);
   const pts = simplify(ch.pts, TOLERANCE);
   if (pts.length < (cls === "cf" ? 6 : 4)) continue;
   bucket[cls].push(pts);
