@@ -2,7 +2,7 @@ import { describe, expect, it } from "vitest";
 import { mySnapshot } from "@cat/shared/fixtures";
 import type { Machine } from "@/data/types";
 import type { InboxItem } from "@/inbox/inbox";
-import { detailMachine, ledgerActions, ledgerBand, nextSealNumber, tierChips, tierCounts, toLastVerify } from "@/inbox/fm-band";
+import { detailMachine, ledgerActions, ledgerBand, nextSealNumber, tierChips, tierCounts, toLastVerify, createVerifyGate } from "@/inbox/fm-band";
 
 const item = (o: Partial<InboxItem>): InboxItem => ({
   id: "a", kind: "seatbelt_off_moving", tier: "warning", status: "open", needsAck: true, occurrences: 1, firstSeen: "2026-09-24T09:00:00.000Z",
@@ -26,6 +26,20 @@ describe("ledger band", () => {
   it("numbers the next seal", () => {
     expect(nextSealNumber({ ok: true, headSeq: 214, firstBadSeq: null, atMs: 0 })).toBe(215);
     expect(nextSealNumber(null)).toBeNull();
+  });
+});
+
+describe("verify gate", () => {
+  it("allows one in flight and throttles right after a finish", () => {
+    let t = 1000;
+    const g = createVerifyGate(5000, () => t);
+    expect(g.start()).toBe(true);
+    expect(g.start()).toBe(false); // in flight
+    g.finish();
+    t += 4999;
+    expect(g.start()).toBe(false); // too soon
+    t += 1;
+    expect(g.start()).toBe(true);
   });
 });
 

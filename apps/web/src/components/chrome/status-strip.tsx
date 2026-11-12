@@ -9,7 +9,7 @@ import { useSafetyState } from "@/alerts/use-safety-state";
 import { Chip } from "@/components/ui/chip";
 import { Mark, Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { useAppState, useDataPort } from "@/data/store";
-import { ledgerBand } from "@/inbox/fm-band";
+import { createVerifyGate, ledgerBand } from "@/inbox/fm-band";
 import { publishVerify, useLastVerify } from "@/ledger/last-verify";
 import { dataLabel } from "@/chrome/data-label";
 import { useDataSource } from "@/data/use-data-source";
@@ -20,7 +20,7 @@ const FALLBACK_PICTO: Record<"clear" | "nosignal", PictogramName> = { clear: "se
 
 /**
  * FM only: a read-only ledger verify when the band mounts, on every FM route change, and when the tab
- * regains focus (the demo's tamper and reset beats change the chain without any alert or event). The Ledger
+ * becomes visible again (the demo's tamper and reset beats change the chain without any alert or event). The Ledger
  * page runs and publishes its own verify, so the band skips it there (one full-chain check, not two).
  * A failed or offline check keeps the last result; nothing is written or sent.
  */
@@ -36,24 +36,26 @@ function useLedgerVerify(enabled: boolean, pathname: string) {
   useEffect(() => {
     if (!enabled || onLedger) return;
     let live = true;
+    // One full-chain verify at a time, and none within 5 s of the last (a tab return can fire several events).
+    const gate = createVerifyGate(5000);
     const run = () => {
+      if (!gate.start()) return;
       port
         .ledgerVerify({ p_from: 1, p_to: null })
         .then((out) => {
           if (live) publishVerify(out, clockRef.current ? Date.parse(clockRef.current) : Date.now());
         })
-        .catch(() => {});
+        .catch(() => {})
+        .finally(() => gate.finish());
     };
     run();
     const onVisible = () => {
       if (document.visibilityState === "visible") run();
     };
     document.addEventListener("visibilitychange", onVisible);
-    window.addEventListener("focus", run);
     return () => {
       live = false;
       document.removeEventListener("visibilitychange", onVisible);
-      window.removeEventListener("focus", run);
     };
   }, [enabled, onLedger, port, tamper, pathname]);
 }

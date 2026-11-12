@@ -80,3 +80,23 @@ export function detailMachine(item: InboxItem, machine: Machine | null | undefin
   if (parts.length === 0) return null;
   return { parts, highlight: faultyPartFor(item, parts) };
 }
+
+/**
+ * Guard for the band's re-verify: at most one in flight, and none within `minGapMs` of the last finish.
+ * `start()` returns false when the call should be skipped; call `finish()` when the verify settles.
+ */
+export function createVerifyGate(minGapMs: number, now: () => number = Date.now) {
+  let busy = false;
+  let lastEnd = Number.NEGATIVE_INFINITY;
+  return {
+    start(): boolean {
+      if (busy || now() - lastEnd < minGapMs) return false;
+      busy = true;
+      return true;
+    },
+    finish(): void {
+      busy = false;
+      lastEnd = now();
+    },
+  };
+}
