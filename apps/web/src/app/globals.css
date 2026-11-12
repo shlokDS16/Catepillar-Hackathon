@@ -13,7 +13,9 @@
 @import "../styles/debrief.css" layer(components);
 @import "../styles/debrief-ink.css" layer(components);
 @import "../styles/ledger.css" layer(components);
-@import "../styles/map.css" layer(components);
+@import "../styles/map-stage.css" layer(components);
+@import "../styles/map-overlay.css" layer(components);
+@import "../styles/map-timeline.css" layer(components);
 @import "../styles/training.css" layer(components);
 
 /*

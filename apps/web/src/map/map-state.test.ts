@@ -1,7 +1,6 @@
 import { describe, expect, it } from "vitest";
 import {
   ageParts,
-  dataClockOffset,
   buildMapModel,
   eventsFromAlerts,
   headingOf,
@@ -42,7 +41,7 @@ const data: SiteMapData = {
   ],
 };
 const model = (over: Partial<Parameters<typeof buildMapModel>[0]> = {}) =>
-  buildMapModel({ data, me: ME, ownCode: "EXC-007", anchorMs: END, endMs: END, assumed: true, events: [], pins: [], hazardCodes: [], ...over });
+  buildMapModel({ data, me: ME, ownCode: "EXC-007", anchorMs: END, freshMs: END, endMs: END, assumed: true, events: [], pins: [], hazardCodes: [], ...over });
 
 describe("positionAt / pathUpTo / headingOf", () => {
   const fixes: Fix[] = [
@@ -116,7 +115,10 @@ describe("mapStateAt", () => {
     expect(provenanceAt(true, false)).toBe("live");
     expect(provenanceAt(false, false)).toBe("replayed");
     expect(mapStateAt(model(), END).machines.every((m) => m.provenance === "simulated")).toBe(true);
-    expect(mapStateAt(model(), END - 300_000).machines.every((m) => m.provenance === "replayed")).toBe(true);
+    const past = mapStateAt(model(), END - 300_000);
+    expect(past.machines.every((m) => m.provenance === "replayed")).toBe(true);
+    // Off Live the positions are still made up: Replayed does not drop Simulated.
+    expect(past.machines.every((m) => m.assumed)).toBe(true);
   });
 
   it("draws trails up to the cursor only", () => {
@@ -126,7 +128,24 @@ describe("mapStateAt", () => {
     expect(late.me!.trail.length).toBe(3);
   });
 
-  it("hides a machine before its first fix and clamps a cursor outside the window", () => {
+  it("hides a machine before its first fix, and an empty track is never drawn", () => {
+    const m = model({ anchorMs: END, freshMs: END });
+    const early = mapStateAt(m, END - 595_000);
+    expect(early.machines.find((x) => x.code === "DMP-003")).toBeUndefined(); // first fix at -500 s... after this cursor
+    const empty = { ...m, actors: [...m.actors, { id: "x", code: "NONE", own: false, health: "ok" as const, track: [] }] };
+    expect(mapStateAt(empty, END).machines.some((x) => x.code === "NONE")).toBe(false);
+  });
+
+  it("keeps a heading near north continuous through 350 to 10 degrees", () => {
+    const west = { lat: 0, lon: 0 };
+    const nne = { lat: 0.001, lon: 0.0001 }; // about 6 degrees
+    const nnw = { lat: 0.002, lon: 0.0000 }; // back to about 354
+    expect(headingOf([west, nne])).toBeGreaterThanOrEqual(0);
+    expect(headingOf([west, nne])).toBeLessThan(10);
+    expect(headingOf([nne, nnw])).toBeGreaterThan(350);
+  });
+
+  it("clamps a cursor outside the window", () => {
     const m = model({ anchorMs: END - 100_000 });
     expect(mapStateAt(m, END - WINDOW_MS - 5000).t).toBe(END - WINDOW_MS);
     expect(mapStateAt(m, END + 5000).t).toBe(END);
@@ -142,7 +161,7 @@ describe("mapStateAt", () => {
 
   it("measures distance from me and treats a machine inside the warning ring as a hazard", () => {
     const near = { ...data, machines: [{ id: "near", code: "LDR-001", lat: 21.1466, lon: 79.0882, moving: false, health: "ok" as const }] };
-    const s = mapStateAt(buildMapModel({ data: near, me: ME, ownCode: "EXC-007", anchorMs: END, endMs: END, assumed: true, events: [], pins: [], hazardCodes: [] }), END);
+    const s = mapStateAt(buildMapModel({ data: near, me: ME, ownCode: "EXC-007", anchorMs: END, freshMs: END, endMs: END, assumed: true, events: [], pins: [], hazardCodes: [] }), END);
     const m = s.machines.find((x) => x.code === "LDR-001");
     expect(m?.distanceM).toBeGreaterThan(25);
     expect(m?.distanceM).toBeLessThan(40);
@@ -188,10 +207,32 @@ describe("cursor helpers", () => {
   });
 });
 
-describe("dataClockOffset", () => {
-  it("leaves a server clock alone and shifts a simulated day onto the wall clock", () => {
-    expect(dataClockOffset(1_000_000, 1_000_000 + 60_000)).toBe(0);
-    expect(dataClockOffset(1_000_000, 90_000_000)).toBe(89_000_000);
+describe("demo timeline", () => {
+  it("shows the event tick for a wall-clock alert even when the snapshot clock is a simulated day", () => {
+    // The snapshot's operator.ts is a simulated 2026-09-24; alerts raised after mount carry the wall clock.
+    const wallNow = END;
+    const alert = { alert_id: "g", kind: "guardian_hazard", tier: "warning", needs_ack: true, escalate_at: null, occurrences: 1, protocol_card_id: null, upgraded_from: null, status: "open", first_seen: new Date(wallNow - 90_000).toISOString() } as AlertRecord;
+    const events = eventsFromAlerts([alert], { an1: { anomaly_id: "an1", machine_code: "EXC-014" } }, { g: "an1" }, wallNow - WINDOW_MS, wallNow);
+    expect(events).toHaveLength(1);
+    const s = mapStateAt(model({ events }), END);
+    expect(s.past.map((e) => e.id)).toEqual(["g"]);
+  });
+});
+
+describe("keyboard and drift", () => {
+  const span = { startMs: END - WINDOW_MS, endMs: END };
+  it("one 1 s arrow step from Live leaves Live", () => {
+    expect(toCursor(END - 1000, END)).toBe(END - 1000);
+    expect(resolveCursor(toCursor(END - 1000, END), span)).toBe(END - 1000);
+    expect(LIVE_SNAP_MS).toBeLessThan(1000);
+  });
+  it("old fixes do not move when only the latest frame advances; the newest fix does, so staleness is live", () => {
+    const a = model({ anchorMs: END, freshMs: END });
+    const b = model({ anchorMs: END, freshMs: END + 5000, endMs: END + 5000 });
+    const own = (m: ReturnType<typeof model>) => m.actors.find((x) => x.own)!.track;
+    expect(own(a)[0].t_ms).toBe(own(b)[0].t_ms);
+    expect(own(b)[own(b).length - 1].t_ms).toBe(END + 5000);
+    expect(mapStateAt(b, END + 5000).me?.ageMs).toBe(0);
   });
 });
 

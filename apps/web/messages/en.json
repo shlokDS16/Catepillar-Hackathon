@@ -273,7 +273,9 @@
       "valueText": "{m} min {s} s ago",
       "noEvents": "No events in this window.",
       "noneYet": "No event yet at this time.",
-      "latest": "{time} · {what}"
+      "latest": "{time} · {what}",
+      "backToLive": "To live",
+      "events": "Events in this window"
     },
     "legend": {
       "label": "Map key",
@@ -283,7 +285,14 @@
       "hazard": "Hazard",
       "other": "Other machine",
       "stale": "Stale: not heard for over a minute"
-    }
+    },
+    "youOnly": "You",
+    "awayShort": "{m} m",
+    "controls": "Map controls",
+    "zoomIn": "Zoom in",
+    "zoomOut": "Zoom out",
+    "zoomInShort": "Zoom in",
+    "zoomOutShort": "Zoom out"
   },
   "replay": {
     "frame": "REPLAY · your event {time}",

@@ -9,7 +9,7 @@ import { MapView } from "@/components/map/map-view";
 import { useAppState } from "@/data/store";
 import { provenanceOf } from "@/data/provenance";
 import { hazardForMachine, hazardTier } from "@/map/hazards";
-import { buildMapModel, dataClockOffset, eventsFromAlerts, mapStateAt, WINDOW_MS } from "@/map/map-state";
+import { buildMapModel, eventsFromAlerts, mapStateAt, WINDOW_MS } from "@/map/map-state";
 import { distanceM, ringPolygon, RING_M, type LatLon, type SiteMapData } from "@/map/site-map";
 import { useMapCursor, useNowMs } from "@/map/use-map-cursor";
 import { useReducedMotion } from "@/replay/use-reenactment";
@@ -26,12 +26,6 @@ type Props = {
   children?: ReactNode;
 };
 
-/** The newest timestamp the store holds, in the data's own clock (server or simulated). */
-function newestDataMs(operatorTs: string | undefined, simNow: string | undefined, alertTimes: string[]): number | null {
-  const all = [operatorTs, simNow, ...alertTimes].map((s) => (s ? Date.parse(s) : NaN)).filter((n) => Number.isFinite(n));
-  return all.length > 0 ? Math.max(...all) : null;
-}
-
 /**
  * S4 /op/map and /fm/map share this: ONE time cursor drives the markers, trails, rings, scrubber,
  * list and provenance stamps, all read from `mapStateAt(model, t)`. The live edge is pinned by
@@ -45,20 +39,16 @@ export function MapWorkspace({ variant, data, me, ownCode, selectedId, onSelect,
   const guardian = useAppState((s) => s.guardian);
   const guardianByAlert = useAppState((s) => s.guardianByAlert);
   const anomalies = useAppState((s) => s.anomalies);
-  const operator = useAppState((s) => s.operator);
-  const clock = useAppState((s) => s.clock);
   const lastFrameMs = useAppState((s) => s.lastFrameMs);
   const connectivity = useAppState((s) => s.connectivity);
 
   const nowMs = useNowMs();
   const [mountedMs] = useState(() => Date.now());
-  // The newest frame is when our data is fresh from: a stopped feed (no signal) ages every machine.
-  const anchorMs = Math.min(lastFrameMs ?? mountedMs, nowMs);
-
-  // Alert times are in the data's clock. Decide once how it maps onto the wall (the demo's is simulated).
-  const dataMs = newestDataMs(operator?.ts, clock?.sim_now, alerts.map((a) => a.first_seen));
-  const [offset, setOffset] = useState<number | null>(null);
-  if (offset === null && dataMs !== null) setOffset(dataClockOffset(dataMs, nowMs));
+  // Fix times hang off the moment the data was fetched, so a paused cursor never drifts; only the
+  // newest report of each machine follows the latest frame, so a stopped feed (no signal) ages it.
+  // Alerts already carry wall-clock times (recorded_at), so events need no clock mapping.
+  const anchorMs = mountedMs;
+  const freshMs = Math.min(lastFrameMs ?? mountedMs, nowMs);
 
   const assumed = (() => {
     const kind = provenanceOf("machine_state", "location").kind;
@@ -73,13 +63,14 @@ export function MapWorkspace({ variant, data, me, ownCode, selectedId, onSelect,
       me,
       ownCode,
       anchorMs,
+      freshMs,
       endMs: nowMs,
       assumed,
-      events: eventsFromAlerts(alerts, guardian, guardianByAlert, startMs, nowMs, offset ?? 0),
+      events: eventsFromAlerts(alerts, guardian, guardianByAlert, startMs, nowMs),
       pins: Object.values(anomalies).map((a) => ({ id: a.anomaly_id, lat: a.lat, lon: a.lon })),
       hazardCodes,
     });
-  }, [data, me, ownCode, anchorMs, nowMs, assumed, alerts, guardian, guardianByAlert, anomalies, offset]);
+  }, [data, me, ownCode, anchorMs, freshMs, nowMs, assumed, alerts, guardian, guardianByAlert, anomalies]);
 
   const cursor = useMapCursor(model);
   const state = useMemo(() => mapStateAt(model, cursor.t), [model, cursor.t]);
@@ -115,7 +106,7 @@ export function MapWorkspace({ variant, data, me, ownCode, selectedId, onSelect,
   return (
     <div className="map-screen" data-variant={variant}>
       <div className="map-stage">
-        <MapView data={data} state={state} fitPoints={fitPoints} focusPoints={focusPoints} ownCode={ownCode} selectedId={selectedId} onSelectMachine={onSelect} offline={connectivity.kind === "nosignal"} />
+        <MapView data={data} state={state} fitPoints={fitPoints} focusPoints={focusPoints} selectedId={selectedId} onSelectMachine={onSelect} offline={connectivity.kind === "nosignal"} />
         <MapTimeline
           model={model}
           t={cursor.t}
@@ -127,7 +118,7 @@ export function MapWorkspace({ variant, data, me, ownCode, selectedId, onSelect,
           onPlay={cursor.play}
           onPause={cursor.pause}
         />
-        <MapLegend rings={state.rings !== null} live={state.rings?.live ?? false} />
+        <MapLegend rings={state.rings !== null} live={state.atLive} />
       </div>
 
       <div className="map-side">
@@ -137,7 +128,7 @@ export function MapWorkspace({ variant, data, me, ownCode, selectedId, onSelect,
           {state.machines.length === 0 ? (
             <p className="t-body text-ink-2">{t("noMachines")}</p>
           ) : (
-            <MachineList machines={state.machines} ownCode={ownCode} selectedId={selectedId} onSelect={onSelect} tierWord={tierWord} />
+            <MachineList machines={state.machines} selectedId={selectedId} onSelect={onSelect} tierWord={tierWord} />
           )}
         </section>
       </div>

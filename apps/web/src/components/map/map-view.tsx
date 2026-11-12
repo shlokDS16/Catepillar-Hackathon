@@ -3,9 +3,12 @@
 // maplibre-gl.css is imported in app/globals.css inside the `vendor` cascade layer, not here:
 // an unlayered vendor stylesheet would outrank every layered Spotter rule.
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
+import { flushSync } from "react-dom";
 import { useTranslations } from "next-intl";
+import { Crosshair, Maximize, Minus, Plus } from "lucide-react";
 import type { Map as MapLibreMap } from "maplibre-gl";
 import { MapOverlay, type Project } from "@/components/map/map-overlay";
+import { FrameStamp } from "@/components/map/provenance-stamp";
 import { SitePlan } from "@/components/map/site-plan";
 import type { MapState } from "@/map/map-state";
 import { boundsOf, fitProjector, type LatLon, type SiteMapData } from "@/map/site-map";
@@ -17,7 +20,6 @@ type Props = {
   fitPoints: LatLon[];
   /** Where the camera starts: me, my rings and what is near them. Defaults to every point. */
   focusPoints?: LatLon[];
-  ownCode: string | null;
   selectedId: string | null;
   onSelectMachine?: (machineId: string) => void;
   /** Offline: the basemap is not attempted at all; the plan carries the last known positions. */
@@ -65,7 +67,7 @@ function useWebgl(): boolean {
  * The paper plan is the ground floor, not an error state: it renders immediately and the basemap
  * simply replaces it once the style is up, so an operator on a dead network never waits on a timer.
  */
-export function MapView({ data, state, fitPoints, focusPoints, ownCode, selectedId, onSelectMachine, offline = false }: Props) {
+export function MapView({ data, state, fitPoints, focusPoints, selectedId, onSelectMachine, offline = false }: Props) {
   const t = useTranslations("map");
   const wrap = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
@@ -108,7 +110,6 @@ export function MapView({ data, state, fitPoints, focusPoints, ownCode, selected
     if (!node) return;
 
     let cancelled = false;
-    let frame = 0;
     void (async () => {
       try {
         const maplibre = await import("maplibre-gl");
@@ -132,19 +133,20 @@ export function MapView({ data, state, fitPoints, focusPoints, ownCode, selected
         });
         map.touchZoomRotate.disableRotation();
         mapRef.current = map;
-        // The overlay is positioned by map.project, so it must be redrawn on every camera frame.
+        // The overlay is positioned by map.project, so it is redrawn synchronously on every camera
+        // frame (flushSync): in the same frame as the tiles, never one frame behind them.
         const reproject = () => {
-          if (frame) return;
-          frame = requestAnimationFrame(() => {
-            frame = 0;
+          if (cancelled) return;
+          flushSync(() =>
             setLiveProject(() => (p: LatLon) => {
               const q = map.project([p.lon, p.lat]);
               return { x: q.x, y: q.y };
-            });
-          });
+            }),
+          );
         };
         map.on("move", reproject);
         map.on("resize", reproject);
+        map.on("render", () => undefined);
         map.on("error", (e) => {
           // Third-party basemap: a missing tile or glyph is routine and recoverable, so only a
           // failure before the style is up means "no basemap". The plan is already on screen.
@@ -163,7 +165,6 @@ export function MapView({ data, state, fitPoints, focusPoints, ownCode, selected
 
     return () => {
       cancelled = true;
-      if (frame) cancelAnimationFrame(frame);
       mapRef.current?.remove();
       mapRef.current = null;
       setLiveProject(null);
@@ -171,7 +172,7 @@ export function MapView({ data, state, fitPoints, focusPoints, ownCode, selected
     // Created once per blocked/unblocked: the overlay follows the store through props, not by rebuilding the map.
   }, [blocked]);
 
-  const planProject = useMemo(() => fitProjector(fitPoints, size, FIT_PADDING), [fitPoints, size]);
+  const planProject = useMemo(() => fitProjector(focusPoints ?? fitPoints, size, FIT_PADDING), [focusPoints, fitPoints, size]);
   const project: Project = status === "live" && liveProject ? liveProject : planProject;
 
   const fitAll = useCallback(() => {
@@ -183,6 +184,8 @@ export function MapView({ data, state, fitPoints, focusPoints, ownCode, selected
       );
   }, []);
 
+  const zoomBy = (delta: number) => mapRef.current?.easeTo({ zoom: (mapRef.current?.getZoom() ?? 16) + delta });
+
   return (
     <div className="map-wrap" data-status={status} data-mode={state.atLive ? "live" : "replay"}>
       {/*
@@ -193,28 +196,38 @@ export function MapView({ data, state, fitPoints, focusPoints, ownCode, selected
       */}
       <div ref={wrap} className="map-frame">
         <div ref={container} className="map-canvas" role="img" aria-label={t("mapLabel")} />
-        {status !== "live" ? <SitePlan reason={reason} /> : null}
-        <MapOverlay data={data} state={state} project={project} size={size} ownCode={ownCode} selectedId={selectedId} onSelect={onSelectMachine} />
-        {status === "live" ? (
-          <div className="map-controls">
-            <button type="button" className="map-ctl" onClick={fitAll}>
-              {t("fitSite")}
-            </button>
-            {state.me ? (
-              <button
-                type="button"
-                className="map-ctl"
-                onClick={() => {
-                  if (state.me) mapRef.current?.flyTo({ center: [state.me.lon, state.me.lat], zoom: 17 });
-                }}
-              >
-                {t("centreOnMe")}
-              </button>
-            ) : null}
-          </div>
-        ) : null}
-        {!state.atLive ? <p className="map-replay-flag t-chip">{t("replayFlag")}</p> : null}
+        {status === "live" ? <div className="map-wash" aria-hidden="true" /> : <SitePlan reason={reason} />}
+        <MapOverlay data={data} state={state} project={project} size={size} selectedId={selectedId} onSelect={onSelectMachine} />
+        <FrameStamp state={state} />
       </div>
+      {status === "live" ? (
+        <div className="map-toolbar" role="group" aria-label={t("controls")}>
+          <button type="button" className="map-ctl" onClick={fitAll}>
+            <Maximize aria-hidden="true" />
+            <span>{t("fitSite")}</span>
+          </button>
+          {state.me ? (
+            <button
+              type="button"
+              className="map-ctl"
+              onClick={() => {
+                if (state.me) mapRef.current?.flyTo({ center: [state.me.lon, state.me.lat], zoom: 17 });
+              }}
+            >
+              <Crosshair aria-hidden="true" />
+              <span>{t("centreOnMe")}</span>
+            </button>
+          ) : null}
+          <button type="button" className="map-ctl" onClick={() => zoomBy(1)} aria-label={t("zoomIn")}>
+            <Plus aria-hidden="true" />
+            <span aria-hidden="true">{t("zoomInShort")}</span>
+          </button>
+          <button type="button" className="map-ctl" onClick={() => zoomBy(-1)} aria-label={t("zoomOut")}>
+            <Minus aria-hidden="true" />
+            <span aria-hidden="true">{t("zoomOutShort")}</span>
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

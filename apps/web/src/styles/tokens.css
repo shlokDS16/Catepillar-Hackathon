@@ -137,11 +137,12 @@
   --rail-w: 120px;
 
   /* Map (S4): the stage fills the area between band and dock, never less than --map-stage-min */
-  --map-min: 340px; /* the map frame never shrinks below this inside the stage */
+  --map-min: 320px; /* the map frame never shrinks below this inside the stage */
   --map-stage-min: 700px; /* map + time cursor + key; the page scrolls rather than crush the map */
   --map-side-w: 360px; /* the machine list beside the map from 1024 px */
   --range-thumb-w: 40px; /* time-cursor thumb: 40 x 80 */
-  --marker: 48px; /* a machine marker's hit area on the canvas; the list rows are the 80 px path */
+  --marker: 80px; /* a machine marker's hit area: the glove target, around a smaller glyph */
+  --label-gap: 28px; /* marker centre to its label; must equal LABEL_GAP in map/label-layout.ts */
   --glyph: 32px; /* a machine glyph inside it */
   --glyph-own: 40px;
 }

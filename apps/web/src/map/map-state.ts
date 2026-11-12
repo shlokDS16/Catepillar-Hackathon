@@ -15,8 +15,8 @@ import type { AlertRecord, AlertTier } from "@/data/types";
 export const WINDOW_MS = 10 * 60_000;
 /** A machine not heard from for this long looks stale: no safety colour, dashed, "Stale". */
 export const STALE_MS = 60_000;
-/** A cursor within this of the live edge is the live edge (the pin). */
-export const LIVE_SNAP_MS = 1500;
+/** A cursor within this of the live edge is the live edge (the pin). Smaller than the 1 s keyboard step, so ArrowLeft leaves Live. */
+export const LIVE_SNAP_MS = 500;
 /** Displacement over this look-back that counts as "moving" for the heading arrow. */
 const MOVING_LOOKBACK_MS = 20_000;
 const MOVING_MIN_M = 2;
@@ -81,6 +81,8 @@ export type MachineAt = {
   ageMs: number;
   stale: boolean;
   provenance: MapProvenance;
+  /** The position is assumed-sensor data: shown as Simulated even when the cursor is in the past. */
+  assumed: boolean;
   /** Metres from me at the cursor; null for my own machine or when I have no fix. */
   distanceM: number | null;
   /**
@@ -95,7 +97,7 @@ export type MapState = {
   /** 0..1 along the window. */
   fraction: number;
   atLive: boolean;
-  me: { lat: number; lon: number; heading_deg: number | null; trail: LatLon[]; ageMs: number; stale: boolean; provenance: MapProvenance } | null;
+  me: { lat: number; lon: number; heading_deg: number | null; trail: LatLon[]; ageMs: number; stale: boolean; provenance: MapProvenance; assumed: boolean } | null;
   /** Own machine first, then hazards by distance, then everyone else by distance. */
   machines: MachineAt[];
   /** Guardian rings around me; `live` says whether they may use safety colours. */
@@ -168,7 +170,7 @@ export function provenanceAt(atLive: boolean, assumed: boolean): MapProvenance {
   return assumed ? "simulated" : "live";
 }
 
-/** The cursor to use when the user has not scrubbed: the live edge. A cursor near the edge snaps to it. */
+/** The cursor to use when the user has not scrubbed: the live edge (null). A stored cursor is only clamped into the window. */
 export function resolveCursor(cursor: number | null, model: Pick<MapModel, "startMs" | "endMs">): number {
   if (cursor === null) return model.endMs;
   return clamp(cursor, model.startMs, model.endMs);
@@ -213,6 +215,7 @@ export function mapStateAt(model: MapModel, t: number): MapState {
         ageMs: meAge,
         stale: meAge > STALE_MS,
         provenance,
+        assumed: model.assumed,
       }
     : null;
 
@@ -243,6 +246,7 @@ export function mapStateAt(model: MapModel, t: number): MapState {
       ageMs,
       stale,
       provenance,
+      assumed: model.assumed,
       distanceM: dist,
       danger: tier === "hazard" && atLive && !stale,
     });
@@ -272,15 +276,6 @@ export function mapStateAt(model: MapModel, t: number): MapState {
   };
 }
 
-/**
- * Offset that maps the data's clock onto the wall clock. A real server clock is within minutes of
- * the wall (offset 0); the demo replays a fixed simulated day, so its newest data is shifted to
- * "now" and the 10-minute window has something to show. Decided once per mount, never re-derived.
- */
-export function dataClockOffset(dataMs: number, wallMs: number): number {
-  return Math.abs(wallMs - dataMs) <= 5 * 60_000 ? 0 : wallMs - dataMs;
-}
-
 /** The alert kinds that belong on a map timeline. SOS, ledger and PPE are not about where machines are. */
 const MAP_KINDS: ReadonlySet<string> = new Set<MapEventKind>(["guardian_hazard", "proximity_zone", "anomaly_machine", "idle_excess", "seatbelt_off_moving"]);
 
@@ -291,13 +286,11 @@ export function eventsFromAlerts(
   guardianByAlert: Record<string, string>,
   startMs: number,
   endMs: number,
-  /** Added to every alert time, to bring a simulated clock onto the wall clock (see dataClockOffset). */
-  offsetMs = 0,
 ): MapEvent[] {
   const out: MapEvent[] = [];
   for (const a of alerts) {
     if (!MAP_KINDS.has(a.kind)) continue;
-    const t = Date.parse(a.first_seen) + offsetMs;
+    const t = Date.parse(a.first_seen);
     if (!Number.isFinite(t) || t < startMs || t > endMs) continue;
     const anomalyId = guardianByAlert[a.alert_id] ?? null;
     const hazard = anomalyId ? guardian[anomalyId] : undefined;
@@ -312,8 +305,10 @@ type ModelInput = {
   me: LatLon | null;
   /** The code of my own machine, to label the own marker. */
   ownCode: string | null;
-  /** When the newest data arrived (wall ms). Fix ages count from here. */
+  /** Stamped once when the data was fetched (wall ms). Older fixes hang off it, so a paused cursor never drifts. */
   anchorMs: number;
+  /** The newest frame (wall ms): only the NEWEST fix of each machine moves with it, so staleness is live. */
+  freshMs: number;
   /** The live edge (wall ms now). */
   endMs: number;
   assumed: boolean;
@@ -328,26 +323,35 @@ function spread(points: readonly LatLon[], anchorMs: number, spanMs: number): Fi
   return points.map((p, i) => ({ t_ms: n === 1 ? anchorMs : anchorMs - spanMs + (spanMs * i) / (n - 1), lat: p.lat, lon: p.lon }));
 }
 
+/** Re-time the newest fix to the latest frame (minus its own age), never before the fix preceding it. */
+function freshen(fixes: Fix[], freshMs: number, lastAgoMs: number): Fix[] {
+  if (fixes.length === 0) return fixes;
+  const last = fixes[fixes.length - 1];
+  const prev = fixes[fixes.length - 2];
+  const t = Math.max(prev ? prev.t_ms : -Infinity, freshMs - lastAgoMs);
+  return [...fixes.slice(0, -1), { ...last, t_ms: t }];
+}
+
 /**
  * The model for a viewer. Trails without per-fix times (the operator's trail) are spread evenly over
  * the window ending at the newest fix: the data has an order but no clock, and the map says so by
  * labelling it Simulated. Other machines carry `track` fixes with their age before the newest data.
  */
 export function buildMapModel(input: ModelInput): MapModel {
-  const { data, me, ownCode, anchorMs, endMs } = input;
+  const { data, me, ownCode, anchorMs, freshMs, endMs } = input;
   const startMs = endMs - WINDOW_MS;
   const trail = data.trail.length > 0 ? data.trail : me ? [me] : [];
   const trailWithMe = me && trail.length > 0 && (trail[trail.length - 1].lat !== me.lat || trail[trail.length - 1].lon !== me.lon) ? [...trail, me] : trail;
-  const meFixes = me && trailWithMe.length > 0 ? spread(trailWithMe, anchorMs, WINDOW_MS - 30_000) : [];
+  const meFixes = me && trailWithMe.length > 0 ? freshen(spread(trailWithMe, anchorMs, WINDOW_MS - 30_000), freshMs, 0) : [];
 
   const actors: MapActor[] = [];
   if (me) {
-    actors.push({ id: "own", code: ownCode ?? "—", own: true, health: "ok", track: meFixes });
+    actors.push({ id: "own", code: ownCode ?? "", own: true, health: "ok", track: meFixes });
   }
   for (const m of data.machines) {
-    const track: Fix[] = (m.track && m.track.length > 0 ? m.track : [{ ago_ms: 0, lat: m.lat, lon: m.lon }])
-      .map((f) => ({ t_ms: anchorMs - f.ago_ms, lat: f.lat, lon: f.lon }))
-      .sort((a, b) => a.t_ms - b.t_ms);
+    const source = m.track && m.track.length > 0 ? m.track : [{ ago_ms: 0, lat: m.lat, lon: m.lon }];
+    const sorted = source.map((f) => ({ t_ms: anchorMs - f.ago_ms, lat: f.lat, lon: f.lon })).sort((a, b) => a.t_ms - b.t_ms);
+    const track = freshen(sorted, freshMs, source.reduce((min, f) => Math.min(min, f.ago_ms), Infinity));
     actors.push({ id: m.id, code: m.code, own: false, health: m.health, track });
   }
   return {

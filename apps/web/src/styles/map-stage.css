@@ -1,0 +1,299 @@
+/*
+ * S4 Map, part 1 of 3 (map-stage / map-overlay / map-timeline): layout, the frame, the toolbar,
+ * the key and the machine list. Ink on paper; the map gets the frame and the furniture stays thin.
+ * Sizes come from tokens.css.
+ */
+
+/* ---------- Layout: the stage fills the area between the band and the dock ---------- */
+.map-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+.map-stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  /* band (+ top inset) above, dock (+ home indicator) below. It grows if the content needs more. */
+  min-height: calc(100dvh - var(--strip-h) - var(--safe-t) - var(--dock-total) - var(--s-6));
+}
+.map-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  min-width: 0;
+}
+.map-side-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+@media (min-width: 1024px) {
+  /* The rail replaces the dock: map and list side by side. */
+  .map-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--map-side-w);
+    gap: var(--s-5);
+    align-items: start;
+  }
+  .map-stage {
+    min-height: calc(100dvh - var(--strip-h) - var(--safe-t) - var(--s-6));
+  }
+  .map-side {
+    max-height: calc(100dvh - var(--strip-h) - var(--safe-t) - var(--s-6));
+    overflow-y: auto;
+    padding-inline-end: var(--s-1);
+  }
+}
+
+/* The loading plate before the data lands holds the stage's footprint, so nothing jumps. */
+.map-slot {
+  min-height: calc(100dvh - var(--strip-h) - var(--safe-t) - var(--dock-total) - var(--s-6));
+  border: var(--bw) solid var(--ink);
+}
+
+/* ---------- The map frame ---------- */
+.map-wrap {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.map-frame {
+  position: relative;
+  flex: 1 1 auto;
+  overflow: hidden;
+  /* a phone shows at least 60% of the screen as map */
+  min-height: max(var(--map-min), 60dvh);
+  border: var(--bw) solid var(--ink);
+  background: var(--paper);
+}
+@media (min-width: 768px) {
+  .map-frame {
+    min-height: var(--map-min);
+  }
+}
+.map-wrap[data-mode="replay"] .map-frame {
+  border-style: dashed;
+  border-width: var(--bw-heavy);
+}
+/* MapLibre adds .maplibregl-map (position: relative) to this node from its own stylesheet. Ours
+   wins because maplibre-gl.css is imported into the `vendor` layer, which is ordered before
+   `components` in globals.css, not because of selector specificity. */
+.map-canvas {
+  position: absolute;
+  inset: 0;
+}
+.map-canvas .maplibregl-ctrl-attrib {
+  background: var(--paper);
+  color: var(--ink-3);
+  font-size: var(--t-meta);
+}
+.map-canvas .maplibregl-ctrl-attrib a {
+  color: var(--ink-2);
+}
+/* A paper wash calms the basemap so the ink on top reads in sunlight. */
+.map-wash {
+  position: absolute;
+  inset: 0;
+  background: color-mix(in srgb, var(--paper) 45%, transparent);
+  pointer-events: none;
+}
+
+/* The paper plan: ruled paper under the same overlay, until (or instead of) the basemap. */
+.map-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--rule-soft) var(--bw-hair), transparent var(--bw-hair)),
+    linear-gradient(90deg, var(--rule-soft) var(--bw-hair), transparent var(--bw-hair));
+  background-size: var(--s-7) var(--s-7);
+  display: flex;
+  align-items: flex-end;
+}
+.map-backdrop-note {
+  margin: var(--s-3);
+  padding: var(--s-1) var(--s-3);
+  background: var(--surface);
+  border: var(--bw-hair) solid var(--ink);
+  color: var(--ink-2);
+  max-width: calc(100% - var(--s-5));
+}
+
+/* ---------- Controls: 80 px. Under the frame on a phone, a column inside its edge from 768 ---------- */
+.map-toolbar {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--s-1);
+}
+@media (min-width: 768px) {
+  .map-toolbar {
+    position: absolute;
+    inset-block-start: var(--s-3);
+    inset-inline-end: var(--s-3);
+    z-index: 6;
+    grid-auto-flow: row;
+    grid-auto-columns: auto;
+    gap: var(--s-2);
+  }
+}
+.map-ctl {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  box-sizing: border-box;
+  min-height: var(--hit);
+  min-width: var(--hit);
+  padding: var(--s-2);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--ff-body);
+  font-size: var(--t-meta);
+  font-weight: var(--fw-label);
+  line-height: var(--lh-meta);
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-ctl:active:not(:disabled) {
+  background: var(--surface-sunk);
+  box-shadow: inset 0 0 0 var(--bw) var(--ink);
+}
+/* Disabled is solid grey: a dashed rule already means stale or replayed on this map. */
+.map-ctl:disabled {
+  border-color: var(--ink-3);
+  color: var(--ink-3);
+  cursor: default;
+}
+.map-ctl svg {
+  width: var(--icon);
+  height: var(--icon);
+  stroke-width: var(--icon-stroke);
+  flex: none;
+}
+
+/* ---------- Key: one folded row ---------- */
+.map-key-box {
+  flex: none;
+}
+.map-key-summary {
+  display: flex;
+  align-items: center;
+  min-height: var(--s-6);
+  cursor: pointer;
+}
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+  margin: 0;
+  padding: var(--s-2) 0;
+  list-style: none;
+}
+.map-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.map-key {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+}
+.map-key[data-key^="ring"] {
+  width: var(--s-6);
+  height: 0;
+  border-top: var(--bw-heavy) dashed var(--ink-2);
+}
+.map-legend[data-live] .map-key[data-key="ring-danger"] {
+  border-top-color: var(--state-critical);
+}
+.map-legend[data-live] .map-key[data-key="ring-warning"] {
+  border-top-color: var(--state-warning);
+}
+.map-key[data-key="own"],
+.map-key[data-key="hazard"],
+.map-key[data-key="other"],
+.map-key[data-key="stale"] {
+  width: var(--s-4);
+  height: var(--s-4);
+  border: var(--bw) solid var(--ink);
+}
+.map-key[data-key="own"] {
+  background: var(--ink);
+  border-radius: 50%;
+}
+.map-key[data-key="hazard"] {
+  background: var(--surface);
+  border-width: var(--bw-heavy);
+}
+.map-legend[data-live] .map-key[data-key="hazard"] {
+  background: var(--state-critical);
+}
+.map-key[data-key="other"] {
+  background: var(--paper);
+}
+.map-key[data-key="stale"] {
+  background: var(--surface-sunk);
+  border-style: dashed;
+}
+
+/* ---------- Machine list ---------- */
+.map-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+.map-list-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.map-list-group h3 {
+  margin: 0;
+}
+.map-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--hit);
+  padding: var(--s-3) var(--s-4);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-row[data-tier="own"] {
+  border-width: var(--bw-heavy);
+}
+.map-row[data-stale] {
+  border-style: dashed;
+}
+.map-row[aria-pressed="true"] {
+  background: var(--surface-sunk);
+  box-shadow: inset 0 0 0 var(--bw) var(--ink);
+}
+.map-row-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+  min-width: 0;
+}

@@ -273,7 +273,9 @@
       "valueText": "{m} मिनट {s} सेकंड पहले",
       "noEvents": "इस अवधि में कोई घटना नहीं।",
       "noneYet": "इस समय तक कोई घटना नहीं।",
-      "latest": "{time} · {what}"
+      "latest": "{time} · {what}",
+      "backToLive": "लाइव पर",
+      "events": "इस अवधि की घटनाएँ"
     },
     "legend": {
       "label": "नक्शे की कुंजी",
@@ -283,7 +285,14 @@
       "hazard": "खतरा",
       "other": "अन्य मशीन",
       "stale": "पुराना: एक मिनट से ज़्यादा सुना नहीं गया"
-    }
+    },
+    "youOnly": "आप",
+    "awayShort": "{m} मी",
+    "controls": "नक्शे के बटन",
+    "zoomIn": "ज़ूम बढ़ाएँ",
+    "zoomOut": "ज़ूम घटाएँ",
+    "zoomInShort": "बड़ा",
+    "zoomOutShort": "छोटा"
   },
   "replay": {
     "frame": "रीप्ले · आपकी घटना {time}",

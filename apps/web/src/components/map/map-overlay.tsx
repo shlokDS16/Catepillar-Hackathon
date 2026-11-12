@@ -1,7 +1,8 @@
 "use client";
 
 import { useTranslations } from "next-intl";
-import { ProvenanceStamp, machineSummary } from "@/components/map/provenance-stamp";
+import { exceptionLines, machineName, machineSummary } from "@/components/map/provenance-stamp";
+import { estimateLabel, placeLabels } from "@/map/label-layout";
 import type { MachineAt, MapState } from "@/map/map-state";
 import { ringPolygon, type LatLon, type Px, type SiteMapData } from "@/map/site-map";
 
@@ -12,7 +13,6 @@ type Props = {
   state: MapState;
   project: Project;
   size: { w: number; h: number };
-  ownCode: string | null;
   selectedId: string | null;
   onSelect?: (id: string) => void;
 };
@@ -33,13 +33,16 @@ function toneOf(m: MachineAt): "critical" | "warning" | "caution" | null {
   return "warning";
 }
 
+const PRIORITY = { own: 0, hazard: 1, other: 2 } as const;
+
 /**
  * Everything the map draws on top of the basemap or the paper plan, from one MapState and one
  * projector: zones, the Guardian rings with their metres, trails that are drawn up to the cursor,
  * anomaly pins, and the machines as real buttons (the keyboard and screen-reader path to them).
- * The same overlay sits on MapLibre and on the plan, so the two cannot disagree.
+ * The same overlay sits on MapLibre and on the plan, so the two cannot disagree. Labels carry the
+ * code and the exceptions only (stale, fault and distance); provenance is the frame's one stamp.
  */
-export function MapOverlay({ data, state, project, size, ownCode, selectedId, onSelect }: Props) {
+export function MapOverlay({ data, state, project, size, selectedId, onSelect }: Props) {
   const t = useTranslations("map");
   if (size.w === 0 || size.h === 0) return null;
 
@@ -47,6 +50,21 @@ export function MapOverlay({ data, state, project, size, ownCode, selectedId, on
     const c = state.rings!.center;
     return project({ lat: c.lat + radius / 111_320, lon: c.lon });
   };
+
+  // A machine panned or fitted off the frame is not drawn (a half-clipped label is worse than none):
+  // it is still in the list, with its distance.
+  const placed = state.machines.filter((m) => {
+    const q = project(m);
+    return q.x >= 0 && q.x <= size.w && q.y >= 0 && q.y <= size.h;
+  }).map((m) => {
+    const q = project(m);
+    const lines = [machineName(t, m), ...exceptionLines(t, m)];
+    return { m, q, lines, ...estimateLabel(lines) };
+  });
+  const sides = placeLabels(
+    placed.map((p) => ({ id: p.m.id, x: p.q.x, y: p.q.y, w: p.w, h: p.h, priority: PRIORITY[p.m.tier] })),
+    size,
+  );
 
   return (
     <>
@@ -68,7 +86,10 @@ export function MapOverlay({ data, state, project, size, ownCode, selectedId, on
         ) : null}
         {state.machines.map((m) =>
           m.trail.length > 1 ? (
-            <path key={m.id} d={path(m.trail, project)} className="map-trail" pathLength={1} data-tier={m.tier} data-stale={m.stale || undefined} />
+            <g key={m.id}>
+              {m.tier === "own" ? <path d={path(m.trail, project)} className="map-trail-casing" /> : null}
+              <path d={path(m.trail, project)} className="map-trail" pathLength={1} data-tier={m.tier} data-stale={m.stale || undefined} />
+            </g>
           ) : null,
         )}
         {state.pins.map((p) => {
@@ -78,8 +99,7 @@ export function MapOverlay({ data, state, project, size, ownCode, selectedId, on
       </svg>
 
       <div className="map-markers">
-        {state.machines.map((m) => {
-          const q = project(m);
+        {placed.map(({ m, q, lines }) => {
           const tone = toneOf(m);
           const selected = selectedId === m.id;
           return (
@@ -91,10 +111,9 @@ export function MapOverlay({ data, state, project, size, ownCode, selectedId, on
               data-tier={m.tier}
               data-tone={tone ?? undefined}
               data-stale={m.stale || undefined}
-              data-prov={m.provenance}
               data-selected={selected || undefined}
               aria-pressed={onSelect ? selected : undefined}
-              aria-label={machineSummary(t, m, ownCode)}
+              aria-label={machineSummary(t, m)}
               onClick={() => onSelect?.(m.id)}
               disabled={!onSelect}
             >
@@ -105,13 +124,12 @@ export function MapOverlay({ data, state, project, size, ownCode, selectedId, on
                   <rect x="-12" y="-12" width="24" height="24" className="map-glyph-body" />
                 )}
               </svg>
-              <span className="map-marker-label" aria-hidden="true">
-                <span className="map-marker-code">{m.tier === "own" ? t("you", { code: m.code === "—" ? (ownCode ?? m.code) : m.code }) : m.code}</span>
-                <span className="map-marker-meta">
-                  {m.health !== "ok" ? <b className="map-marker-health">{t(`health.${m.health}`)}</b> : null}
-                  {m.distanceM !== null ? <span className="tnum">{t("away", { m: Math.round(m.distanceM) })}</span> : null}
-                </span>
-                <ProvenanceStamp kind={m.provenance} ageMs={m.ageMs} stale={m.stale} />
+              <span className="map-marker-label" data-side={sides[m.id] ?? "below"} aria-hidden="true">
+                {lines.map((l, i) => (
+                  <span key={i} className={i === 0 ? "map-marker-code" : "map-marker-meta"}>
+                    {l}
+                  </span>
+                ))}
               </span>
             </button>
           );
