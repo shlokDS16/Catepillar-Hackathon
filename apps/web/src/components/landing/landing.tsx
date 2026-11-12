@@ -5,6 +5,8 @@ import { DawnPoster } from "@/components/landing/dawn-poster";
 import { LandingEngine } from "@/components/landing/landing-engine";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram, type SignShape } from "@/components/ui/pictogram";
+import { buildLedgerDemo, groups } from "@/components/landing/ledger-demo";
+import { WipeLink } from "@/components/landing/wipe-link";
 
 type Style = CSSProperties & Record<`--${string}`, string | number>;
 
@@ -30,6 +32,7 @@ export async function Landing() {
   const t = await getTranslations("landing");
   const te = await getTranslations("enums.safety");
   const caption = t("caption");
+  const ledger = await buildLedgerDemo();
   return (
     <div className="landing" data-landing>
       <noscript>
@@ -40,6 +43,7 @@ export async function Landing() {
         <LanguageChip />
       </header>
 
+      <div className="l-body">
       <main className="l-scene">
         <canvas className="l-canvas" aria-hidden="true" />
 
@@ -53,12 +57,12 @@ export async function Landing() {
               <h1 className="l-h1 rv rv-out">{t("headline")}</h1>
               <p className="l-sub rv rv-out">{t("sub")}</p>
               <div className="l-actions rv rv-out">
-                <a className="l-cta" href="/op">
+                <WipeLink className="l-cta" href="/op">
                   <span>{t("cta")}</span>
                   <span className="l-arrow" aria-hidden="true">
                     →
                   </span>
-                </a>
+                </WipeLink>
                 <a className="l-link" href="/fm">
                   {t("ctaFleet")}
                 </a>
@@ -165,6 +169,75 @@ export async function Landing() {
           </div>
         </section>
       </main>
+
+        {/* 6 · Tamper-evident ledger (DOM, light stage) */}
+        <section className="stage stage-light" data-stage="6" style={{ "--h": 180 } as Style}>
+          <div className="pin">
+            <div className="l-ledger-wrap">
+              <div className="l-copy-light rv rv-io" style={{ "--a": 0.02, "--b": 0.14, "--c": 0.94, "--d": 1 } as Style}>
+                <p className="l-kicker">06</p>
+                <h2 className="l-h2">{t("s6.title")}</h2>
+                <p className="l-sub">{t("s6.body")}</p>
+                <div className="l-status rv" style={{ "--a": 0.6, "--b": 0.72 } as Style}>
+                  <span className="st-ok">
+                    <Chip tone="clear" word icon={<Pictogram name="proximity" shape="circle" />}>
+                      {t("s6.chainOk")}
+                    </Chip>
+                  </span>
+                  <span className="st-bad">
+                    <Chip tone="critical" word icon={<Pictogram name="proximity" shape="octagon" />}>
+                      {t("s6.chainBroken")}
+                    </Chip>
+                  </span>
+                </div>
+              </div>
+              <ol className="l-ledger">
+                {ledger.map((r, i) => (
+                  <li
+                    key={r.seq}
+                    className={`lrow rv${r.tampered ? " lrow-tamper" : ""}${r.seq > 4 ? " lrow-after" : ""}`}
+                    style={{ "--a": 0.1 + i * 0.07, "--b": 0.22 + i * 0.07, "--k": 0.6 + Math.max(0, r.seq - 4) * 0.04, "--m": 0.72 + Math.max(0, r.seq - 4) * 0.04 } as Style}
+                  >
+                    <span className="lrow-n">{`${t("s6.row")} ${r.seq}`}</span>
+                    <span className="lrow-type">{r.type}</span>
+                    <span className="lrow-sev">sev {r.severity}</span>
+                    <span className="lrow-hash">{groups(r.stored)}</span>
+                    <span className="lrow-prev">
+                      {t("s6.prev")} {groups(r.prev)}
+                    </span>
+                    {r.tampered ? <span className="lrow-flag">{t("s6.tamper")}</span> : null}
+                  </li>
+                ))}
+              </ol>
+            </div>
+            <Caption text={caption} />
+          </div>
+        </section>
+
+        {/* 7 · Close; the footer curtain follows */}
+        <section className="stage stage-close" data-stage="7">
+          <div className="pin close-pin">
+            <h2 className="l-h1 close-h">{t("s7.title")}</h2>
+            <p className="l-sub">{t("s7.body")}</p>
+            <WipeLink className="l-cta" href="/op">
+              <span>{t("cta")}</span>
+              <span className="l-arrow" aria-hidden="true">
+                →
+              </span>
+            </WipeLink>
+            <Caption text={caption} />
+          </div>
+        </section>
+      </div>
+
+      <footer className="l-foot">
+        <p className="l-foot-brand">{t("brand")}</p>
+        <nav className="l-foot-nav" aria-label={t("brand")}>
+          <a href="/op">{t("cta")}</a>
+          <a href="/fm">{t("ctaFleet")}</a>
+        </nav>
+        <p className="l-foot-note">{t("s7.foot")}</p>
+      </footer>
       <LandingEngine />
     </div>
   );

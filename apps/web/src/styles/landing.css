@@ -31,6 +31,7 @@
   transform: translateX(-50%);
   border-radius: 16px;
   background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent);
   color: var(--ink);
 }
 
@@ -534,6 +535,291 @@
   background: var(--line-glow);
 }
 
+/* Body wrapper: everything above the footer curtain. */
+.l-body {
+  position: relative;
+  z-index: 2;
+  background: var(--rock-front);
+}
+
+/* Per-stage poster images: the WebGL-off and reduced-motion picture (hidden while the canvas runs). */
+.l-poster-img {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  display: none;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.landing[data-gl="off"] .l-poster-img,
+.landing[data-motion="reduced"] .l-poster-img {
+  display: block;
+}
+
+/* 6 · Ledger: a light, paper stage. */
+.stage-light {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.stage-light .l-kicker,
+.stage-light .l-caption {
+  color: var(--ink-2);
+}
+
+.stage-light .l-sub {
+  color: var(--ink-2);
+}
+
+.l-ledger-wrap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: var(--s-7);
+  padding: calc(var(--s-8) + var(--s-5)) var(--gutter) var(--s-8);
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.l-copy-light {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.l-status {
+  display: grid;
+  margin-top: var(--s-4);
+}
+
+.l-status > span {
+  grid-area: 1 / 1;
+  justify-self: start;
+}
+
+.st-ok {
+  opacity: calc(1 - var(--e));
+}
+
+.st-bad {
+  opacity: var(--e);
+}
+
+.l-ledger {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--ff-mono);
+}
+
+.lrow {
+  --tt: clamp(0, calc((var(--p) - var(--k, 0.6)) / (var(--m, 0.72) - var(--k, 0.6))), 1);
+  --et: calc(var(--tt) * var(--tt) * (3 - 2 * var(--tt)));
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  column-gap: var(--s-3);
+  row-gap: 2px;
+  padding: var(--s-3) var(--s-4);
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+  font-size: 12.5px;
+  line-height: 19.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  opacity: var(--e);
+  transform: translateY(calc((1 - var(--e)) * 28px));
+}
+
+.lrow + .lrow {
+  margin-top: var(--s-4);
+}
+
+/* The hash link to the row above: a 1 px rule that draws as the row arrives. */
+.lrow + .lrow::before {
+  content: "";
+  position: absolute;
+  left: var(--s-5);
+  bottom: 100%;
+  width: var(--bw-hair);
+  height: var(--s-4);
+  background: var(--ink-3);
+  transform: scaleY(var(--e));
+  transform-origin: top;
+  transition: background var(--dur-lhover) var(--ease-quint);
+}
+
+.lrow-n {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.lrow-type {
+  overflow-wrap: anywhere;
+}
+
+.lrow-sev {
+  color: var(--ink-2);
+}
+
+.lrow-hash {
+  grid-column: 1 / 3;
+  font-weight: 700;
+}
+
+.lrow-prev {
+  grid-column: 3;
+  color: var(--ink-3);
+  text-align: right;
+}
+
+.lrow-flag {
+  grid-column: 1 / -1;
+  margin-top: var(--s-1);
+  padding-top: var(--s-1);
+  border-top: var(--bw-hair) solid currentColor;
+  font-weight: 700;
+  text-transform: uppercase;
+  opacity: var(--et);
+  max-height: calc(var(--et) * 28px);
+  overflow: hidden;
+}
+
+.lrow-tamper,
+.lrow-after {
+  border-color: color-mix(in srgb, var(--ink) calc((1 - var(--et)) * 100%), var(--state-critical));
+}
+
+.lrow-tamper {
+  background: color-mix(in srgb, var(--surface) calc((1 - var(--et)) * 100%), var(--state-critical));
+  color: color-mix(in srgb, var(--ink) calc((1 - var(--et)) * 100%), var(--on-ink));
+}
+
+.lrow-tamper .lrow-sev,
+.lrow-tamper .lrow-prev {
+  color: inherit;
+}
+
+.lrow-after + .lrow-after::before,
+.lrow-tamper + .lrow-after::before {
+  background: color-mix(in srgb, var(--ink-3) calc((1 - var(--et)) * 100%), var(--state-critical));
+}
+
+@media (hover: hover) {
+  .lrow:hover + .lrow::before,
+  .lrow + .lrow:hover::before {
+    background: var(--ink);
+  }
+}
+
+@media (max-width: 899px) {
+  .l-ledger-wrap {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: var(--s-5);
+    padding-top: calc(var(--s-8) + var(--s-2));
+    overflow: hidden;
+  }
+  .lrow {
+    padding: var(--s-2) var(--s-3);
+  }
+  .lrow + .lrow {
+    margin-top: var(--s-3);
+  }
+  .lrow + .lrow::before {
+    height: var(--s-3);
+  }
+  .l-copy-light .l-sub {
+    display: none;
+  }
+}
+
+/* 7 · Close: ink stage, then the footer curtain. */
+.stage-close {
+  --p: 0;
+  height: 100svh;
+}
+
+.close-pin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--s-5);
+  padding: 0 var(--gutter);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  background: transparent;
+}
+
+.stage-close {
+  background: var(--ink);
+}
+
+.close-h {
+  max-width: 14ch;
+}
+
+/* Sticky curtain footer: the body (z 2) scrolls off a sticky footer (z 1). */
+.l-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  min-height: 60svh;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--s-5);
+  padding: var(--s-8) var(--gutter) var(--s-6);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.l-foot-brand {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: clamp(72px, 20vw, 260px);
+  line-height: 0.85;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+}
+
+:lang(hi) .l-foot-brand,
+:lang(ta) .l-foot-brand {
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.l-foot-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-5);
+}
+
+.l-foot-nav a {
+  color: var(--ink);
+  font-weight: 600;
+  text-underline-offset: 4px;
+}
+
+.l-foot-note {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 13px;
+  line-height: 19.5px;
+  color: var(--ink-2);
+}
+
 /* Still mode (posters): the scene alone, no copy. */
 .landing[data-still] .l-copy,
 .landing[data-still] .l-callouts,
@@ -555,7 +841,8 @@
     position: relative;
     min-height: 100svh;
   }
-  .rv {
+  .rv,
+  .lrow {
     opacity: 1 !important;
     transform: none !important;
   }
@@ -564,7 +851,56 @@
     margin-top: var(--s-4);
   }
   .l-cta,
-  .l-arrow {
+  .l-arrow,
+  .lg,
+  .lrow + .lrow::before {
     transition: none;
+  }
+  .l-poster-img {
+    display: block;
+  }
+  .l-poster {
+    transition: none;
+  }
+  /* The trail and rings read as fully drawn, the ledger shows the broken chain, callouts show. */
+  .callout::before {
+    transform: none;
+  }
+  .callout-n,
+  .callout-t {
+    opacity: 1;
+    transform: none;
+  }
+  .stage[data-stage="6"] {
+    --p: 1;
+  }
+  .st-ok {
+    opacity: 0;
+  }
+  .st-bad {
+    opacity: 1;
+  }
+  .lrow + .lrow::before {
+    transform: none;
+  }
+  .lg {
+    opacity: 1;
+  }
+  .l-canvas {
+    display: none;
+  }
+  .l-ledger-wrap {
+    position: relative;
+    min-height: 100svh;
+  }
+  .pin {
+    overflow: visible;
+  }
+  .stage-close {
+    height: auto;
+    min-height: 100svh;
+  }
+  .l-foot {
+    position: static;
   }
 }
