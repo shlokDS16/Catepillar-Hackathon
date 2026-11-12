@@ -1,7 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { EVENT_PAYLOADS } from "@cat/shared/fixtures";
 import { AnomalyDetected } from "@cat/shared";
-import { groupInbox, orderInbox, parseDispatch, rowActions, sanitise, toggleExpanded, validateReason, type InboxItem } from "./inbox";
+import { effectiveStatus, groupInbox, orderInbox, parseDispatch, rowActions, sanitise, toggleExpanded, validateReason, type InboxItem } from "./inbox";
 
 const base: InboxItem = {
   id: "a", kind: "seatbelt_off_moving", tier: "warning", status: "open", needsAck: true, occurrences: 1,
@@ -102,5 +102,43 @@ describe("dispatch line", () => {
     expect(parseDispatch("telegram:sent")).toEqual({ channel: "telegram", status: "sent" });
     expect(parseDispatch(null)).toBeNull();
     expect(parseDispatch("garbage")).toBeNull();
+  });
+});
+
+describe("near-miss allowlist (cannot be joined to a pairing)", () => {
+  it("drops machine, task, anomaly, dispatch, operator and the exact time", () => {
+    const anomaly = AnomalyDetected.parse(EVENT_PAYLOADS["anomaly.detected"]);
+    const out = sanitise(item({ kind: "near_miss", nonPunitive: true, operatorName: "Meena", machineCode: "DMP-003", taskId: "t", taskBlocked: true, missing: ["vest"], dispatch: "telegram:sent", anomaly, firstSeen: "2026-09-24T08:55:00.000+05:30" }));
+    expect(out.machineCode).toBeNull();
+    expect(out.operatorName).toBeNull();
+    expect(out.taskId).toBeNull();
+    expect(out.dispatch).toBeNull();
+    expect(out.anomaly).toBeNull();
+    expect(out.missing).toEqual([]);
+    expect(out.firstSeen).not.toContain("08:55");
+    expect(out.firstSeen.slice(0, 10)).toBe("2026-09-24");
+  });
+  it("two near-miss rows from different times look identical in time, so time cannot join them", () => {
+    const a = sanitise(item({ kind: "near_miss", nonPunitive: true, firstSeen: "2026-09-24T08:55:00.000+05:30" }));
+    const b = sanitise(item({ kind: "near_miss", nonPunitive: true, firstSeen: "2026-09-24T17:20:00.000+05:30" }));
+    expect(a.firstSeen).toBe(b.firstSeen);
+  });
+});
+
+describe("timestamps and live status", () => {
+  it("orders by instant across offsets", () => {
+    const out = orderInbox([
+      item({ id: "later", firstSeen: "2026-09-24T04:30:00.000+00:00" }),
+      item({ id: "earlier", firstSeen: "2026-09-24T09:40:00.000+05:30" }),
+    ]);
+    expect(out.map((i) => i.id)).toEqual(["earlier", "later"]);
+  });
+  it("a local acknowledge holds until the live status moves on", () => {
+    const local = { status: "acknowledged" as const, from: "open" as const };
+    expect(effectiveStatus("open", "open", local)).toBe("acknowledged");
+    expect(effectiveStatus("open", undefined, local)).toBe("acknowledged");
+    expect(effectiveStatus("open", "resolved", local)).toBe("resolved");
+    expect(effectiveStatus("open", "escalated", local)).toBe("escalated");
+    expect(effectiveStatus("open", "acknowledged", undefined)).toBe("acknowledged");
   });
 });

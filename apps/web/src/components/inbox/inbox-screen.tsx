@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import { useLocale, useTranslations } from "next-intl";
 import { KIND_PICTO } from "@/alerts/kinds";
@@ -14,7 +14,7 @@ import { Plate } from "@/components/ui/plate";
 import { newRequestId } from "@/data/port";
 import { useAppState, useDataPort } from "@/data/store";
 import type { AlertStatus, Lang } from "@/data/types";
-import { groupInbox, parseDispatch, rowActions, toggleExpanded, type InboxItem } from "@/inbox/inbox";
+import { effectiveStatus, groupInbox, parseDispatch, rowActions, toggleExpanded, type InboxItem } from "@/inbox/inbox";
 
 /**
  * S7 /fm: open alerts by tier then age, each row with who, where, how long, how often, the dispatch
@@ -33,7 +33,8 @@ export function InboxScreen() {
   const [base, setBase] = useState<InboxItem[] | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
-  const [local, setLocal] = useState<Record<string, AlertStatus>>({});
+  const [local, setLocal] = useState<Record<string, { status: AlertStatus; from: AlertStatus }>>({});
+  const [granted, setGranted] = useState<Set<string>>(() => new Set());
   const [expanded, setExpanded] = useState<Set<string>>(() => new Set());
   const [overrideFor, setOverrideFor] = useState<InboxItem | null>(null);
 
@@ -61,12 +62,12 @@ export function InboxScreen() {
     const merged = base.map((i) => {
       const live = alerts.find((a) => a.alert_id === i.id);
       const line = dispatch[i.id]?.at(-1) ?? i.dispatch;
-      return { ...i, status: local[i.id] ?? live?.status ?? i.status, occurrences: live?.occurrences ?? i.occurrences, dispatch: line };
+      return { ...i, status: effectiveStatus(i.status, live?.status, local[i.id]), occurrences: live?.occurrences ?? i.occurrences, dispatch: line };
     });
     const extra: InboxItem[] = alerts
       .filter((a) => !byId.has(a.alert_id))
       .map((a) => ({
-        id: a.alert_id, kind: a.kind, tier: a.tier, status: local[a.alert_id] ?? a.status, needsAck: a.needs_ack, occurrences: a.occurrences,
+        id: a.alert_id, kind: a.kind, tier: a.tier, status: effectiveStatus(a.status, a.status, local[a.alert_id]), needsAck: a.needs_ack, occurrences: a.occurrences,
         firstSeen: a.first_seen, operatorName: null, machineCode: null, taskId: null, taskBlocked: false, missing: [],
         dispatch: dispatch[a.alert_id]?.at(-1) ?? null, anomaly: null, nonPunitive: false,
       }));
@@ -74,13 +75,23 @@ export function InboxScreen() {
   }, [base, alerts, dispatch, local]);
 
   const groups = useMemo(() => groupInbox(items), [items]);
-  const markHandled = useCallback((id: string) => setLocal((m) => ({ ...m, [id]: "acknowledged" })), []);
+  // A successful Acknowledge shows at once; a later live change (resolved, escalated) takes over again.
+  const markAcknowledged = (id: string) => {
+    const from = alerts.find((a) => a.alert_id === id)?.status ?? base?.find((i) => i.id === id)?.status ?? "open";
+    setLocal((m) => ({ ...m, [id]: { status: "acknowledged", from } }));
+  };
+  const markGranted = (id: string) => setGranted((s) => new Set(s).add(id));
 
   if (failed && !base) {
     return (
       <Plate as="section" className="flex flex-col items-start gap-4" aria-label={t("title")}>
         <p className="t-body">{t("loadFailed")}</p>
-        <Button onClick={() => setAttempt((n) => n + 1)}>{t("retry")}</Button>
+        <Button
+          onClick={() => {
+            setFailed(false);
+            setAttempt((n) => n + 1);
+          }}
+        >{t("retry")}</Button>
       </Plate>
     );
   }
@@ -94,7 +105,8 @@ export function InboxScreen() {
       simNow={simNow}
       expanded={expanded.has(item.id)}
       onToggle={() => setExpanded((s) => toggleExpanded(s, item.id))}
-      onAcknowledged={markHandled}
+      granted={granted.has(item.id)}
+      onAcknowledged={markAcknowledged}
       onGrant={() => setOverrideFor(item)}
       onShowOnMap={() => router.push("/fm/map")}
     />
@@ -121,7 +133,7 @@ export function InboxScreen() {
         {groups.suppressed.map((i) => row(i, false))}
       </Fold>
 
-      <OverrideSheet item={overrideFor} onClose={() => setOverrideFor(null)} onGranted={markHandled} />
+      <OverrideSheet item={overrideFor} onClose={() => setOverrideFor(null)} onGranted={markGranted} />
     </div>
   );
 }
@@ -142,16 +154,19 @@ type RowProps = {
   live: boolean;
   simNow: string | null;
   expanded: boolean;
+  granted: boolean;
   onToggle: () => void;
   onAcknowledged: (id: string) => void;
   onGrant: () => void;
   onShowOnMap: () => void;
 };
 
-function InboxRow({ item, live, simNow, expanded, onToggle, onAcknowledged, onGrant, onShowOnMap }: RowProps) {
+function InboxRow({ item, live, simNow, expanded, granted, onToggle, onAcknowledged, onGrant, onShowOnMap }: RowProps) {
   const t = useTranslations("inbox");
   const lang = useLocale() as Lang;
   const port = useDataPort();
+  const tc = useTranslations("chrome");
+  const offline = useAppState((s) => s.connectivity.kind === "nosignal");
   const [ack, setAck] = useState<ButtonStatus>("idle");
   const [requestId] = useState(newRequestId);
   const actions = rowActions(item);
@@ -159,6 +174,11 @@ function InboxRow({ item, live, simNow, expanded, onToggle, onAcknowledged, onGr
   const sentence = anomaly ? (lang === "hi" ? anomaly.explanation.hi : anomaly.explanation.en) : null;
   const dispatch = parseDispatch(item.dispatch);
   const ageMin = simNow ? Math.max(0, Math.floor((Date.parse(simNow) - Date.parse(item.firstSeen)) / 60_000)) : null;
+  const meta = [
+    item.nonPunitive ? t("noOperator") : item.operatorName,
+    item.machineCode,
+    item.nonPunitive ? t("today") : ageMin === null ? null : ageMin === 0 ? t("ageNow") : t("age", { m: ageMin }),
+  ].filter(Boolean);
   const detailsId = `inbox-detail-${item.id}`;
   const tone = live ? safetyTone(item.tier) : "outline";
   const picto = item.kind === "near_miss" ? "proximity" : KIND_PICTO[item.kind];
@@ -183,19 +203,12 @@ function InboxRow({ item, live, simNow, expanded, onToggle, onAcknowledged, onGr
         <p className="t-title">{t(`kind.${item.kind}`)}</p>
       </div>
 
-      <p className="t-label text-ink-2">
-        {item.nonPunitive ? t("noOperator") : item.operatorName}
-        {!item.nonPunitive && item.operatorName && item.machineCode ? " · " : null}
-        {item.nonPunitive && item.machineCode ? " · " : null}
-        {item.machineCode}
-        {" · "}
-        <span className="tnum">{ageMin === null ? "" : ageMin === 0 ? t("ageNow") : t("age", { m: ageMin })}</span>
-      </p>
+      <p className="t-label text-ink-2 tnum">{meta.join(" · ")}</p>
 
       {item.missing.length > 0 ? <p className="t-body">{t("missing", { items: item.missing.map((m) => t(`ppe.${m}`)).join(", ") })}</p> : null}
 
       {sentence && !expanded ? (
-        <p className="t-body" lang={lang === "hi" ? undefined : "en"}>
+        <p className="t-body">
           {sentence}
         </p>
       ) : null}
@@ -214,11 +227,16 @@ function InboxRow({ item, live, simNow, expanded, onToggle, onAcknowledged, onGr
 
       <div className="inbox-actions">
         {actions.acknowledge ? (
-          <Button variant="primary" status={ack} note={ack === "error" ? t("notSent") : undefined} onClick={acknowledge}>
+          <Button variant="primary" status={ack} disabled={offline} note={offline ? tc("needsSignal") : ack === "error" ? t("notSent") : undefined} onClick={acknowledge}>
             {t("acknowledge")}
           </Button>
         ) : null}
-        {actions.override ? <Button onClick={onGrant}>{t("grantOverride")}</Button> : null}
+        {actions.override && !granted ? (
+          <Button disabled={offline} note={offline ? tc("needsSignal") : undefined} onClick={onGrant}>
+            {t("grantOverride")}
+          </Button>
+        ) : null}
+        {granted ? <Chip tone="outline">{t("overrideGranted")}</Chip> : null}
         {anomaly ? (
           <Button aria-expanded={expanded} aria-controls={detailsId} onClick={onToggle}>
             {expanded ? t("hideDetails") : t("details")}

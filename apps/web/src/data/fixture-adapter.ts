@@ -223,11 +223,11 @@ export class FixtureAdapter implements DataPort {
     });
     return [
       row({ id: IDS.root, kind: "ledger_tamper", tier: "critical", firstSeen: at("09:41"), needsAck: true, dispatch: "telegram:sent" }),
-      row({ id: "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1", kind: "ppe_missing", tier: "warning", firstSeen: at("09:43"), needsAck: true, operatorName: "Ravi", machineCode: "EXC-007", taskId: IDS.task, taskBlocked: true, missing: ["vest"], dispatch: "telegram:delivered" }),
+      row({ id: "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1", kind: "ppe_missing", tier: "caution", firstSeen: at("09:43"), needsAck: true, operatorName: "Ravi", machineCode: "EXC-007", taskId: IDS.task, taskBlocked: true, missing: ["vest"], dispatch: "telegram:delivered" }),
       row({ id: IDS.dispatch, kind: "guardian_hazard", tier: "warning", firstSeen: at("09:47"), needsAck: true, operatorName: "Ravi", machineCode: "EXC-014", anomaly: hydraulic, dispatch: "telegram:sent" }),
       row({ id: IDS.anomaly, kind: "idle_excess", tier: "caution", firstSeen: at("09:20"), occurrences: 3, machineCode: "EXC-007", anomaly: idle }),
       row({ id: "a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2", kind: "alert_flood", tier: "caution", firstSeen: at("09:30"), needsAck: true, occurrences: 12 }),
-      row({ id: "a3a3a3a3-a3a3-4a3a-8a3a-a3a3a3a3a3a3", kind: "near_miss", tier: "caution", firstSeen: at("09:10"), machineCode: "DMP-003", nonPunitive: true }),
+      row({ id: "a3a3a3a3-a3a3-4a3a-8a3a-a3a3a3a3a3a3", kind: "near_miss", tier: "caution", firstSeen: at("09:10"), nonPunitive: true }),
       row({ id: IDS.alert, kind: "seatbelt_off_moving", tier: "warning", firstSeen: at("09:40"), status: "acknowledged", needsAck: true, operatorName: "Ravi", machineCode: "EXC-007", dispatch: "telegram:answered" }),
       row({ id: "a4a4a4a4-a4a4-4a4a-8a4a-a4a4a4a4a4a4", kind: "proximity_zone", tier: "warning", firstSeen: at("08:55"), status: "resolved", needsAck: true, operatorName: "Meena", machineCode: "DMP-003" }),
       row({ id: "a5a5a5a5-a5a5-4a5a-8a5a-a5a5a5a5a5a5", kind: "idle_excess", tier: "caution", firstSeen: at("08:30"), status: "suppressed", machineCode: "EXC-011" }),

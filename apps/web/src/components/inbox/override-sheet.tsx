@@ -5,7 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { Button, type ButtonStatus } from "@/components/ui/button";
 import { Sheet } from "@/components/ui/sheet";
 import { newRequestId, RpcError } from "@/data/port";
-import { useDataPort } from "@/data/store";
+import { useAppState, useDataPort } from "@/data/store";
 import { REASON_MAX, validateReason, type InboxItem } from "@/inbox/inbox";
 
 type Props = { item: InboxItem | null; onClose: () => void; onGranted: (id: string) => void };
@@ -22,16 +22,18 @@ export function OverrideSheet({ item, onClose, onGranted }: Props) {
   const items = item ? item.missing.map((m) => tp(m)).join(", ") : "";
   // The form is keyed by the row, so a new row is a fresh intent (empty reason, new request_id).
   return (
-    <Sheet open={open} onClose={onClose} title={t("title", { name: item?.operatorName ?? "", items })}>
-      {item && item.taskId ? <OverrideForm key={item.id} item={item} taskId={item.taskId} onClose={onClose} onGranted={onGranted} /> : null}
+    <Sheet open={open} onClose={onClose} title={t("title", { name: item?.operatorName ?? t("anyone"), items })}>
+      {item && item.taskId ? <OverrideForm key={item.id} item={item} taskId={item.taskId} items={items} onClose={onClose} onGranted={onGranted} /> : null}
     </Sheet>
   );
 }
 
-type FormProps = { item: InboxItem; taskId: string; onClose: () => void; onGranted: (id: string) => void };
+type FormProps = { item: InboxItem; taskId: string; items: string; onClose: () => void; onGranted: (id: string) => void };
 
-function OverrideForm({ item, taskId, onClose, onGranted }: FormProps) {
+function OverrideForm({ item, taskId, items, onClose, onGranted }: FormProps) {
   const t = useTranslations("inbox.override");
+  const tc = useTranslations("chrome");
+  const offline = useAppState((s) => s.connectivity.kind === "nosignal");
   const format = useFormatter();
   const port = useDataPort();
   const [reason, setReason] = useState("");
@@ -75,8 +77,8 @@ function OverrideForm({ item, taskId, onClose, onGranted }: FormProps) {
             </label>
             <div className="flex flex-wrap gap-3">
               {(["quick1", "quick2"] as const).map((k) => (
-                <Button key={k} size="dense" onClick={() => setReason(t(k))}>
-                  {t(k)}
+                <Button key={k} size="dense" onClick={() => setReason(k === "quick1" ? t(k, { items }) : t(k))}>
+                  {k === "quick1" ? t(k, { items }) : t(k)}
                 </Button>
               ))}
             </div>
@@ -94,7 +96,7 @@ function OverrideForm({ item, taskId, onClose, onGranted }: FormProps) {
               <span role={fieldError ? "alert" : undefined}>{fieldError ?? t("hint")}</span>
               <span className="tnum">{t("counter", { n: reason.trim().length })}</span>
             </p>
-            <Button variant="primary" status={status} note={error ?? undefined} onClick={grant}>
+            <Button variant="primary" status={status} disabled={offline} note={offline ? tc("needsSignal") : (error ?? undefined)} onClick={grant}>
               {t("grant")}
             </Button>
           </>

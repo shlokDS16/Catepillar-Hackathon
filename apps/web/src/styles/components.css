@@ -1402,8 +1402,9 @@
 }
 .inbox-fold > summary {
   min-height: var(--hit-dense);
-  display: flex;
-  align-items: center;
+  display: list-item;
+  list-style-position: inside;
+  line-height: var(--hit-dense);
   cursor: pointer;
 }
 .inbox-textarea {

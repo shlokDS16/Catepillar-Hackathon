@@ -440,7 +440,8 @@
       "answered": "answered",
       "no_answer": "no answer",
       "failed": "failed",
-      "suppressed": "suppressed"
+      "suppressed": "suppressed",
+      "dry_run": "test run (not sent)"
     },
     "acknowledge": "Acknowledge",
     "grantOverride": "Grant override",
@@ -451,7 +452,7 @@
     "override": {
       "title": "Let {name} start without: {items}",
       "reasonLabel": "Reason (recorded permanently)",
-      "quick1": "Vest is on its way to the operator",
+      "quick1": "{items} is on its way to the operator",
       "quick2": "Short task under supervision",
       "counter": "{n} / 500",
       "hint": "10 to 500 characters.",
@@ -465,7 +466,10 @@
       "forbidden": "Only the fleet manager can grant this.",
       "invalidState": "This task is no longer blocked.",
       "validation": "The reason was not accepted.",
-      "network": "Not sent. Try again."
-    }
+      "network": "Not sent. Try again.",
+      "anyone": "this operator"
+    },
+    "today": "Today",
+    "overrideGranted": "Override granted"
   }
 }
