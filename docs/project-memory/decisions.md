@@ -128,3 +128,9 @@ Decision: adopt docs/design/landing-v3-spec.md.
 - A real-product proof section.
 - A footer whose wordmark is drawn from our own terrain contours.
 Acceptance gate: the scroll audit reports 0 dead, thin or flat at 1440 and 375. Two Sonnet lanes (A scene, B page), each with an Opus review. Landing files are owned by lead session 2; session 4 imports scene/excavator.ts and parts.ts read-only, so their exports stay stable.
+
+## D19a (2026-11-12): Landing v3 as built, deviations from the spec
+- Stages 4-5: the machine stays parked. The stage 5 replay rewinds the haul truck to the 10:44 warning pose instead of redrawing the trail (spec A3). Ring state comes from a pure `ringLevelFor()`, so a rewind never escalates the rings or fires anything without a ledger entry. Opus review A approved it ("reads as stage 4 played backwards").
+- Footer: at Shlok's request (2026-11-12), the wordmark is 3D. SPOTTER is a terraced landform built from our terrain function, with shader contours, the day's trail and the excavator on the haul road (scene/wordmark.ts). The camera goes from a top-down view (which reads as the flat contour drawing) to a 52° oblique. It mounts once and lazily; phones and reduced motion get a still, and no-JS gets the top-down still. contours.svg is dropped.
+- Proof copy says only what is true: "captured from a production build of the app, on demo data".
+- Open for Shlok: the Hindi copy needs a native read. The hi locale reuses the en app captures.
