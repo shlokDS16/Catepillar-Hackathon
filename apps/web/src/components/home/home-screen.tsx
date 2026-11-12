@@ -11,6 +11,7 @@ import { ProvenanceChip, ProvenanceLine } from "@/components/ui/provenance";
 import { useMode } from "@/data/mode";
 import { useAppState } from "@/data/store";
 import { currentTask } from "@/hero/work-state";
+import { mergeWeatherHeat } from "@/task/task-state";
 
 /**
  * S1 Home: hero (L1-L3), conditions row (L3), loop card (L4), today's tasks (L2-L3), Simple/Detailed (L6).
@@ -38,7 +39,7 @@ export function HomeScreen() {
     );
   }
 
-  const etaImpact = current?.eta_factors?.find((f) => f.key.startsWith("heat:") || f.key.startsWith("weather:"));
+  const etaImpact = mergeWeatherHeat(current?.eta_factors).find((f) => f.key.startsWith("weather_heat:") || f.key.startsWith("heat:") || f.key.startsWith("weather:"));
 
   return (
     <div className="home">
@@ -60,7 +61,7 @@ export function HomeScreen() {
                 {t("home.forecast", { c: format.number(weather.forecast_peak_c, { maximumFractionDigits: 0 }), time: format.dateTime(new Date(weather.forecast_peak_at), "time") })}
               </span>
             ) : null}
-            {detailed && etaImpact ? (
+            {detailed && etaImpact && etaImpact.multiplier > 1 ? (
               <span className="t-meta text-ink-2 tnum">{t("home.etaImpact", { pct: Math.round((etaImpact.multiplier - 1) * 100) })}</span>
             ) : null}
             {detailed ? <span className="t-meta text-ink-3">{weather.source_label}</span> : null}

@@ -15,7 +15,7 @@
     "sosActive": "SOS active",
     "live": "Live",
     "reconnecting": "Reconnecting…",
-    "fixture": "Fixture",
+    "fixture": "Simulated shift",
     "openSync": "Connection",
     "comingSoon": "Coming in a later task.",
     "languageNamed": "Language: {name}",
@@ -25,7 +25,7 @@
     "skipToContent": "Skip to content",
     "sosHold": "SOS: hold for 1.5 seconds to send",
     "sosOpen": "Tap to open",
-    "fixtureStatus": "Fixture {time} ×{speed}"
+    "fixtureStatus": "Simulated shift · {time} · {speed}× speed"
   },
   "start": {
     "chooseLanguage": "Choose your language",
@@ -64,6 +64,7 @@
       "machine_age": "machine age",
       "shift_hour": "shift hour",
       "weather": "weather",
+      "weather_heat": "weather and heat",
       "assumed": "assumed"
     },
     "taskStatus": {
@@ -163,7 +164,7 @@
     "wbgt": "WBGT {c} °C",
     "temp": "{c} °C",
     "forecast": "peak {c} °C forecast by {time} (scenario forecast)",
-    "etaImpact": "ETA {pct, number, +#;-#} %",
+    "etaImpact": "adds {pct} % to ETA",
     "loopTitle": "Because of today",
     "todaysTasks": "Today's tasks",
     "noTasks": "No tasks today. Ask your supervisor.",
@@ -487,7 +488,7 @@
         "none": "No reading",
         "scrubber": "Re-enactment time. Arrow keys step 1 second.",
         "legendEvent": "Event at {time}",
-        "legendResponse": "You responded after {s} s",
+        "legendResponse": "In the recorded event you responded {s} s after the flag (not this attempt)",
         "play": "Play",
         "pause": "Pause",
         "playAgain": "Play again",
@@ -495,7 +496,7 @@
         "tenX": "10×",
         "speedLabel": "Playback speed 10 times",
         "ended": "Re-enactment finished",
-        "legendResponseEnd": "You responded after {s} s (after the replay ends)"
+        "legendResponseEnd": "In the recorded event you responded {s} s after the flag (after the replay ends)"
       }
     }
   },
@@ -794,6 +795,7 @@
       "noChange": "no change",
       "group": {
         "weather": "Weather",
+        "weather_heat": "Weather and heat (multiplied together)",
         "skill": "Operator skill",
         "age": "Machine age",
         "heat": "Heat",
@@ -870,8 +872,8 @@
       "walker": "Walker in range"
     },
     "s5": {
-      "title": "Replay hand-off",
-      "body": "The trail rewinds, and the next operator learns from this shift without being on it.",
+      "title": "Replay of your own event",
+      "body": "The trail rewinds, and the operator rehearses their own event from this shift, then decides again.",
       "scrub": "Shift replay",
       "from": "06:12",
       "to": "14:12",
@@ -913,7 +915,7 @@
     "openLessonsTitle": "Lessons you can open any time",
     "because": "Because of {time}",
     "kind": {
-      "replay": "Practice",
+      "replay": "Replay",
       "lesson": "Lesson"
     },
     "status": {
@@ -1179,9 +1181,18 @@
     },
     "source": "Weather: Open-Meteo archive, CC BY 4.0. Task times and the organiser estimate are organiser fields.",
     "ev": {
-      "title": "Evidence · simulated data · synthetic cohort",
+      "title": "Evidence · illustrative figures, not yet measured",
       "none": "Not computed yet",
       "inProgress": "Evaluation in progress",
+      "illustrative": "Illustrative, not measured: typed demo values, not computed from any run in this repository.",
+      "popDetection": "Population: {n_idle} idle-excess and {n_over} overheat test events, simulated cohort, period not recorded.",
+      "thresholds": "Alarm thresholds in use: idle excess raises caution at 40 % idle of engine hours and warning at 50 %, over a rolling 60 simulated minutes (at least 30). Overheat: no threshold is defined in the shipped detector.",
+      "driftLabel": "Hydraulic drift (EWMA)",
+      "driftNone": "not evaluated yet",
+      "popEta": "Population: {n} tasks, all conditions, typed demo value. It is not derived from the per-condition rows above (n = {rows}) and does not equal the weighted figure in the banner.",
+      "illustrativeTag": "illustrative, not measured",
+      "popImpact": "Population: {n} operators per arm, simulated cohort, period not recorded. Illustrative, not measured.",
+      "popOps": "Population: {n} machines, simulated, period not recorded.",
       "detection": "Detection",
       "precision": "Precision",
       "recall": "Recall",
@@ -1204,6 +1215,8 @@
       "faith": "Faithfulness"
     },
     "metaDemo": "Simulated demo data · n = {n}",
+    "population": "Population: {cond} condition, all task types, n = {n} tasks. Period: not recorded in the demo rows.",
+    "verdictPop": "The banner uses {n} of those {total} tasks: groups with 10 or more tasks and both estimates.",
     "demoChip": "Simulated demo data",
     "sourceDemo": "Simulated demo data: these rows are generated for the demo, not organiser task times. Weather labels follow Open-Meteo categories."
   }
