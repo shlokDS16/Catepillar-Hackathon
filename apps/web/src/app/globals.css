@@ -13,6 +13,7 @@
 @import "../styles/debrief.css" layer(components);
 @import "../styles/debrief-ink.css" layer(components);
 @import "../styles/ledger.css" layer(components);
+@import "../styles/training.css" layer(components);
 
 /*
  * Tailwind 4 theme map. The default palette, type scale, radii and shadows are cleared so a

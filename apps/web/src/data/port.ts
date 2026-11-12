@@ -89,7 +89,16 @@ export type DataPort = {
   replaySubmit(input: In<typeof ReplaySubmitIn>): Promise<ReplayDebriefResult>;
   lessonGet(code: string): Promise<LessonContent>;
   lessonComplete(input: In<typeof LessonCompleteIn>): Promise<void>;
+  /** Repeats of the event behind a lesson in the last days; null when there is nothing to say. */
+  recurrence(lessonCode: string): Promise<RecurrenceHint | null>;
 };
+
+/**
+ * "Seatbelt: 0 repeats in 7 days" on Home after a lesson (S1). Derived from the event stream by the
+ * backend later; the fixture adapter returns a scripted number, so `simulated` is always true there
+ * and the screen says so.
+ */
+export type RecurrenceHint = { lesson_code: string; repeats: number; days: number; simulated: boolean };
 
 /** One request_id per intent, reused on retry (interaction-map §3). */
 export function newRequestId(): string {

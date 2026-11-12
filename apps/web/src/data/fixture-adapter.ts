@@ -1,7 +1,7 @@
 import { AnomalyDetected, MySnapshotOut } from "@cat/shared";
 import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, protocolCard, replayScenario, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
 import type { ReplayScenario } from "@cat/shared";
-import { RpcError, type DataPort, type PortMessage } from "@/data/port";
+import { RpcError, type DataPort, type PortMessage, type RecurrenceHint } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
 import type { SiteMapData } from "@/map/site-map";
 import type { LedgerScenario } from "@/ledger/fixtures";
@@ -22,6 +22,8 @@ export type Beat = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 export class FixtureAdapter implements DataPort {
   private listeners = new Set<Listener>();
   private seq = 1000;
+  /** Id of the seatbelt breach event from beat 2, so the lesson and replay can say what they came from. */
+  private breachEventId: string = IDS.event;
   private simMs = Date.parse(mySnapshot.run.sim_now);
   private ticker: ReturnType<typeof setInterval> | null = null;
   private snapshotValue: Snapshot;
@@ -87,6 +89,7 @@ export class FixtureAdapter implements DataPort {
     this.seq += 1;
     return {
       ...seatbeltBreachEvent,
+      id: crypto.randomUUID(),
       seq: this.seq,
       type,
       tier: null,
@@ -119,9 +122,11 @@ export class FixtureAdapter implements DataPort {
       }
       case 2: {
         // Seatbelt off on a slope while moving: breach, warning, motion lock.
+        const breach = this.event("safety.seatbelt_breach", EVENT_PAYLOADS["safety.seatbelt_breach"], { tier: "warning" });
+        this.breachEventId = breach.id;
         this.push(
           this.event("operator.motion_lock_changed", { motion_locked: true, call_allowed: false, reason: "moving" }),
-          this.event("safety.seatbelt_breach", EVENT_PAYLOADS["safety.seatbelt_breach"], { tier: "warning" }),
+          breach,
           this.event("alert.raised", {
             ...EVENT_PAYLOADS["alert.raised"],
             escalate_at: new Date(Date.now() + 20_000).toISOString(),
@@ -162,8 +167,8 @@ export class FixtureAdapter implements DataPort {
       }
       case 4: // The Loop: replay ready from the seatbelt event, lesson assigned.
         this.push(
-          this.event("training.lesson_assigned", EVENT_PAYLOADS["training.lesson_assigned"]),
-          this.event("training.replay_ready", EVENT_PAYLOADS["training.replay_ready"]),
+          this.event("training.lesson_assigned", { ...EVENT_PAYLOADS["training.lesson_assigned"], because_event_id: this.breachEventId }),
+          this.event("training.replay_ready", { ...EVENT_PAYLOADS["training.replay_ready"], source_event_id: this.breachEventId }),
         );
         return;
       case 6:
@@ -363,14 +368,25 @@ export class FixtureAdapter implements DataPort {
   async replaySubmit(input: Parameters<DataPort["replaySubmit"]>[0]) {
     await wait(this.latencyMs * 3);
     const { fixtureAnswerKey, scoreReplay } = await import("@/replay/fixture-scoring");
-    return scoreReplay(replayScenario as ReplayScenario, fixtureAnswerKey, input);
+    const result = scoreReplay(replayScenario as ReplayScenario, fixtureAnswerKey, input);
+    this.push(this.event("training.replay_completed", { replay_id: input.p_replay_id, attempt_id: crypto.randomUUID(), scores: result.scores }));
+    return result;
   }
-  async lessonGet() {
+  async lessonGet(code: string) {
     await wait(this.latencyMs);
+    // The fixture authors one lesson; any other code is "not found", never someone else's content.
+    if (code !== lessonContent.code) throw new RpcError("not_found");
     return lessonContent;
   }
-  async lessonComplete() {
+  async lessonComplete(input: Parameters<DataPort["lessonComplete"]>[0]) {
     await wait(this.latencyMs);
+    // The server answers with the event; the store learns from it, never from this call.
+    this.push(this.event("training.lesson_completed", { assignment_id: input.p_assignment_id, quiz_score: input.p_quiz_score }));
+  }
+  async recurrence(lessonCode: string): Promise<RecurrenceHint | null> {
+    await wait(this.latencyMs);
+    // Scripted: the demo run has no repeat of the seatbelt event after its lesson.
+    return lessonCode === lessonContent.code ? { lesson_code: lessonCode, repeats: 0, days: 7, simulated: true } : null;
   }
 
   /** Beat 1's "vest on" also unblocks Start for the fixture's PPE check. */

@@ -1,17 +1,15 @@
 "use client";
 
-import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
-import { useEffect, useState } from "react";
 import { useSafetyState } from "@/alerts/use-safety-state";
 import { HeroCard } from "@/components/hero/hero-card";
-import { Button } from "@/components/ui/button";
+import { LoopCard } from "@/components/home/loop-card";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import { ProvenanceChip, ProvenanceLine } from "@/components/ui/provenance";
 import { useMode } from "@/data/mode";
-import { useAppState, useDataPort } from "@/data/store";
+import { useAppState } from "@/data/store";
 import { currentTask } from "@/hero/work-state";
 
 /**
@@ -25,32 +23,10 @@ export function HomeScreen() {
   const snapshot = useAppState((s) => s.snapshot);
   const machine = useAppState((s) => s.machine);
   const tasks = useAppState((s) => s.tasks);
-  const assignments = useAppState((s) => s.assignments);
-  const port = useDataPort();
   const { safety, topAlert } = useSafetyState();
   const weather = snapshot?.weather ?? null;
   const detailed = mode === "detailed";
   const current = currentTask(tasks);
-
-  // The lesson's card count comes from its content, not a hardcoded number (F06-F08 review 15).
-  const loop = assignments.find((a) => a.replay_id) ?? assignments[0];
-  const lessonCode = loop?.lesson_code ?? null;
-  const [lessonCards, setLessonCards] = useState<number | null>(null);
-  useEffect(() => {
-    if (!lessonCode) return;
-    let live = true;
-    void port
-      .lessonGet(lessonCode)
-      .then((lesson) => {
-        if (live) setLessonCards(lesson.cards.length);
-      })
-      .catch(() => {
-        if (live) setLessonCards(null);
-      });
-    return () => {
-      live = false;
-    };
-  }, [port, lessonCode]);
 
   if (!snapshot) {
     return (
@@ -91,22 +67,7 @@ export function HomeScreen() {
           </Plate>
         ) : null}
 
-        {loop ? (
-          <Plate as="section" rule="heavy" className="flex flex-col gap-3" aria-label={t("home.loopTitle")}>
-            <p className="t-label text-ink-2">{t("home.becauseToday")}</p>
-            <p className="t-title">{t(`home.lesson.${loop.lesson_code}`)}</p>
-            <div className="flex flex-wrap items-center gap-6">
-              {loop.replay_id ? (
-                <Button variant="primary" href={`/op/training/replay/${loop.replay_id}`}>
-                  {t("home.practise")}
-                </Button>
-              ) : null}
-              <Link href={`/op/training/lesson/${loop.lesson_code}`} prefetch={false} className="t-label underline underline-offset-4">
-                {lessonCards != null ? t("home.lessonCards", { n: lessonCards }) : t("home.lessonLink")}
-              </Link>
-            </div>
-          </Plate>
-        ) : null}
+        <LoopCard />
 
         <section aria-label={t("home.todaysTasks")} className="flex flex-col gap-2">
           <h2 className="t-title">{t("home.todaysTasks")}</h2>
