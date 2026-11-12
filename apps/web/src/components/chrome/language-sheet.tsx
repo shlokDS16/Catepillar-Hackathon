@@ -68,7 +68,7 @@ export function LanguageChip() {
   return (
     <>
       <Chip onClick={() => setOpen(true)} aria-label={t("languageNamed", { name })}>
-        {name}
+        <span aria-hidden="true">{Array.from(name).slice(0, 2).join("")}</span>
       </Chip>
       <LanguageSheet open={open} onClose={() => setOpen(false)} />
     </>

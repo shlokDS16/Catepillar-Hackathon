@@ -1,10 +1,11 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { KIND_PICTO } from "@/alerts/kinds";
 import { safetyTone } from "@/alerts/selectors";
 import { useSafetyState } from "@/alerts/use-safety-state";
-import { Chip, type ChipTone } from "@/components/ui/chip";
+import { Chip } from "@/components/ui/chip";
 import { Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { useAppState } from "@/data/store";
 import { useMotionLock } from "@/hero/use-motion-lock";
@@ -12,12 +13,13 @@ import { useMotionLock } from "@/hero/use-motion-lock";
 const FALLBACK_PICTO: Record<"clear" | "nosignal", PictogramName> = { clear: "seatbelt", nosignal: "sos" };
 
 /**
- * The 80 px status strip: [Safety chip][Connectivity chip], both from the store.
+ * The ink status band: [state plate][connectivity caption][Language][Ask] (operator) or
+ * [page title][caption][Language] (fleet manager), all from the store.
  * Colour + pictogram + word, always; NO SIGNAL after 10 s without a frame.
  * While the motion lock shows, the strip stays visible above it but goes inert: its safety chip
  * is a Link, so it must not stay tab-reachable or tappable during the lock (interaction-map §6).
  */
-export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
+export function StatusStrip({ showSafety = true, title, actions }: { showSafety?: boolean; title?: ReactNode; actions?: ReactNode }) {
   const t = useTranslations();
   const format = useFormatter();
   const { safety, topAlert } = useSafetyState();
@@ -29,22 +31,18 @@ export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
   const safetyWord = t(`enums.safety.${safety}`);
   const picto: PictogramName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? FALLBACK_PICTO.nosignal : FALLBACK_PICTO.clear;
 
-  let connTone: ChipTone = "outline";
   let connText: string;
   switch (connectivity.kind) {
     case "live":
-      connTone = "ink";
       connText = clock ? t("chrome.simStatus", { time: format.dateTime(new Date(clock.sim_now), "time"), speed: clock.speed }) : t("chrome.live");
       break;
     case "reconnecting":
       connText = t("chrome.reconnecting");
       break;
     case "nosignal":
-      connTone = "nosignal";
       connText = t("chrome.noSignalStatus", { time: format.dateTime(new Date(connectivity.syncedAtMs), "time") });
       break;
     default:
-      connTone = "sunk";
       connText = clock ? t("chrome.fixtureStatus", { time: format.dateTime(new Date(clock.sim_now), "time"), speed: clock.speed }) : t("chrome.fixture");
   }
 
@@ -62,9 +60,11 @@ export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
           {safetyWord}
         </Chip>
       ) : null}
-      <Chip tone={connTone} word dashed={connectivity.kind === "nosignal"} className="ms-auto">
+      {title}
+      <span className="strip-cap t-caption" data-conn={connectivity.kind}>
         {connText}
-      </Chip>
+      </span>
+      <div className="strip-actions">{actions}</div>
     </header>
   );
 }

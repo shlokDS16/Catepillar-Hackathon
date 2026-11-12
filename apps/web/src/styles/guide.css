@@ -24,11 +24,6 @@
 .guide-entry-action {
   margin-top: var(--s-1);
 }
-/* The SOS plate floats over the bottom-right corner of every operator screen; a block button or a
-   wide plate footer would run under it, so the action keeps that corner clear. */
-.shell[data-role="operator"] .guide-entry-action {
-  padding-inline-end: calc(var(--hit-sos) + var(--s-4));
-}
 
 /* ---------- The sheet ---------- */
 .guide {
@@ -38,27 +33,6 @@
 }
 .guide > * {
   margin: 0;
-}
-/*
- * The SOS plate floats above every sheet, 96–204 px up from the bottom of the screen in the
- * right-hand corner. The actions row keeps that corner clear on its own line; this padding lifts
- * everything above it out of the band entirely, so no sentence is ever read through SOS.
- * Measured at 375 px, which is where R1 hit the same thing.
- */
-.shell[data-role="operator"] .guide {
-  /* The band runs from the nav up past the plate: --nav-h (80) + --s-4 (16) + --hit-sos (108).
-     Reserving only --hit-sos left the last child — the private-mode note, which has no inline
-     padding of its own — sitting ~64 px inside it. */
-  padding-block-end: calc(var(--nav-h) + var(--s-4) + var(--hit-sos));
-}
-/*
- * Sheets reserve the SOS corner in their head by default, because most of them are short enough
- * for the head to sit inside the SOS band. The guide is always the full 90 dvh, so its head is
- * 500 px above the plate and that reservation only costs the title a third wrapped line — which
- * then pushes the last step's text down into the band it was meant to protect.
- */
-.shell[data-role="operator"] .sheet-body:has(.guide) .sheet-head {
-  padding-inline-end: 0;
 }
 
 /* The step rail: four words, the current one inverted in ink. It reports progress and is not a
@@ -156,10 +130,6 @@
   align-items: center;
   gap: var(--s-4);
   margin-top: var(--s-2);
-}
-/* Same reservation as .sheet-head: SOS floats above every sheet and owns that corner. */
-.shell[data-role="operator"] .guide-actions {
-  padding-inline-end: calc(var(--hit-sos) + var(--s-4));
 }
 /* Two buttons share the ~200 px strip left of SOS at 375 px. They keep the full 80 px target but
    give up the wide default side padding, which is what decides whether the Hindi pair fits on one

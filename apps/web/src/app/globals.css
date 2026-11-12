@@ -71,7 +71,6 @@
   --spacing-content: var(--content-max);
   --spacing-hero: var(--hero-max);
   --spacing-strip: var(--strip-h);
-  --spacing-nav: var(--nav-h);
   --spacing-rail: var(--rail-w);
 
   --ease-*: initial;

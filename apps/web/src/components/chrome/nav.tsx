@@ -13,7 +13,10 @@ type NavProps = {
   badges?: Partial<Record<NavItem["key"], string>>;
 };
 
-/** Bottom bar below 1024 px, left rail from 1024 px. Icon + label always, 80 px targets. */
+/**
+ * The dock: an ink bar below 1024 px, the left rail from 1024 px. Icon + label always, 96 px tall.
+ * The operator's last dock slot is the SOS plate (SosControl), fixed over the reserved cell.
+ */
 export function Nav({ role, badges }: NavProps) {
   const items = navFor(role);
   const pathname = usePathname();
@@ -22,11 +25,11 @@ export function Nav({ role, badges }: NavProps) {
   const serverLocked = useAppState((s) => s.operator?.motion_locked ?? false);
   const shown = useMotionLock(serverLocked);
   return (
-    <nav className="nav" aria-label={t("primary")} inert={shown || undefined}>
+    <nav className="nav" data-sos={role === "operator" || undefined} aria-label={t("primary")} inert={shown || undefined}>
       {items.map(({ key, href, icon: Icon }) => {
         const badge = badges?.[key];
         return (
-          <Link key={key} href={href} className="nav-item" aria-current={active?.key === key ? "page" : undefined}>
+          <Link key={key} href={href} className="nav-item" aria-current={active?.key === key ? (pathname === href || pathname.startsWith(`${href}/`) ? "page" : "true") : undefined}>
             <span className="nav-icon">
               <Icon className="icon" aria-hidden="true" />
               {badge ? <span className="nav-badge tnum">{badge}</span> : null}
@@ -39,11 +42,12 @@ export function Nav({ role, badges }: NavProps) {
   );
 }
 
-/** The title row's screen name, taken from the active nav item. Sub-screens render their own. */
-export function ActiveTitle({ role }: { role: ShellRole }) {
+/** The page h1: the active nav item's name, except the operator Map, which has its own. Hidden for operators (the dock shows it); a display title in the FM band. */
+export function ActiveTitle({ role, className }: { role: ShellRole; className?: string }) {
   const items = navFor(role);
   const pathname = usePathname();
   const t = useTranslations("nav");
   const active = activeItem(items, pathname);
-  return active ? <h1 className="t-title">{t(active.key)}</h1> : null;
+  if (pathname === "/op/map" || pathname.startsWith("/op/map/")) return <h1 className={className}>{t("map")}</h1>;
+  return active ? <h1 className={className}>{t(active.key)}</h1> : null;
 }
