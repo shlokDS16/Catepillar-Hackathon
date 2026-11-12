@@ -1,0 +1,282 @@
+/*
+ * Landing (docs/design/landing-dossier.md). Pinned stages inside tall wrappers; pacing comes from
+ * the wrapper height. JS only writes `--p` (0..1) on each .stage; everything else is CSS math.
+ * Colour reads tokens only (scenery tokens are at the end of tokens.css).
+ */
+
+.landing {
+  --k: 1;
+  background: var(--rock-front);
+  color: var(--on-ink);
+  font-family: var(--ff-body);
+}
+
+@media (max-width: 767px) {
+  .landing {
+    --k: 0.8;
+  }
+}
+
+/* Navbar: a fixed centred pill. One variant (paper); both dark and light stages read it clearly. */
+.l-nav {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: var(--z-chrome);
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  max-width: calc(100vw - 2 * var(--gutter));
+  padding: var(--s-1) var(--s-1) var(--s-1) var(--s-5);
+  transform: translateX(-50%);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  color: var(--ink);
+}
+
+.l-brand {
+  font-family: var(--ff-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Stages */
+.stage {
+  --p: 0;
+  position: relative;
+  height: calc(var(--h) * 1svh * var(--k));
+}
+
+.pin {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.l-poster {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.7s var(--ease-quint);
+}
+
+[data-gl="on"] .l-poster {
+  opacity: 0;
+}
+
+.l-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, color-mix(in srgb, var(--rock-front) 82%, transparent), transparent 62%);
+}
+
+.l-copy {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: calc(var(--s-8) + var(--s-5));
+  max-width: 920px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.l-kicker,
+.l-caption,
+.l-hint {
+  margin: 0;
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
+  line-height: 19.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.l-kicker {
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--on-ink) 78%, transparent);
+}
+
+.l-h1 {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: clamp(46px, 9.2vw, 118px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+:lang(hi) .l-h1,
+:lang(ta) .l-h1 {
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.l-sub {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 17px;
+  line-height: 25px;
+  color: color-mix(in srgb, var(--on-ink) 82%, transparent);
+}
+
+.l-b {
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  max-width: 28ch;
+  font-family: var(--ff-display);
+  font-weight: 600;
+  font-size: clamp(30px, 5vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.l-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-5);
+  margin-top: var(--s-2);
+}
+
+.l-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--hit-dense);
+  padding: 0 var(--s-5);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 17px;
+  text-decoration: none;
+  transition:
+    transform var(--dur-lhover) var(--ease-quint),
+    box-shadow var(--dur-lhover) var(--ease-quint);
+}
+
+.l-arrow {
+  transition: transform var(--dur-lhover) var(--ease-quint);
+}
+
+@media (hover: hover) {
+  .l-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 12px color-mix(in srgb, var(--ink) 40%, transparent);
+  }
+  .l-cta:hover .l-arrow {
+    transform: translateX(3px);
+  }
+}
+
+.l-cta:active {
+  transform: scale(0.98);
+  transition-duration: 130ms;
+}
+
+.l-cta:focus-visible,
+.l-link:focus-visible {
+  outline-color: var(--on-ink);
+}
+
+.l-link {
+  color: var(--on-ink);
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+.l-caption {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: var(--s-5);
+  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+}
+
+.l-hint {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--s-5);
+  display: none;
+  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+}
+
+@media (min-width: 900px) {
+  .l-hint {
+    display: block;
+  }
+}
+
+/*
+ * Scroll-linked reveals. Per element: --a..--b is the p window; defaults suit "in" at .5-.65.
+ * smoothstep(t) = t*t*(3-2t) so the scroll position eases without any script.
+ */
+.rv {
+  --a: 0.5;
+  --b: 0.65;
+  --t: clamp(0, calc((var(--p) - var(--a)) / (var(--b) - var(--a))), 1);
+  --e: calc(var(--t) * var(--t) * (3 - 2 * var(--t)));
+}
+
+.rv-in {
+  opacity: var(--e);
+  transform: translateY(calc((1 - var(--e)) * 28px));
+}
+
+.rv-out {
+  --a: 0.22;
+  --b: 0.44;
+  opacity: calc(1 - var(--e));
+  transform: translateY(calc(var(--e) * -28px));
+}
+
+.stage[data-stage="1"] .l-b {
+  --a: 0.62;
+  --b: 0.74;
+}
+
+/* The language chip inside the pill: a compact 48 px target, rounded to match. */
+.l-nav .chip {
+  min-height: var(--hit-dense);
+  border-width: var(--bw-hair);
+  border-radius: 12px;
+  padding: 0 var(--s-4);
+  font-size: 15px;
+}
+
+/* Reduced motion: still stages, no pinning, everything visible, nothing loops. */
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    height: auto;
+    min-height: 100svh;
+  }
+  .pin {
+    position: relative;
+    min-height: 100svh;
+  }
+  .rv {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .l-b {
+    position: static;
+    margin-top: var(--s-4);
+  }
+  .l-cta,
+  .l-arrow {
+    transition: none;
+  }
+}
