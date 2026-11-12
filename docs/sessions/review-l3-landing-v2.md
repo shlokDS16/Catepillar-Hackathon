@@ -111,3 +111,50 @@ Blocker 0 · High 3 · Medium 6 · Low 9
 ## Not verified
 - I measured live contrast, LCP and 60 fps only indirectly. The browser pane ran hidden, so rAF and paint entries were suspended. The 1440 leader measurements were taken while the pane was active.
 - I did not test real context loss. The finding comes from code reading.
+
+## Re-check against head ea3ab77 (2026-11-12, fresh worktree)
+
+Commits since 6c0f06c: bd0b983, 5e95f40, 6a264eb, ea3ab77.
+
+**Verdict: PASS.** All Highs are fixed. Mediums 4-8 are fixed and 9 is deferred by decision. Four new Lows are open, and none of them blocks.
+
+**Gates:**
+- typecheck: exit 0, 0 errors.
+- lint: exit 0, 0 problems.
+- test: 22 files, 266/266 passed.
+- build: compiled, 16/16 pages, exit 0.
+- The three.js chunk (`3030bijau2umq.js`) is still absent from the 9 SSR scripts of `/`.
+
+| # | Status | Evidence |
+|---|---|---|
+| H1 stale leaders | Fixed | The scene calls `opts.onFrame` after every render (index.ts, `renderOnce` and `tick`). The engine redraws there while `now === 2`. |
+| H2 pairing by meaning | Fixed | Anchors now carry an `id`. The engine maps c1 to the cylinder, c2 to the cab and c3 to the beacon (`LEADER_ID`), with no sort and one elbow per line. The new beacon anchor is on the house, and the cab anchor moved to mid-cab (ea3ab77). |
+| H3 copy contrast | Fixed (estimate) | The left scrim is now 74 % to 60 % at 30 % width, then 0 at 60 %, plus a 55 % bottom-left radial. Below 1100 px the bottom scrim is 90 %. Estimated headline contrast at the copy's right edge is about 7:1. The recaptured s2-s4 at 1440 read clearly. |
+| M4 context loss | Fixed | A `webglcontextlost` handler calls `preventDefault`, stops the rAF and fires `onLost`. The engine then sets `data-gl="off"` so the posters return, and the listener is removed in `dispose`. |
+| M5 no-JS ink and dots | Fixed | noscript has `.l-ink,.l-leaders{display:none!important}`. |
+| M6 no-JS callouts and ledger | Fixed | noscript sets stage 6 `--p:1` and forces callout opacity to 1. |
+| M7 hero LCP | Fixed | The `ln-rise` animation is removed, so the hero lines paint in place (no `animation` on stage 1). |
+| M8 stale QA | Fixed | All `l3v2-page-*` were recaptured on the v2 scene, plus new s2b captures (6a264eb). |
+| M9 Ink Frame on /op | Deferred | By decision, to the lead's portal phase 1. |
+| L10 kicker | Fixed | Uses `.l-sr` hidden text. |
+| L11 rail | Fixed | It now has `aria-current="step"`, stage names in the labels, an ink colour keyed to `data-paper`, and focus moves to the stage (`tabIndex=-1`). |
+| L12 governor | Fixed | A good frame bleeds 0.5 from the slow count. |
+| L13 negative dt | Fixed | dt is clamped with `Math.max(0, …)`. |
+| L14 allocations | Fixed | Scratch vectors are reused and `getAnchors` returns the shared array. |
+| L15 flash ramp | Fixed | Light text starts at ov ≥ 0.85. |
+| L16 hi wording | Fixed | Now "सिमुलेटेड शिफ्ट". |
+| L17 draws and tris | Fixed | Truck wheels are instanced (3 draws), and terrain is 260/200 segments. |
+| L18 reduced-motion busy and rail | Fixed | `busy` resets after 1 s. The rail stays visible under reduced motion and is static. |
+
+### Still open (Low, non-blocking)
+19. **The callout labels at the right of stage 2 rely on a text-shadow only** (landing.css `.callout-t`).
+    - In l3v2-page-s2b-1440.png, "Seatbelt, idle…" and "Works on a patchy bench connection" sit over the bright bench and the tracks, and read weakly.
+    - Fix: give `.l-callouts` a right-side ink scrim like the left one, or a 70 % ink plate.
+    - Not measured live, because the pane was hidden. The s2b capture also predates the mid-cab anchor (ea3ab77), so line crossings at head are not verified.
+20. **After `onLost`, the engine can restart the loop on a dead context.**
+    - `syncRunning` (IntersectionObserver or visibilitychange) still calls `ctl.setRunning(true)`.
+    - Fix: in `onLost` set `ctl = null`, or add a `lost` flag that `syncRunning` checks.
+21. **`drawLeaders` interleaves reads and writes on every frame.**
+    - It calls `getBoundingClientRect` on each label after writing the previous polyline's points, which can force layout three times per frame on desktop.
+    - Fix: read all the label rects first, then write.
+22. **Under reduced motion `data-now` and `data-paper` are never set.** The static rail is `--on-frame` at 50 % everywhere, so it is invisible over the paper of stage 6 and over the footer. Fix: give it a contrasting plate (for example a `--frame` pill behind the ticks).
