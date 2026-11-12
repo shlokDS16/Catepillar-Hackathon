@@ -989,5 +989,128 @@
       "tilt": "TILT",
       "valueText": "{t} of {total} s. {caption}"
     }
+  },
+  "safety": {
+    "title": "Safety",
+    "clearTitle": "No active alerts",
+    "clearNote": "Nothing needs you right now.",
+    "noSignalNote": "New alerts may not reach this screen. Look around you.",
+    "activeTitle": "Needs you now",
+    "recentTitle": "Earlier",
+    "recentNone": "Nothing earlier today.",
+    "checksTitle": "Checks",
+    "status": {
+      "open": "Waiting for you. Tap Acknowledge.",
+      "escalating": "Your supervisor will be alerted soon.",
+      "escalated": "Your supervisor has been alerted.",
+      "acknowledged": "You acknowledged this.",
+      "resolved": "Done. This is closed."
+    },
+    "at": "{time}",
+    "seatbelt": {
+      "label": "Seatbelt",
+      "fastened": "Fastened",
+      "off": "Off",
+      "unknown": "Not known"
+    },
+    "ppe": {
+      "label": "PPE",
+      "on": "on",
+      "off": "not on",
+      "unknown": "not known",
+      "item": {
+        "helmet": "Helmet",
+        "vest": "Vest",
+        "boots": "Boots",
+        "gloves": "Gloves"
+      }
+    },
+    "proximity": {
+      "label": "Close by",
+      "none": "Nothing near",
+      "person": "Person {m} m",
+      "machine": "Machine {m} m",
+      "zone": {
+        "awareness": "awareness",
+        "warning": "warning",
+        "danger": "danger"
+      }
+    },
+    "conditions": {
+      "label": "Heat",
+      "wbgt": "WBGT {c} °C",
+      "unknown": "Not known"
+    },
+    "openMap": "Open site map",
+    "report": "Report something",
+    "reportDraft": "Report something (draft kept)",
+    "reportNote": "A near miss, first aid or damage. It takes under a minute."
+  },
+  "incident": {
+    "title": "Report something",
+    "typeLegend": "What happened?",
+    "type": {
+      "near_miss": {
+        "label": "Near miss",
+        "hint": "It almost went wrong"
+      },
+      "first_aid": {
+        "label": "First aid",
+        "hint": "Someone needed help"
+      },
+      "property_damage": {
+        "label": "Damage",
+        "hint": "Machine or property"
+      },
+      "manual": {
+        "label": "Other",
+        "hint": "Something else"
+      }
+    },
+    "nearMissPrivacy": "A near miss is not a report against anyone. Your supervisor sees it without your name. It helps the site fix the cause, not blame a person.",
+    "severityLegend": "How serious?",
+    "severity": {
+      "1": {
+        "label": "Low",
+        "hint": "Nobody hurt"
+      },
+      "3": {
+        "label": "Serious",
+        "hint": "Someone could have been hurt"
+      },
+      "5": {
+        "label": "Injury",
+        "hint": "Someone is hurt"
+      }
+    },
+    "severityPlate": "Level {n}",
+    "injuryNote": "If someone is hurt right now, hold the SOS button first.",
+    "noteLabel": "A few words (optional)",
+    "notePlaceholder": "Where, and what you saw",
+    "noteCount": "{n} of {max}",
+    "photo": "Add photo",
+    "photoNote": "Photos are not available in this demo yet. Your report goes without one.",
+    "submit": "Send report",
+    "missingKind": "Choose what happened.",
+    "missingSeverity": "Choose how serious.",
+    "failed": "Not sent. Your report is saved on this phone. Try again.",
+    "draftRestored": "We kept your unfinished report.",
+    "draftSaved": "Saved on this phone until it is sent.",
+    "sent": "Report sent",
+    "recording": "Sent · recording in the ledger…",
+    "recorded": "Recorded #{seq}",
+    "nextTitle": "What happens next",
+    "nextNearMiss": [
+      "Your supervisor sees what happened, without your name.",
+      "It is added to the site record. It cannot be changed later.",
+      "Nobody is blamed. It helps the site fix the cause."
+    ],
+    "nextOther": [
+      "Your supervisor is told now.",
+      "It is added to the site record. It cannot be changed later.",
+      "If someone still needs help, hold the SOS button."
+    ],
+    "done": "Done",
+    "another": "Report another"
   }
 }

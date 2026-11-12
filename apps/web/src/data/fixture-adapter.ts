@@ -345,10 +345,36 @@ export class FixtureAdapter implements DataPort {
   async sosCancel() {
     await wait(this.latencyMs);
   }
-  async incidentLog() {
+  /** Request ids already answered, so a retry with the same id gets the same result and never a second entry. */
+  private incidentsDone = new Map<string, { event_id: string }>();
+  private incidentFailed = new Set<string>();
+  /**
+   * Fixture only: a note containing "#fail" makes the FIRST attempt of that request fail, so the
+   * draft-survives-a-failure path can be shown and tested without a network. The retry succeeds.
+   */
+  async incidentLog(input: { p_request_id: string; p_incident_type: string; p_description: string | null }) {
     await wait(this.latencyMs);
-    setTimeout(() => this.push(this.event("incident.logged", { ...EVENT_PAYLOADS["incident.logged"], seq: 216 })), 1500);
-    return rpc.incidentLogOut;
+    const done = this.incidentsDone.get(input.p_request_id);
+    if (done) return done;
+    if (input.p_description?.includes("#fail") && !this.incidentFailed.has(input.p_request_id)) {
+      this.incidentFailed.add(input.p_request_id);
+      throw new RpcError("network");
+    }
+    const out = { ...rpc.incidentLogOut };
+    this.incidentsDone.set(input.p_request_id, out);
+    setTimeout(
+      () =>
+        this.push(
+          this.event("incident.logged", {
+            ...EVENT_PAYLOADS["incident.logged"],
+            incident_id: out.event_id,
+            incident_type: input.p_incident_type as (typeof EVENT_PAYLOADS)["incident.logged"]["incident_type"],
+            seq: 216,
+          }),
+        ),
+      1500,
+    );
+    return out;
   }
   async ppeOverride() {
     await wait(this.latencyMs);
