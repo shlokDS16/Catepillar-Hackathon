@@ -1,12 +1,17 @@
 "use client";
 
 import { useEffect } from "react";
-import type { SceneController } from "@/components/landing/scene";
+import type { SceneController, SceneOptions } from "@/components/landing/scene";
 
-/** Screen-space anchors the scene exposes (cab, boom cylinder, bucket), in CSS px from the canvas. */
-type Anchor = { x: number; y: number; visible: boolean };
-/** `getAnchors` is optional until the scene implements it; the engine tolerates its absence. */
+/** Screen-space anchors the scene exposes, in CSS px from the canvas. `id` is absent on older scenes. */
+type Anchor = { x: number; y: number; visible: boolean; id?: "cylinder" | "cab" | "beacon" };
+/** The scene may lack `getAnchors`, `onFrame` and `onLost`; the engine tolerates their absence. */
 type Ctl = SceneController & { getAnchors?: () => Anchor[] };
+type Opts = SceneOptions & { onFrame?: () => void; onLost?: () => void };
+/** Callout i (c1 boom and stick, c2 seatbelt and rules, c3 patchy connection) to its anchor. */
+const LEADER_ID = ["cylinder", "cab", "beacon"] as const;
+/** Without ids the scene returns cab, cylinder, bucket: map the same callouts onto that order. */
+const LEADER_FALLBACK = [1, 0, 2];
 
 /**
  * Scroll engine: native scroll, one rAF per scroll burst, no smoothing library (dossier §1.3).
@@ -46,6 +51,7 @@ export function LandingEngine() {
     let raf = 0;
     let ctl: Ctl | null = null;
     let now = 0;
+    const rail = Array.from(root.querySelectorAll<HTMLAnchorElement>(".l-rail a"));
     const leaders = Array.from(root.querySelectorAll<SVGGElement>(".leader"));
     const labels = Array.from(root.querySelectorAll<HTMLElement>(".callout"));
     const pin2 = root.querySelector<HTMLElement>('.stage[data-stage="2"] .pin');
@@ -87,43 +93,48 @@ export function LandingEngine() {
       if (cur !== now - 1) {
         now = cur + 1;
         root.dataset.now = String(now);
+        rail.forEach((a, i) => (i === now - 1 ? a.setAttribute("aria-current", "step") : a.removeAttribute("aria-current")));
       }
+      // The rail turns ink once the stage 6 paper has risen over most of the screen.
+      if (now === 6 && (bands[5]?.last ?? 0) > 0.07) root.dataset.paper = "1";
+      else delete root.dataset.paper;
       ctl?.setProgress(ps);
       if (now === 2) drawLeaders();
     };
 
-    // Stage 2: a 1 px leader from each label to its anchor on the machine. Anchors and labels are
-    // each sorted top to bottom and paired in order, so the lines never cross.
+    // Stage 2: a 1 px leader from each label to its anchor on the machine, paired by meaning (anchor
+    // id), routed with one elbow. Redrawn from the scene's own frame callback so it tracks the dig.
     const drawLeaders = () => {
-      const a = (canvas && pin2 && ctl?.getAnchors?.()) || [];
+      const a: Anchor[] = (canvas && pin2 && (ctl?.getAnchors?.() as Anchor[] | undefined)) || [];
       if (!a.length || !canvas || !pin2) {
         leaders.forEach((g) => g.style.setProperty("--vis", "0"));
         return;
       }
       const cr = canvas.getBoundingClientRect();
       const pr = pin2.getBoundingClientRect();
-      const ax = a.map((p) => ({ x: p.x + cr.left - pr.left, y: p.y + cr.top - pr.top, v: p.visible })).sort((p, q) => p.y - q.y);
       const mobile = window.innerWidth < 768;
-      const ls = labels
-        .map((el) => el.getBoundingClientRect())
-        .map((r) => (mobile ? { x: r.left - pr.left + 12, y: r.bottom - pr.top } : { x: r.left - pr.left - 8, y: r.top - pr.top + 14 }))
-        .sort((p, q) => p.y - q.y);
+      const hasIds = a.some((p) => p.id);
       leaders.forEach((g, i) => {
-        const p = ax[i];
-        const l = ls[i];
-        const line = g.firstElementChild as SVGLineElement;
+        const p = hasIds ? a.find((q) => q.id === LEADER_ID[i]) : a[LEADER_FALLBACK[i]];
+        const el = labels[i];
+        const poly = g.firstElementChild as SVGPolylineElement;
         const dot = g.lastElementChild as SVGCircleElement;
-        if (!p || !l) {
+        if (!p || !el) {
           g.style.setProperty("--vis", "0");
           return;
         }
-        line.setAttribute("x1", l.x.toFixed(1));
-        line.setAttribute("y1", l.y.toFixed(1));
-        line.setAttribute("x2", p.x.toFixed(1));
-        line.setAttribute("y2", p.y.toFixed(1));
-        dot.setAttribute("cx", p.x.toFixed(1));
-        dot.setAttribute("cy", p.y.toFixed(1));
-        g.style.setProperty("--vis", p.v ? "1" : "0");
+        const r = el.getBoundingClientRect();
+        const ax = p.x + cr.left - pr.left;
+        const ay = p.y + cr.top - pr.top;
+        const lx = mobile ? r.left - pr.left + 12 : r.left - pr.left - 8;
+        const ly = mobile ? r.bottom - pr.top : r.top - pr.top + 14;
+        // One elbow: leave the label straight, then run to the anchor, so neighbouring lines stay apart.
+        const ex = mobile ? lx : lx - 28 - i * 10;
+        const ey = mobile ? ly + 10 + i * 6 : ly;
+        poly.setAttribute("points", `${lx.toFixed(1)},${ly.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`);
+        dot.setAttribute("cx", ax.toFixed(1));
+        dot.setAttribute("cy", ay.toFixed(1));
+        g.style.setProperty("--vis", p.visible ? "1" : "0");
       });
     };
 
@@ -156,7 +167,7 @@ export function LandingEngine() {
       try {
         const { createScene } = await import("@/components/landing/scene");
         if (disposed) return;
-        ctl = createScene(canvas, {
+        const opts: Opts = {
           snap: Boolean(still),
           reducedMotion: reduced.matches,
           onRing: (level) => {
@@ -165,7 +176,16 @@ export function LandingEngine() {
           onReady: () => {
             root.dataset.gl = "on";
           },
-        });
+          onFrame: () => {
+            if (now === 2) drawLeaders();
+          },
+          // A lost context leaves a black canvas: bring the posters back.
+          onLost: () => {
+            root.dataset.gl = "off";
+            ctl?.setRunning(false);
+          },
+        };
+        ctl = createScene(canvas, opts);
         ctl.setProgress(ps);
         if (still) {
           ctl.renderOnce();
@@ -262,13 +282,13 @@ export function LandingEngine() {
     counters.forEach((c) => cio.observe(c));
 
     // Rail ticks scroll to a point where the stage's copy has arrived (p about .3), not to p = 0.
-    const rail = Array.from(root.querySelectorAll<HTMLAnchorElement>(".l-rail a"));
     const onRail = (e: MouseEvent) => {
       const a = e.currentTarget as HTMLAnchorElement;
       const b = bands[Number(a.dataset.rail) - 1];
       if (!b) return;
       e.preventDefault();
       window.scrollTo({ top: b.top + b.travel * (b.el.dataset.stage === "7" ? 0 : 0.3), behavior: "smooth" });
+      b.el.focus({ preventScroll: true });
     };
     rail.forEach((a) => a.addEventListener("click", onRail));
     const closeIo = new IntersectionObserver(

@@ -771,7 +771,7 @@
     },
     "rail": {
       "label": "Story progress",
-      "go": "Part {n} of 7"
+      "go": "Part {n} of 7: {name}"
     },
     "wipe": {
       "band": "Operator cockpit · simulated shift"

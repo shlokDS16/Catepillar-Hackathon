@@ -56,6 +56,9 @@ export function WipeLink({
     busy.current = true;
     if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
       router.push(href);
+      window.setTimeout(() => {
+        busy.current = false;
+      }, 1000);
       return;
     }
     const x = e.clientX || window.innerWidth / 2;

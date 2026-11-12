@@ -39,7 +39,8 @@ function Lines({ text }: { text: string }) {
 /** "0N / 07" whose digit rolls from the previous stage's number as the block fades in. */
 function Kicker({ n }: { n: number }) {
   return (
-    <p className="l-kicker" aria-label={`0${n} / 07`}>
+    <p className="l-kicker">
+      <span className="l-sr">{`0${n} / 07`}</span>
       <span aria-hidden="true">
         0
         <span className="roll">
@@ -92,7 +93,7 @@ export async function Landing() {
   return (
     <div className="landing" data-landing>
       <noscript>
-        <style>{`.landing .stage{height:auto!important;min-height:100svh}.landing .pin{position:relative!important}.landing .rv{opacity:1!important;transform:none!important}.landing .ln-i{transform:none!important;animation:none!important}.landing .roll-col{transform:translateY(calc(var(--n)*-1*var(--lh)))!important}.landing .l-paper{transform:none!important}.landing .callout::before{transform:none!important}`}</style>
+        <style>{`.landing .stage{height:auto!important;min-height:100svh}.landing .pin{position:relative!important}.landing .rv{opacity:1!important;transform:none!important}.landing .ln-i{transform:none!important;animation:none!important}.landing .roll-col{transform:translateY(calc(var(--n)*-1*var(--lh)))!important}.landing .l-paper{transform:none!important}.landing .callout::before{transform:none!important}.landing .l-ink,.landing .l-leaders{display:none!important}.landing .stage[data-stage="6"]{--p:1}.landing .callout-n,.landing .callout-t{opacity:1!important;transform:none!important}`}</style>
       </noscript>
       <header className="l-nav">
         <span className="l-brand">{t("brand")}</span>
@@ -101,9 +102,9 @@ export async function Landing() {
 
       <nav className="l-rail" aria-label={t("rail.label")}>
         <ol>
-          {[1, 2, 3, 4, 5, 6, 7].map((n) => (
-            <li key={n}>
-              <a href={`#stage-${n}`} data-rail={n} aria-label={t("rail.go", { n })}>
+          {[t("headline"), t("s2.title"), t("s3.title"), t("s4.title"), t("s5.title"), t("s6.title"), t("s7.title")].map((name, i) => (
+            <li key={i}>
+              <a href={`#stage-${i + 1}`} data-rail={i + 1} aria-label={t("rail.go", { n: i + 1, name })}>
                 <span aria-hidden="true" />
               </a>
             </li>
@@ -117,7 +118,7 @@ export async function Landing() {
         <div className="l-grade" aria-hidden="true" />
 
         {/* 1 · Dawn over the bench */}
-        <section className="stage" id="stage-1" data-stage="1" style={{ "--h": 400 } as Style}>
+        <section className="stage" id="stage-1" tabIndex={-1} data-stage="1" style={{ "--h": 400 } as Style}>
           <div className="pin">
             <DawnPoster className="l-poster" />
             <div className="l-shade" aria-hidden="true" />
@@ -148,7 +149,7 @@ export async function Landing() {
         </section>
 
         {/* 2 · The machine */}
-        <section className="stage" id="stage-2" data-stage="2" style={{ "--h": 200 } as Style}>
+        <section className="stage" id="stage-2" tabIndex={-1} data-stage="2" style={{ "--h": 200 } as Style}>
           <div className="pin">
             <Poster n={2} />
             <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.2, "--b": 0.32 } as Style}>
@@ -161,7 +162,7 @@ export async function Landing() {
             <svg className="l-leaders" aria-hidden="true" focusable="false">
               {[0, 1, 2].map((i) => (
                 <g key={i} className="leader rv" data-leader={i} style={{ "--a": 0.3 + i * 0.2, "--b": 0.4 + i * 0.2 } as Style}>
-                  <line />
+                  <polyline />
                   <circle r="4" />
                 </g>
               ))}
@@ -179,7 +180,7 @@ export async function Landing() {
         </section>
 
         {/* 3 · The operator's trail */}
-        <section className="stage" id="stage-3" data-stage="3" style={{ "--h": 250 } as Style}>
+        <section className="stage" id="stage-3" tabIndex={-1} data-stage="3" style={{ "--h": 250 } as Style}>
           <div className="pin">
             <Poster n={3} />
             <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.08, "--b": 0.2 } as Style}>
@@ -208,7 +209,7 @@ export async function Landing() {
         </section>
 
         {/* 4 · Guardian rings */}
-        <section className="stage" id="stage-4" data-stage="4" style={{ "--h": 250 } as Style}>
+        <section className="stage" id="stage-4" tabIndex={-1} data-stage="4" style={{ "--h": 250 } as Style}>
           <div className="pin">
             <Poster n={4} />
             <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.05, "--b": 0.17 } as Style}>
@@ -232,7 +233,7 @@ export async function Landing() {
         </section>
 
         {/* 5 · Replay hand-off */}
-        <section className="stage" id="stage-5" data-stage="5" style={{ "--h": 200 } as Style}>
+        <section className="stage" id="stage-5" tabIndex={-1} data-stage="5" style={{ "--h": 200 } as Style}>
           <div className="pin">
             <Poster n={5} />
             <div className="l-ink rv" style={{ "--a": 0.85, "--b": 1 } as Style} aria-hidden="true" />
@@ -263,7 +264,7 @@ export async function Landing() {
       </div>
 
         {/* 6 · Tamper-evident ledger (DOM, light stage) */}
-        <section className="stage stage-light" id="stage-6" data-stage="6" style={{ "--h": 180 } as Style}>
+        <section className="stage stage-light" id="stage-6" tabIndex={-1} data-stage="6" style={{ "--h": 180 } as Style}>
           <div className="pin">
             <div className="l-paper rv" style={{ "--a": 0, "--b": 0.14 } as Style}>
             <div className="l-ledger-wrap">
@@ -311,7 +312,7 @@ export async function Landing() {
         </section>
 
         {/* 7 · Close; the footer curtain follows */}
-        <section className="stage stage-close" id="stage-7" data-stage="7">
+        <section className="stage stage-close" id="stage-7" tabIndex={-1} data-stage="7">
           <div className="pin close-pin">
             <h2 className="l-h1 close-h">
               <Lines text={t("s7.title")} />

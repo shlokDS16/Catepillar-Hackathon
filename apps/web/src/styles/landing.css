@@ -327,6 +327,7 @@
 }
 
 .l-copy-left .l-sub {
+  color: var(--on-frame);
   max-width: 38ch;
 }
 
@@ -341,14 +342,15 @@
   margin-bottom: -100svh;
   pointer-events: none;
   background:
-    linear-gradient(to right, color-mix(in srgb, var(--frame) 55%, transparent), transparent 45%),
+    linear-gradient(to right, color-mix(in srgb, var(--frame) 74%, transparent) 0, color-mix(in srgb, var(--frame) 60%, transparent) 30%, transparent 60%),
+    radial-gradient(70% 55% at 0% 100%, color-mix(in srgb, var(--frame) 55%, transparent), transparent),
     radial-gradient(120% 90% at 60% 45%, transparent 55%, color-mix(in srgb, var(--frame) 45%, transparent));
 }
 
-@media (max-width: 767px) {
+@media (max-width: 1099px) {
   .l-grade {
     background:
-      linear-gradient(to top, color-mix(in srgb, var(--frame) 78%, transparent), transparent 70%),
+      linear-gradient(to top, color-mix(in srgb, var(--frame) 90%, transparent) 0, color-mix(in srgb, var(--frame) 80%, transparent) 40%, transparent 82%),
       linear-gradient(to bottom, color-mix(in srgb, var(--frame) 45%, transparent), transparent 26%);
   }
 }
@@ -772,7 +774,7 @@
    row settles on paper: ink text, a 3 px critical left plate, critical border, critical flag line. */
 .lrow-tamper {
   --ov: clamp(0, calc(12 * var(--et) * (1 - var(--et))), 1);
-  --fx: clamp(0, calc((var(--ov) - 0.4) * 10), 1);
+  --fx: clamp(0, calc((var(--ov) - 0.8) * 20), 1);
   isolation: isolate;
   border-left-width: calc(2px + var(--et) * 1px);
   color: color-mix(in srgb, var(--on-frame) calc(var(--fx) * 100%), var(--ink));
@@ -953,10 +955,6 @@
 }
 
 @media (prefers-reduced-motion: no-preference) {
-  .stage[data-stage="1"] .ln-i {
-    animation: ln-rise 0.8s var(--ease-quint) both;
-    animation-delay: calc(var(--i) * 60ms);
-  }
   .stage-close .ln-i {
     transform: none;
     transition: transform 0.9s var(--ease-quint) calc(var(--i) * 60ms);
@@ -1079,7 +1077,7 @@
   opacity: 1;
 }
 
-.landing[data-now="6"] .l-rail {
+.landing[data-paper] .l-rail {
   color: var(--ink);
 }
 
@@ -1109,7 +1107,8 @@
   transition: opacity var(--dur-lhover) linear;
 }
 
-.leader line {
+.leader polyline {
+  fill: none;
   stroke: var(--on-frame);
   stroke-width: 1;
 }
@@ -1299,8 +1298,7 @@
     transform: none;
   }
   .l-ink,
-  .leader,
-  .l-rail {
+  .leader {
     display: none;
   }
   .lrow-tamper::after {
@@ -1317,4 +1315,20 @@
   .l-foot {
     position: static;
   }
+}
+
+/* Visually hidden text for screen readers (the rolled digits are aria-hidden). */
+.l-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.stage:focus {
+  outline: none;
 }
