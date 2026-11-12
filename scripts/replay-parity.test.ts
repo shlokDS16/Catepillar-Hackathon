@@ -8,9 +8,8 @@
  *     the two results must be deep-equal, scores to the last digit.
  *  2. BUILD: the 010_replay.sql prelude (a scenario with frames), one breach frame, `private.step_loop`, then the
  *     stored `scenario_json` is parsed with the zod `ReplayScenario` (incl. event_ms and seatbelt_fastened).
- *  3. QUEUE: a loop_queue row that cannot be built is marked with an error and committed; nothing else is touched.
  *
- * Nothing in 1 and 2 is committed. Skipped when no connection is configured.
+ * Nothing here is committed (the committing procedures are never called: step_loop runs inside the rolled-back transaction). Skipped when no connection is configured.
  */
 import { readFileSync } from "node:fs";
 import { join } from "node:path";
@@ -18,7 +17,7 @@ import { afterAll, describe, expect, it } from "vitest";
 import postgres from "postgres";
 import { ReplayScenario } from "../packages/shared/src/index.ts";
 import { replayScenario } from "../packages/shared/src/fixtures/index.ts";
-import { fixtureAnswerKey, scoreReplay, type SubmitInput } from "../apps/web/src/replay/fixture-scoring.ts";
+import { fixtureAnswerKey, scoreReplay, type AnswerKey, type SubmitInput } from "../apps/web/src/replay/fixture-scoring.ts";
 import { poolerUrl } from "./lib/db.ts";
 import { loadEnv, repoRoot } from "./lib/env.ts";
 
@@ -53,7 +52,7 @@ function cases(): SubmitInput[] {
     { p_open_order: ["c_trend", "c_trend", "c_map", "c_card", "c_wind", "c_shift"], p_choices: [{ step: 1, choice_ids: ["stop"], ms: 15000 }, { step: 3, choice_ids: ["c", "b", "a"], ms: 20001 }] },
     { p_open_order: ["c_card", "c_map", "c_trend"], p_choices: [{ step: 3, choice_ids: ["b", "a", "c"], ms: 500 }] },
     { p_open_order: ["c_trend", "nope", "c_map"], p_choices: [{ step: 2, choice_ids: ["belt", "radio"], ms: 0 }, { step: 3, choice_ids: ["a"], ms: 0 }] },
-    { p_open_order: ["c_trend", "c_map", "c_card"], p_choices: [{ step: 1, choice_ids: ["stop"], ms: 100 }, { step: 1, choice_ids: ["continue"], ms: 100 }, { step: 9, choice_ids: ["x"], ms: 1 }] },
+    { p_open_order: ["c_trend", "c_map", "c_card"], p_choices: [{ step: 1, choice_ids: ["stop"], ms: 100 }] },
     { p_open_order: ["c_map", "c_trend", "c_wind"], p_choices: [{ step: 2, choice_ids: ["belt"], ms: 15000 }, { step: 3, choice_ids: ["a", "c", "b"], ms: 19999 }] },
   ];
   const rand = rng(10_000_011);
@@ -71,7 +70,6 @@ function cases(): SubmitInput[] {
       const ids = step === 3 ? shuffle(pool).slice(0, 1 + Math.floor(rand() * 3)) : shuffle(pool).slice(0, 1 + Math.floor(rand() * 2));
       const lim = LIMIT_MS[step]!;
       choices.push({ step, choice_ids: ids, ms: pick([0, lim - 1, lim, lim + 1, lim * 2, Math.floor(rand() * lim * 1.5)]) });
-      if (rand() < 0.05) choices.push({ step, choice_ids: [pick(pool)], ms: 1 });             // a duplicate answer: the first wins
     }
     random.push({ p_open_order: open, p_choices: choices });
   }
@@ -98,33 +96,43 @@ d("replay_submit matches the web scoreReplay", () => {
             select o.v, 'OP-PARITY', 'Parity', 'novice', s.v, 'Operator-PAR' from ids o, ids s where o.k = 'op' and s.k = 'site';
           insert into public.profiles (user_id, role, operator_id, site_id, display_name)
             select u.v, 'operator', o.v, s.v, 'Parity' from ids u, ids o, ids s where u.k = 'u' and o.k = 'op' and s.k = 'site';`);
-        const [{ ev }] = await tx<{ ev: string }[]>`
-          select (private.emit_event('safety.seatbelt_breach', '{"frame_seq": 1}', 'parity:' || gen_random_uuid()::text, 'system',
-                   (select v from ids where k = 'site'), p_operator_id => (select v from ids where k = 'op'))).id::text as ev`;
-        const [{ rid }] = await tx<{ rid: string }[]>`
-          insert into public.replay_scenarios (source_event_id, operator_id, template_version, scenario_json, answer_key)
-          values (${ev}::uuid, (select v from ids where k = 'op'), 1, ${JSON.stringify(replayScenario)}::text::jsonb, ${JSON.stringify(fixtureAnswerKey)}::text::jsonb)
-          returning id::text as rid`;
+        // Three keys: the fixture's (every weight 1) and two with unequal weights and swapped axes, so a SQL
+        // scorer that ignored `weight` or `axis` would be caught.
+        const keyB: AnswerKey = { ...fixtureAnswerKey, steps: fixtureAnswerKey.steps.map((s) => ({ ...s, weight: s.step === 1 ? 2 : s.step === 2 ? 0.5 : 1 })) };
+        const keyC: AnswerKey = { ...fixtureAnswerKey, steps: fixtureAnswerKey.steps.map((s) => ({ ...s, weight: s.step === 3 ? 3 : 0.25, axis: s.step === 1 ? "procedure" : "safety" })) };
+        const refs: { key: AnswerKey; rid: string }[] = [];
+        for (const key of [fixtureAnswerKey, keyB, keyC]) {
+          const [{ ev }] = await tx<{ ev: string }[]>`
+            select (private.emit_event('safety.seatbelt_breach', '{"frame_seq": 1}', 'parity:' || gen_random_uuid()::text, 'system',
+                     (select v from ids where k = 'site'), p_operator_id => (select v from ids where k = 'op'))).id::text as ev`;
+          const [{ rid }] = await tx<{ rid: string }[]>`
+            insert into public.replay_scenarios (source_event_id, operator_id, template_version, scenario_json, answer_key)
+            values (${ev}::uuid, (select v from ids where k = 'op'), 1, ${JSON.stringify(replayScenario)}::text::jsonb, ${JSON.stringify(key)}::text::jsonb)
+            returning id::text as rid`;
+          refs.push({ key, rid });
+        }
         await tx.unsafe(`set local role authenticated`);
         await tx`select set_config('request.jwt.claims', json_build_object('sub', (select v from ids where k = 'u'), 'role', 'authenticated')::text, true)`;
 
         const payload = all.map((c, ord) => ({ ord, open: c.p_open_order, choices: c.p_choices }));
-        const got = await tx<{ ord: number; res: unknown }[]>`
-          select x.ord, public.replay_submit(${rid}::uuid, gen_random_uuid(), array(select jsonb_array_elements_text(x.open)), x.choices) as res
-            from jsonb_to_recordset(${JSON.stringify(payload)}::text::jsonb) as x(ord int, open jsonb, choices jsonb) order by x.ord`;
-        expect(got).toHaveLength(all.length);
-        for (const row of got) {
-          const input = all[row.ord]!;
-          const expected = rows(scoreReplay(replayScenario as never, fixtureAnswerKey, input));
-          expect(rows(row.res), `case ${row.ord}: ${JSON.stringify(input)}`).toEqual(expected);
-          compared++;
+        for (const { key, rid } of refs) {
+          const got = await tx<{ ord: number; res: unknown }[]>`
+            select x.ord, public.replay_submit(${rid}::uuid, gen_random_uuid(), array(select jsonb_array_elements_text(x.open)), x.choices) as res
+              from jsonb_to_recordset(${JSON.stringify(payload)}::text::jsonb) as x(ord int, open jsonb, choices jsonb) order by x.ord`;
+          expect(got).toHaveLength(all.length);
+          for (const row of got) {
+            const input = all[row.ord]!;
+            const expected = rows(scoreReplay(replayScenario as never, key, input));
+            expect(rows(row.res), `case ${row.ord}: ${JSON.stringify(input)}`).toEqual(expected);
+            compared++;
+          }
         }
         throw new Rollback();
       });
     } catch (e) {
       if (!(e instanceof Rollback)) throw e;
     }
-    expect(compared).toBe(all.length);
+    expect(compared).toBe(all.length * 3);
     console.log(`replay parity: ${compared} answer sets, replay_submit == scoreReplay`);
   }, 120_000);
 });
@@ -157,24 +165,4 @@ d("build_replay output parses with the ReplayScenario contract", () => {
     expect(belts.slice(0, 10).every((b) => b === true)).toBe(true);
     expect(belts.slice(10).every((b) => b === false)).toBe(true);
   }, 60_000);
-});
-
-d("a queue row that cannot be built", () => {
-  it("is marked with an error, committed, and leaves everything else alone", async () => {
-    const [{ id }] = await sql!<{ id: string }[]>`select gen_random_uuid()::text as id`;
-    try {
-      await sql!`insert into private.loop_queue (event_id) values (${id}::uuid)`;
-      // Either this call or the worker's own step 2 (whichever is first) takes the row; both write the same thing.
-      await sql!`select private.step_loop(20)`;
-      let row: { done_at: string | null; error: string | null } | undefined;
-      for (let i = 0; i < 10 && !row?.error; i++) {
-        [row] = await sql!<{ done_at: string | null; error: string | null }[]>`select done_at, error from private.loop_queue where event_id = ${id}::uuid`;
-        if (!row?.error) await new Promise((r) => setTimeout(r, 500));
-      }
-      expect(row?.error).toBe("event not found");
-      expect(row?.done_at).toBeNull();
-    } finally {
-      await sql!`delete from private.loop_queue where event_id = ${id}::uuid`;
-    }
-  }, 30_000);
 });

@@ -195,7 +195,7 @@ begin
   assert private.step_loop(20) = 0, 'an errored row is not retried by itself';
 end $$;
 
--- ── 4. a sealed near miss never becomes a replay ─────────────────────────────────────────────────
+-- ── 4. a sealed near miss: the operator keeps the lesson, the trainer sees nothing linking it to a person ──
 do $$
 declare ev public.events;
 begin
@@ -203,8 +203,11 @@ begin
          pg_temp.id('run'), pg_temp.id('ma'), pg_temp.id('op_ravi'), p_sim_ts => (select shift_start from s) + interval '1200 seconds');
   perform pg_temp.expect_err(format('select private.build_replay(%L)', ev.id), '%sealed near miss%');
   assert private.step_loop(20) = 1, 'the sealed event''s queue row is handled';
-  assert (select error like 'replay: P0001 build_replay: a sealed near miss%' from private.loop_queue where event_id = ev.id), 'and fails closed';
+  assert (select done_at is not null and error is null from private.loop_queue where event_id = ev.id), 'and finished cleanly, not left as an error';
   assert (select count(*) from public.replay_scenarios where source_event_id = ev.id) = 0, 'no replay for it';
+  assert (select count(*) from public.lesson_assignments where because_event_id = ev.id and operator_id = pg_temp.id('op_ravi')) = 1, 'the operator still gets the lesson';
+  assert (select private.event_is_sealed(e) from public.events e where e.type = 'training.lesson_assigned' and (e.payload ->> 'because_event_id')::uuid = ev.id),
+    'its training.lesson_assigned is sealed by causation';
 end $$;
 
 -- ── 5. who may read what ─────────────────────────────────────────────────────────────────────────
@@ -222,6 +225,11 @@ begin
   sj := public.replay_get(pg_temp.rid());
   assert sj ->> 'id' = pg_temp.rid()::text and jsonb_array_length(sj #> '{investigate,cards}') = 7, 'Ravi gets his replay';
   assert sj::text !~ '"(relevant|best|axis|weight|why|correct)"', 'and no answer key';
+  assert public.replay_get(pg_temp.rid()) = sj, 'the order is stored: a reload sees the same lists';
+  -- B1: list order must not carry the key
+  assert (select count(*) from (select (x ->> 'id') in ('c_trend','c_map','c_card') f from jsonb_array_elements(sj #> '{investigate,cards}') with ordinality t(x, o) order by o limit 3) q where f) < 3, 'the first three cards are not all the relevant ones';
+  assert (select count(*) from (select (x ->> 'id') in ('c_trend','c_map','c_card') f from jsonb_array_elements(sj #> '{investigate,cards}') with ordinality t(x, o) order by o desc limit 3) q where f) < 3, 'nor the last three';
+  assert sj #>> '{decide,steps,0,choices,0,id}' <> 'stop' and sj #>> '{decide,steps,1,choices,0,id}' <> 'belt', 'the best single choice is not listed first';
   assert (select count(*) from public.replay_scenarios) = 1, 'he can select the row';
   perform pg_temp.expect_err('select answer_key from public.replay_scenarios', 'permission denied%');
   perform pg_temp.expect_err('select * from public.replay_scenarios', 'permission denied%');
@@ -247,6 +255,10 @@ do $$
 begin
   perform pg_temp.expect_err(format('select public.replay_get(%L)', pg_temp.rid()), 'forbidden');
   perform pg_temp.expect_err('select answer_key from public.replay_scenarios', 'permission denied%');
+  assert (select count(*) from public.lesson_assignments) = 1, 'the trainer reads the non-sealed assignment only';
+  assert (select count(*) from public.events where type = 'training.lesson_assigned') = 1, 'and one training.lesson_assigned, not the sealed one';
+  assert (select count(*) from public.replay_scenarios where id = pg_temp.rid()) = 1, 'a trainer of the site reads the keyless scenario row';
+  assert (select count(*) from public.replay_attempts) = 0, 'but never the stored attempts';
 end $$;
 reset role;
 set local role anon;
@@ -307,6 +319,17 @@ begin
   perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":1,"choice_ids":[],"ms":10}]'), 'validation');
   perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":1,"choice_ids":["stop"],"ms":-5}]'), 'validation');
   perform pg_temp.expect_err(format('select public.replay_submit(%L, null, %L, %L::jsonb)', pg_temp.rid(), '{}', '[]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":1.5,"choice_ids":["stop"],"ms":10}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":1,"choice_ids":["stop"],"ms":1e400}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":1,"choice_ids":["stop"],"ms":2.5}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":1,"choice_ids":[{"a":1}],"ms":10}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":1,"choice_ids":["nope"],"ms":10}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":9,"choice_ids":["stop"],"ms":10}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":3,"choice_ids":["park","park","belt"],"ms":10}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":1,"choice_ids":["stop"],"ms":1},{"step":1,"choice_ids":["stop"],"ms":1}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), %L, %L::jsonb)', pg_temp.rid(), '{}', '[{"step":1,"choice_ids":["stop"],"ms":-1}]'), 'validation');
+  perform pg_temp.expect_err(format('select public.replay_submit(%L, gen_random_uuid(), (select array_agg(''c'' || g) from generate_series(1, 51) g), %L::jsonb)', pg_temp.rid(), '[]'), 'validation');
   assert (select count(*) from public.replay_attempts) = 4, 'rejected submits store nothing';
 end $$;
 reset role;
