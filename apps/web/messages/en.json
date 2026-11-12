@@ -1327,12 +1327,12 @@
   },
   "wait": {
     "title": "While you wait",
-    "why": "The machine is parked. One short lesson while nothing moves.",
+    "why": "The machine is parked. Practise while nothing moves.",
     "stops": "Stops the moment the machine moves"
   },
   "fleet": {
     "title": "Fleet",
-    "note": "Demo fleet · tasks and movement simulated",
+    "note": "Demo roster · LDR-001 and DMP-005 are invented; operators, tasks and movement simulated",
     "who": "{operator} · {task}",
     "task": {
       "excavation": "Excavation",

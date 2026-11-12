@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { ItemAction, useBecause, useLessonTitle } from "@/components/training/training-bits";
 import { Plate } from "@/components/ui/plate";
@@ -8,7 +8,7 @@ import type { RecurrenceHint } from "@/data/port";
 import { useAppState, useDataPort } from "@/data/store";
 import { currentTask } from "@/hero/work-state";
 import { lastLessonDone, nextItem, trainingItems, type TrainingItem } from "@/training/assignments";
-import { idleMsSince, showWhileYouWait } from "@/components/home/while-you-wait";
+import { idleMsSince, nextIdleSince, showWhileYouWait } from "@/components/home/while-you-wait";
 
 /**
  * S1 L4, the end of the loop: my next assignment as a full-width Practise (primary) over a
@@ -24,22 +24,24 @@ export function LoopCard() {
   const tasks = useAppState((s) => s.tasks);
   const machine = useAppState((s) => s.machine);
   const simNow = useAppState((s) => s.clock?.sim_now ?? null);
+  const live = useAppState((s) => s.connectivity.kind === "live" || s.connectivity.kind === "fixture");
   const status = currentTask(tasks)?.status ?? null;
   const parked = (status === "paused" || status === "blocked_ppe") && machine?.moving === false;
   // Sim time at which this idle spell was first seen; cleared the moment the machine moves or the task resumes.
   const [idleSince, setIdleSince] = useState<number | null>(null);
   const nowMs = simNow ? Date.parse(simNow) : Number.NaN;
-  if (parked && idleSince === null && !Number.isNaN(nowMs)) setIdleSince(nowMs);
-  else if (!parked && idleSince !== null) setIdleSince(null);
+  const nextSince = nextIdleSince(idleSince, parked, nowMs);
+  if (nextSince !== idleSince) setIdleSince(nextSince);
+  const items = useMemo(() => trainingItems(assignments, progress, times), [assignments, progress, times]);
   if (!snapshot) return null;
-  const items = trainingItems(assignments, progress, times);
   const next = nextItem(items);
   // The lesson of the same assignment, offered beside Practise while it is still open.
   const lesson = next?.kind === "replay" ? (items.find((i) => i.kind === "lesson" && i.assignmentId === next.assignmentId && i.status === "todo") ?? null) : null;
   const doneCode = lastLessonDone(assignments, progress);
   const waiting = showWhileYouWait({
     taskStatus: status,
-    moving: machine ? machine.moving : null,
+    // A dropped feed leaves `moving` stale, so the card steps aside until the signal is back.
+    moving: machine && live ? machine.moving : null,
     hasAssignment: next !== null,
     idleMs: parked ? idleMsSince(idleSince, simNow) : null,
   });
@@ -72,8 +74,16 @@ function NextCard({ item, lesson }: { item: TrainingItem; lesson: TrainingItem |
 function WaitCard({ item }: { item: TrainingItem }) {
   const t = useTranslations("wait");
   const title = useLessonTitle(item.lessonCode);
+  // If the machine moves while a button here has focus, hand focus to the Practice card that replaces this one.
+  const hadFocus = useRef(false);
+  useEffect(
+    () => () => {
+      if (hadFocus.current) window.setTimeout(() => document.querySelector<HTMLElement>(".loop a, .loop button")?.focus(), 0);
+    },
+    [],
+  );
   return (
-    <section className="loop wait" aria-label={t("title")}>
+    <section className="loop wait" aria-label={t("title")} onFocus={() => (hadFocus.current = true)} onBlur={() => (hadFocus.current = false)}>
       <p className="t-caption sec-label">{t("title")}</p>
       <Plate className="flex flex-col gap-3">
         <p className="t-caption sec-because">{t("why")}</p>

@@ -1,4 +1,4 @@
-/* Fleet strip (FM Inbox). Tokens only. Six cells from 1024 px; phones show three plus "+3 more". */
+/* Fleet strip (FM Inbox). Tokens only. Six columns from 1280 px, three below; phones show three plus "+3 more". */
 .fleet {
   display: flex;
   flex-direction: column;
@@ -21,7 +21,7 @@
   padding: 0;
   list-style: none;
 }
-@media (min-width: 1024px) {
+@media (min-width: 1280px) {
   .fleet-cells { grid-template-columns: repeat(6, minmax(0, 1fr)); }
 }
 .fleet-cell {

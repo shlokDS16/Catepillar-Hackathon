@@ -277,7 +277,6 @@ export function InboxScreen() {
   return (
     <div className="inbox-triage">
       {banner}
-      <FleetStrip items={items} selectedId={lead?.id ?? null} />
       <p className="t-label inbox-count">
         {t("needsAction")} <span className="tnum">({groups.needsAction.length})</span>
       </p>
@@ -286,6 +285,7 @@ export function InboxScreen() {
       ) : (
         <div ref={leadRef}>{detail(lead, "lead", leadIndex >= 0 ? t("ofN", { i: leadIndex + 1, n: groups.needsAction.length }) : undefined)}</div>
       )}
+      <FleetStrip items={items} selectedId={lead?.id ?? null} />
       {queued.length > 0 ? (
         <section aria-label={t("queueLabel", { n: queued.length })} className="inbox-queue">
           <h2 className="t-label">{t("queueLabel", { n: queued.length })}</h2>

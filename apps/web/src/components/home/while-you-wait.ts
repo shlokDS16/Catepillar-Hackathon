@@ -26,6 +26,16 @@ export function showWhileYouWait(i: WaitInput): boolean {
   return i.idleMs !== null && i.idleMs >= WAIT_MIN_IDLE_MIN * 60_000;
 }
 
+/**
+ * The idle-spell start (epoch ms): set on the first parked render with a usable clock, kept while parked,
+ * cleared the moment the machine moves or the task resumes.
+ */
+export function nextIdleSince(prev: number | null, parked: boolean, nowMs: number): number | null {
+  if (!parked) return null;
+  if (prev !== null) return prev;
+  return Number.isNaN(nowMs) ? null : nowMs;
+}
+
 /** Milliseconds from `since` (epoch ms) to `now` (ISO string), or null when either is unusable. */
 export function idleMsSince(since: number | null, now: string | null): number | null {
   if (since === null || now === null) return null;

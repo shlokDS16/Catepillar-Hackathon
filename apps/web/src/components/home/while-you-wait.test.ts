@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { idleMsSince, showWhileYouWait, type WaitInput } from "./while-you-wait";
+import { idleMsSince, nextIdleSince, showWhileYouWait, type WaitInput } from "./while-you-wait";
 
 const base: WaitInput = { taskStatus: "paused", moving: false, hasAssignment: true, idleMs: 3 * 60_000 };
 
@@ -25,6 +25,20 @@ describe("showWhileYouWait", () => {
     for (const s of ["in_progress", "planned", "completed", "cancelled", null] as const) {
       expect(showWhileYouWait({ ...base, taskStatus: s })).toBe(false);
     }
+  });
+});
+
+describe("nextIdleSince", () => {
+  it("starts on the first parked render and keeps the start while parked", () => {
+    expect(nextIdleSince(null, true, 1000)).toBe(1000);
+    expect(nextIdleSince(1000, true, 9000)).toBe(1000);
+  });
+  it("clears the moment the machine moves or the task resumes", () => {
+    expect(nextIdleSince(1000, false, 9000)).toBeNull();
+    expect(nextIdleSince(null, false, 9000)).toBeNull();
+  });
+  it("does not start without a usable clock", () => {
+    expect(nextIdleSince(null, true, Number.NaN)).toBeNull();
   });
 });
 

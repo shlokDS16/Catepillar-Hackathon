@@ -46,9 +46,10 @@ describe("buildFleetCells", () => {
     expect(buildFleetCells([row({ id: "x" })], "x").some((c) => c.selected)).toBe(false);
   });
 
-  it("prefers the operator named on an alert row", () => {
-    const cells = buildFleetCells([row({ id: "a", machineCode: "DMP-003", operatorName: "Meena D." })], null);
-    expect(cells.find((c) => c.code === "DMP-003")?.operator).toBe("Meena D.");
+  it("never takes the operator from an alert row and gives each machine its own driver", () => {
+    const cells = buildFleetCells([row({ id: "a", machineCode: "EXC-014", kind: "guardian_hazard", tier: "warning", operatorName: "Ravi" })], null);
+    expect(cells.find((c) => c.code === "EXC-014")?.operator).not.toBe("Ravi");
+    expect(cells.filter((c) => c.operator === "Ravi").map((c) => c.code)).toEqual(["EXC-007"]);
   });
 
   it("roster has six unique codes", () => {
