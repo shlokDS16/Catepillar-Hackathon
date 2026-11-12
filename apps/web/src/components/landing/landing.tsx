@@ -161,8 +161,6 @@ export async function Landing() {
         <span className="l-brand">{t("brand")}</span>
         <LanguageChip />
       </header>
-      <ShiftTape labels={tapeLabels} />
-
       <main className="l-body">
         <div className="l-scene">
           {/* One pinned view for stages 1-5: the canvas, one stage's words at a time, the tape stays fixed above. */}
@@ -315,6 +313,9 @@ export async function Landing() {
           ))}
           <div className="l-hold" aria-hidden="true" />
         </div>
+
+        {/* The tape sits after the hero in DOM order (tab order: hero actions, then the six ticks); it is fixed on screen. */}
+        <ShiftTape labels={tapeLabels} />
 
         {/* 6 · Tamper-evident ledger: a paper sheet that slides up over the held scene */}
         <section className="l-ledger" id="stage-6" tabIndex={-1} data-stage="6" aria-labelledby="l-ledger-h">

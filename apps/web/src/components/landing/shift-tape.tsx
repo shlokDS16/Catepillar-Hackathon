@@ -53,7 +53,9 @@ export function lineIndexAt(minutes: number): number {
 }
 
 /** Everything the tape shows for a clock reading. Pure. */
-export function tapeState(minutes: number, replay: boolean, msgs: TapeMsgs): TapeState {
+export function tapeState(clock: number, replay: boolean, msgs: TapeMsgs): TapeState {
+  // The tape reads whole minutes: stage 4 p .45 is 643.5, which is 10:44 with entry 4 stamped.
+  const minutes = Math.round(clock);
   const time = fmtClock(minutes);
   const stamped = ENTRIES.filter((e) => minutes + 1e-6 >= e.at).map((e) => e.n as number);
   const current = stamped.length ? Math.max(...stamped) : 0;
