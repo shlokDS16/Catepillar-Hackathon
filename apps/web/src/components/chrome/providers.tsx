@@ -1,7 +1,9 @@
 "use client";
 
-import { useState, type ReactNode } from "react";
+import { useEffect, useMemo, type ReactNode } from "react";
 import { FixtureAdapter } from "@/data/fixture-adapter";
+import { LiveAdapter } from "@/data/live-adapter";
+import { liveRpc, reportFallback, reportLive, restoreLive, useLiveState } from "@/data/live-session";
 import { ModeProvider } from "@/data/mode";
 import type { DataPort } from "@/data/port";
 import { DataProvider } from "@/data/store";
@@ -15,13 +17,22 @@ export function fixtureAdapter(): FixtureAdapter {
 }
 
 /**
- * Data + mode providers for a shell. The port is the FixtureAdapter until F13 swaps in the
- * SupabaseAdapter for live runs; screens never know which one they talk to.
+ * Data + mode providers for a shell. The port is the FixtureAdapter unless the Live switch is on
+ * (D18: signed in as this shell's role), when it is the LiveAdapter: real backend for the snapshot,
+ * Replay and the Ledger verdict, fixtures for the rest. Screens never know which one they talk to.
  */
 export function AppProviders({ role, children }: { role: ShellRole; children: ReactNode }) {
-  const [port] = useState<DataPort>(() => fixtureAdapter());
+  const live = useLiveState();
+  useEffect(() => {
+    void restoreLive();
+  }, []);
+  const useLive = live.role === role;
+  const port = useMemo<DataPort>(
+    () => (useLive ? new LiveAdapter(liveRpc, fixtureAdapter(), { onFallback: reportFallback, onLive: reportLive }) : fixtureAdapter()),
+    [useLive],
+  );
   return (
-    <DataProvider port={port}>
+    <DataProvider key={useLive ? "live" : "demo"} port={port}>
       <ModeProvider fixed={role === "fleet_manager" ? "detailed" : undefined}>{children}</ModeProvider>
     </DataProvider>
   );

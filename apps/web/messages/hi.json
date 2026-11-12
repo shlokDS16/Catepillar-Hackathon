@@ -25,7 +25,12 @@
     "skipToContent": "सीधे सामग्री पर जाएँ",
     "sosHold": "SOS: भेजने के लिए 1.5 सेकंड दबाए रखें",
     "sosOpen": "खोलने के लिए छुएँ",
-    "fixtureStatus": "सिम्युलेटेड शिफ़्ट · {time} · {speed}× गति"
+    "fixtureStatus": "सिम्युलेटेड शिफ़्ट · {time} · {speed}× गति",
+    "source": {
+      "demo": "डेमो डेटा",
+      "live": "लाइव डेटा",
+      "fallback": "लाइव डेटा उपलब्ध नहीं, डेमो डेटा दिख रहा है"
+    }
   },
   "start": {
     "chooseLanguage": "अपनी भाषा चुनें",

@@ -8,6 +8,7 @@ import { useSafetyState } from "@/alerts/use-safety-state";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { useAppState } from "@/data/store";
+import { useDataSource } from "@/data/use-data-source";
 import { useMotionLock } from "@/hero/use-motion-lock";
 
 const FALLBACK_PICTO: Record<"clear" | "nosignal", PictogramName> = { clear: "seatbelt", nosignal: "sos" };
@@ -27,6 +28,7 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
   const clock = useAppState((s) => s.clock);
   const serverLocked = useAppState((s) => s.operator?.motion_locked ?? false);
   const lockShown = useMotionLock(serverLocked);
+  const source = useDataSource();
 
   const safetyWord = t(`enums.safety.${safety}`);
   const picto: PictogramName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? FALLBACK_PICTO.nosignal : FALLBACK_PICTO.clear;
@@ -45,6 +47,9 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
     default:
       connText = clock ? t("chrome.fixtureStatus", { time: format.dateTime(new Date(clock.sim_now), "time"), speed: clock.speed }) : t("chrome.fixture");
   }
+
+  // D18: say which data this is. A failed live call shows the plain notice instead of the clock.
+  connText = source === "fallback" ? t("chrome.source.fallback") : `${t("chrome.source." + source)} · ${connText}`;
 
   return (
     <header className="strip" inert={lockShown || undefined}>

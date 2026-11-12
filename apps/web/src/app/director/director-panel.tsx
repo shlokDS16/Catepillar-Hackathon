@@ -50,6 +50,9 @@ export function DirectorPanel() {
           </Button>
         ))}
       </div>
+      <Button block variant="secondary" href="/director/live">
+        Live switch (sign in to read the real backend)
+      </Button>
       <section aria-label="Incident report failure (fixtures)" className="flex flex-col gap-2">
         <h2 className="t-label">Incident sheet</h2>
         <Button

@@ -25,7 +25,12 @@
     "skipToContent": "Skip to content",
     "sosHold": "SOS: hold for 1.5 seconds to send",
     "sosOpen": "Tap to open",
-    "fixtureStatus": "Simulated shift · {time} · {speed}× speed"
+    "fixtureStatus": "Simulated shift · {time} · {speed}× speed",
+    "source": {
+      "demo": "Demo data",
+      "live": "Live data",
+      "fallback": "Live data unavailable, showing demo data"
+    }
   },
   "start": {
     "chooseLanguage": "Choose your language",
