@@ -40,8 +40,11 @@ export const ReplayScenario = z.object({
   investigate: z.object({ cards: z.array(EvidenceCard).min(3).max(7),
     max_open: z.number().int().nullable() }),                          // hard limit: the server scores only the first max_open ids (UI-20)
   decide: z.object({ steps: z.array(DecideStep).min(3).max(4) }),
-  reenactment: z.object({ duration_ms: z.number().int(), trail: z.array(Pt),
-    machine_track: z.array(Pt.extend({ speed_kmh: z.number(), pitch_deg: z.number() })),
+  reenactment: z.object({ duration_ms: z.number().int(),
+    event_ms: z.number().int().optional(),                             // 2.1.0: where the event sits in [0, duration_ms]; absent = the last fix
+    trail: z.array(Pt),
+    machine_track: z.array(Pt.extend({ speed_kmh: z.number(), pitch_deg: z.number(),
+      seatbelt_fastened: z.boolean().nullable().optional() })),        // 2.1.0: same name as frames.ts; null/absent = no reading
     wind: z.array(z.object({ t_ms: z.number().int(), from_deg: z.number(), kmh: z.number() })),
     real_response_ms: z.number().int().nullable() }),                  // played in the debrief
 });
