@@ -1,8 +1,8 @@
 import { describe, expect, it } from "vitest";
 import { mySnapshot } from "@cat/shared/fixtures";
 import type { Machine } from "@/data/types";
-import { groupInbox, type InboxItem } from "@/inbox/inbox";
-import { detailMachine, ledgerActions, ledgerBand, nextSealNumber, tierChips, tierCounts, triageFocus } from "@/inbox/fm-band";
+import type { InboxItem } from "@/inbox/inbox";
+import { detailMachine, ledgerActions, ledgerBand, nextSealNumber, tierChips, tierCounts, toLastVerify } from "@/inbox/fm-band";
 
 const item = (o: Partial<InboxItem>): InboxItem => ({
   id: "a", kind: "seatbelt_off_moving", tier: "warning", status: "open", needsAck: true, occurrences: 1, firstSeen: "2026-09-24T09:00:00.000Z",
@@ -29,16 +29,25 @@ describe("ledger band", () => {
   });
 });
 
-describe("triage focus", () => {
-  it("is the highest tier, so a critical ledger break beats a warning", () => {
-    const g = groupInbox([item({ id: "w", tier: "warning" }), item({ id: "l", kind: "ledger_tamper", tier: "critical" }), item({ id: "c", tier: "caution" })]);
-    expect(triageFocus(g)?.id).toBe("l");
-  });
-  it("is null with nothing open", () => expect(triageFocus(groupInbox([item({ status: "resolved" })]))).toBeNull());
+describe("ledger actions", () => {
   it("offers Verify and Compare only for an open ledger break", () => {
     expect(ledgerActions(item({ kind: "ledger_tamper", tier: "critical" }))).toEqual({ verify: true, compare: true });
     expect(ledgerActions(item({ kind: "ledger_tamper", status: "resolved" }))).toEqual({ verify: false, compare: false });
     expect(ledgerActions(item({}))).toEqual({ verify: false, compare: false });
+  });
+});
+
+describe("verdict to band", () => {
+  const out = { ok: true, chain_ok: true, head_seq: 214, first_bad_seq: null };
+  it("a live verdict is verified", () => expect(ledgerBand(toLastVerify(out, 5, false))).toEqual({ kind: "verified", n: 214, atMs: 5 }));
+  it("a fixture fallback in Live mode is never verified", () => {
+    const v = toLastVerify(out, 5, true);
+    expect(ledgerBand(v)).toEqual({ kind: "unavailable" });
+    expect(nextSealNumber(v)).toBeNull();
+  });
+  it("a failed browser re-check or broken chain needs a check", () => {
+    expect(ledgerBand(toLastVerify(out, 5, false, false)).kind).toBe("check");
+    expect(ledgerBand(toLastVerify({ ...out, chain_ok: false, first_bad_seq: 9 }, 5, false)).kind).toBe("check");
   });
 });
 

@@ -171,9 +171,10 @@ export function InboxScreen() {
   );
 
   // "Critical 1 · Warning 1 · Caution 4": colour + pictogram + word + count, only tiers that have an open alert.
-  const tiers = (
+  const chips = tierChips(tierCounts(groups.needsAction));
+  const tiers = chips.length === 0 ? null : (
     <ul className="inbox-tiers" aria-label={t("tierChips")}>
-      {tierChips(tierCounts(groups.needsAction)).map(({ tier, n }) => (
+      {chips.map(({ tier, n }) => (
         <li key={tier}>
           <Chip tone={safetyTone(tier)} word icon={<Pictogram name="fault" />}>
             {t(`tier.${tier}`)} <span className="tnum">{n}</span>

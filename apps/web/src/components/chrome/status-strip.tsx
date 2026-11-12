@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useRef, type ReactNode } from "react";
+import { usePathname } from "next/navigation";
 import { useFormatter, useTranslations } from "next-intl";
 import { KIND_PICTO } from "@/alerts/kinds";
 import { safetyTone } from "@/alerts/selectors";
@@ -9,7 +10,7 @@ import { Chip } from "@/components/ui/chip";
 import { Mark, Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { useAppState, useDataPort } from "@/data/store";
 import { ledgerBand } from "@/inbox/fm-band";
-import { setLastVerify, useLastVerify } from "@/ledger/last-verify";
+import { publishVerify, useLastVerify } from "@/ledger/last-verify";
 import { dataLabel } from "@/chrome/data-label";
 import { useDataSource } from "@/data/use-data-source";
 import { syncState } from "@/chrome/sync-state";
@@ -18,11 +19,12 @@ import { useMotionLock } from "@/hero/use-motion-lock";
 const FALLBACK_PICTO: Record<"clear" | "nosignal", PictogramName> = { clear: "seatbelt", nosignal: "sos" };
 
 /**
- * FM only: runs a read-only ledger verify when the band mounts and again whenever a ledger_tamper alert
- * appears or goes, and publishes the result (the band cell and the Inbox seal line read it). A failed
- * or offline check keeps the last result; nothing is written or sent.
+ * FM only: a read-only ledger verify when the band mounts, on every FM route change, and when the tab
+ * regains focus (the demo's tamper and reset beats change the chain without any alert or event). The Ledger
+ * page runs and publishes its own verify, so the band skips it there (one full-chain check, not two).
+ * A failed or offline check keeps the last result; nothing is written or sent.
  */
-function useLedgerVerify(enabled: boolean) {
+function useLedgerVerify(enabled: boolean, pathname: string) {
   const port = useDataPort();
   const tamper = useAppState((s) => s.alerts.filter((a) => a.kind === "ledger_tamper").length);
   const simNow = useAppState((s) => s.clock?.sim_now ?? null);
@@ -30,25 +32,30 @@ function useLedgerVerify(enabled: boolean) {
   useEffect(() => {
     clockRef.current = simNow;
   }, [simNow]);
+  const onLedger = pathname.startsWith("/fm/ledger");
   useEffect(() => {
-    if (!enabled) return;
+    if (!enabled || onLedger) return;
     let live = true;
-    port
-      .ledgerVerify({ p_from: 1, p_to: null })
-      .then((out) => {
-        if (!live) return;
-        setLastVerify({
-          ok: out.ok && out.chain_ok,
-          headSeq: out.head_seq,
-          firstBadSeq: out.first_bad_seq ?? null,
-          atMs: clockRef.current ? Date.parse(clockRef.current) : Date.now(),
-        });
-      })
-      .catch(() => {});
+    const run = () => {
+      port
+        .ledgerVerify({ p_from: 1, p_to: null })
+        .then((out) => {
+          if (live) publishVerify(out, clockRef.current ? Date.parse(clockRef.current) : Date.now());
+        })
+        .catch(() => {});
+    };
+    run();
+    const onVisible = () => {
+      if (document.visibilityState === "visible") run();
+    };
+    document.addEventListener("visibilitychange", onVisible);
+    window.addEventListener("focus", run);
     return () => {
       live = false;
+      document.removeEventListener("visibilitychange", onVisible);
+      window.removeEventListener("focus", run);
     };
-  }, [enabled, port, tamper]);
+  }, [enabled, onLedger, port, tamper, pathname]);
 }
 
 /**
@@ -73,9 +80,10 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
   const source = useDataSource();
   const runStatus = useAppState((s) => s.snapshot?.run?.status ?? null);
   const connText = dataLabel({ connectivity, clock, t, formatTime: (ms) => format.dateTime(new Date(ms), "time"), source, runStatus });
-  // The fleet manager's band (no safety chip) also shows the ledger state from the last verify.
-  const fm = !showSafety;
-  useLedgerVerify(fm);
+  // The fleet manager's band (any /fm route) also shows the ledger state from the last verify.
+  const pathname = usePathname() ?? "";
+  const fm = pathname === "/fm" || pathname.startsWith("/fm/");
+  useLedgerVerify(fm, pathname);
   const band = ledgerBand(useLastVerify());
   const sync = syncState(connectivity);
   // No outbox exists yet, so "Saved" or "n queued" would claim something nothing measured: the cell shows only when offline.
@@ -102,11 +110,13 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
         </span>
         {fm && band.kind !== "unknown" ? (
           <span className="strip-ledger t-caption" data-state={band.kind}>
-            <Mark kind={band.kind === "verified" ? "check" : "cross"} />
+            <Mark kind={band.kind === "verified" ? "check" : band.kind === "unavailable" ? "info" : "cross"} />
             <span className="sr-only">{t("fmBand.label")}: </span>
             {band.kind === "verified"
               ? t("fmBand.verified", { n: band.n, time: format.dateTime(new Date(band.atMs), "time") })
-              : t("fmBand.checkNeeded", { n: band.n })}
+              : band.kind === "unavailable"
+                ? t("fmBand.unavailable")
+                : t("fmBand.checkNeeded", { n: band.n })}
           </span>
         ) : null}
         {syncText ? (

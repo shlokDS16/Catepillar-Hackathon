@@ -681,7 +681,8 @@
   "fmBand": {
     "label": "Ledger",
     "verified": "{n} entries · verified {time}",
-    "checkNeeded": "{n} entries · check needed"
+    "checkNeeded": "{n} entries · check needed",
+    "unavailable": "Ledger check unavailable"
   },
   "inbox": {
     "title": "Inbox",
@@ -689,10 +690,9 @@
     "whyLabel": "Why",
     "factsLabel": "Facts",
     "timelineCaption": "Dry run, nothing sent",
-    "ledgerSeal": "Sealed into the ledger when you act, #{n}",
+    "ledgerSeal": "Sealed into the ledger when you act, next entry #{n}",
     "ledgerSealNoN": "Sealed into the ledger when you act",
     "ledgerSealed": "Recorded in the ledger",
-    "ledgerSealOpen": "Open the ledger",
     "ledgerVerify": "Verify",
     "ledgerCompare": "Compare",
     "partCaption": "{part}: {state}",

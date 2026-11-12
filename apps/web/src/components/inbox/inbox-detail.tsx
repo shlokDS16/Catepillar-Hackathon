@@ -202,7 +202,7 @@ export function InboxDetail({ item, live, simNow, lines, granted, onAcknowledged
             {steps.length === 1 && !item.nonPunitive ? <li className="text-ink-2">{t("noDispatch")}</li> : null}
           </ol>
         </section>
-        {item.nonPunitive ? null : (
+        {item.nonPunitive || item.status === "suppressed" ? null : (
           <Link href="/fm/ledger" className="inbox-seal t-label">
             {open ? (sealN === null ? t("ledgerSealNoN") : t("ledgerSeal", { n: sealN })) : t("ledgerSealed")}
           </Link>

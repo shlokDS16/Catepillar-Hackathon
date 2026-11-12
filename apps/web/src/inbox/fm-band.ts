@@ -1,6 +1,5 @@
 import type { Machine } from "@/data/types";
-import { TIER_RANK } from "@/data/types";
-import type { InboxGroups, InboxItem } from "@/inbox/inbox";
+import type { InboxItem } from "@/inbox/inbox";
 import { machineParts, worstPart, type MachinePartView, type PartId } from "@/machine/parts";
 
 /** Pure rules for the FM detail pane, the band's ledger cell and the phone triage focus (D17 phase 3). */
@@ -20,26 +19,34 @@ export function tierChips(c: TierCounts): { tier: keyof TierCounts; n: number }[
 }
 
 /** The result of the last ledger verify, as the band and the detail pane need it. */
-export type LastVerify = { ok: boolean; headSeq: number; firstBadSeq: number | null; atMs: number };
+export type LastVerify = { ok: boolean; headSeq: number; firstBadSeq: number | null; atMs: number; unavailable?: boolean };
 
-export type LedgerBand = { kind: "unknown" } | { kind: "verified"; n: number; atMs: number } | { kind: "check"; n: number };
+/**
+ * A verdict for the band. In Live mode the adapter answers a failed call (forbidden, network, busy) from fixtures:
+ * that verdict was never checked against the real chain, so it is stored as unavailable, never as verified.
+ * `localOk` is the browser re-check on the Ledger page; both must pass.
+ */
+export function toLastVerify(
+  out: { ok: boolean; chain_ok: boolean; head_seq: number; first_bad_seq: number | null },
+  atMs: number,
+  fellBack: boolean,
+  localOk: boolean = true,
+): LastVerify {
+  return { ok: out.ok && out.chain_ok && localOk, headSeq: out.head_seq, firstBadSeq: out.first_bad_seq ?? null, atMs, unavailable: fellBack || undefined };
+}
+
+export type LedgerBand = { kind: "unknown" } | { kind: "unavailable" } | { kind: "verified"; n: number; atMs: number } | { kind: "check"; n: number };
 
 /** "214 entries · check needed" after a failed verify, "214 entries · verified hh:mm" after a clean one; nothing before the first. */
 export function ledgerBand(v: LastVerify | null): LedgerBand {
   if (!v) return { kind: "unknown" };
+  if (v.unavailable) return { kind: "unavailable" };
   return v.ok ? { kind: "verified", n: v.headSeq, atMs: v.atMs } : { kind: "check", n: v.headSeq };
 }
 
 /** The number the next sealed entry will get (head + 1), or null before any verify. */
 export function nextSealNumber(v: LastVerify | null): number | null {
-  return v ? v.headSeq + 1 : null;
-}
-
-/** The phone triage focus: the highest-tier open alert (the list is already ordered tier, then age). */
-export function triageFocus(groups: InboxGroups): InboxItem | null {
-  let best: InboxItem | null = null;
-  for (const i of groups.needsAction) if (!best || TIER_RANK[i.tier] > TIER_RANK[best.tier]) best = i;
-  return best;
+  return v && !v.unavailable ? v.headSeq + 1 : null;
 }
 
 /** A ledger break shows Verify and Compare (both open /fm/ledger); every other alert has none of these. */
