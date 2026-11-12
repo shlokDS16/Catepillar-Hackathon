@@ -6,14 +6,18 @@ import { useCallback, useEffect, useReducer, useRef } from "react";
 import { takeoverQueue } from "@/alerts/selectors";
 import { PhaseRail } from "@/components/replay/phase-rail";
 import { ReplayBrief } from "@/components/replay/replay-brief";
+import { ReplayDebrief } from "@/components/replay/replay-debrief";
+import { ReplayDecide } from "@/components/replay/replay-decide";
 import { ReplayInvestigate } from "@/components/replay/replay-investigate";
+import { ReplaySubmitting } from "@/components/replay/replay-submitting";
 import { Button } from "@/components/ui/button";
 import { Plate } from "@/components/ui/plate";
 import { Sheet } from "@/components/ui/sheet";
-import { Stub } from "@/components/ui/stub";
 import { useAppState, useDataPort } from "@/data/store";
 import { heldDestination } from "@/replay/leave-guard";
 import { initialReplayState, needsLeaveConfirm, replayReduce } from "@/replay/machine";
+import { useDocumentHidden } from "@/replay/use-replay-timer";
+import { useReplaySubmit } from "@/replay/use-replay-submit";
 
 /** Where [Leave] goes when the operator pressed Back rather than tapping a destination. */
 const TRAINING_HREF = "/op/training";
@@ -37,9 +41,17 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
   // only on an explicit [Resume], so a live alert costs no training time.
   const alerts = useAppState((s) => s.alerts);
   const liveAlert = takeoverQueue(alerts).length > 0;
-  if (liveAlert && !state.paused) dispatch({ type: "pause" });
+  if (liveAlert && !state.paused) dispatch({ type: "pause", reason: "alert" });
+
+  // A hidden page stops the clock, and it stays stopped until the operator presses [Resume]
+  // (interaction-map §4.5), so coming back never starts a countdown they are not ready for.
+  const hidden = useDocumentHidden();
+  useEffect(() => {
+    if (hidden) dispatch({ type: "pause", reason: "hidden" });
+  }, [hidden]);
 
   const { phase, loads } = state;
+  const retrySubmit = useReplaySubmit(port, replayId, state, dispatch);
   useEffect(() => {
     if (phase !== "loading") return;
     let live = true;
@@ -146,7 +158,7 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
       {state.paused ? (
         <Plate as="section" rule="heavy" className="replay-paused">
           <p className="t-title">{t("paused.title")}</p>
-          <p className="t-body">{t("paused.body")}</p>
+          <p className="t-body">{state.pauseReason === "hidden" ? t("paused.hiddenBody") : t("paused.body")}</p>
           <Button variant="primary" onClick={() => dispatch({ type: "resume" })}>
             {t("paused.resume")}
           </Button>
@@ -184,8 +196,22 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
             onTimeout={() => dispatch({ type: "investigate_timeout" })}
           />
         ) : null}
-        {phase === "decide" || phase === "submitting" ? <Stub task="R3" /> : null}
-        {phase === "debrief" ? <Stub task="R4" /> : null}
+        {phase === "decide" && scenario ? (
+          <ReplayDecide
+            key={`${state.attempt}-${state.step}`}
+            scenario={scenario}
+            step={state.step}
+            paused={state.paused}
+            attempt={state.attempt}
+            onAnswer={(choiceIds, ms) => dispatch({ type: "answer", choiceIds, ms })}
+            onTimeout={() => dispatch({ type: "step_timeout" })}
+          />
+        ) : null}
+        {phase === "submitting" ? (
+          <ReplaySubmitting failed={state.submitFailed} onRetry={retrySubmit} />
+        ) : null}
+        {/* R4 replaces ReplayDebrief's body; it already receives the scored result. */}
+        {phase === "debrief" && state.debrief ? <ReplayDebrief result={state.debrief} /> : null}
       </div>
 
       <Button onClick={askLeave}>{t("backToTraining")}</Button>
