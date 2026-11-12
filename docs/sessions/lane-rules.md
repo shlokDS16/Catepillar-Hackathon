@@ -2,6 +2,11 @@
 
 Read this file, then only the sections your brief cites. The plan is docs/sessions/team-plan-2026-11-12.md.
 
+## ABSOLUTE: no phone calls, no messages (Shlok, 2026-11-12)
+The demo phone numbers include a friend's number. Never place a Twilio call, never send SMS or
+Telegram, never hold or trigger SOS, never request /api/sos-demo, never run scripts/smoke.ts with
+--twilio-call, never set SOS_LIVE or DRY_RUN=false. Stub any test that would dispatch for real.
+
 ## Where you work
 - You run in your own git worktree. Create your branch from the current HEAD:
   `git checkout -b lane/<l1|l2|l3>-<task-id>`. Commit there; push only that branch

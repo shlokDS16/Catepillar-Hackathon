@@ -16,3 +16,24 @@ describe("FixtureAdapter beats × RPCs", () => {
     await adapter.taskPause({ p_task_id: IDS.task }); // stops the progress timer (no open handle)
   });
 });
+
+describe("FixtureAdapter PPE override (F10)", () => {
+  it("an override lets Start through for 15 sim minutes, then Start answers override_expired", async () => {
+    const adapter = new FixtureAdapter(0);
+    const out = await adapter.ppeOverride();
+    const live = await adapter.taskStart({ p_task_id: IDS.task, p_request_id: IDS.request });
+    expect(live.status).toBe("started");
+    await adapter.taskPause({ p_task_id: IDS.task });
+
+    (adapter as unknown as { simMs: number }).simMs = Date.parse(out.valid_until) + 1000;
+    await expect(adapter.taskStart({ p_task_id: IDS.task, p_request_id: IDS.request })).rejects.toMatchObject({ code: "override_expired" });
+  });
+  it("a restored vest after an expired override lets Start through again", async () => {
+    const adapter = new FixtureAdapter(0);
+    const out = await adapter.ppeOverride();
+    (adapter as unknown as { simMs: number }).simMs = Date.parse(out.valid_until) + 1000;
+    await adapter.playBeat(1);
+    expect((await adapter.taskStart({ p_task_id: IDS.task, p_request_id: IDS.request })).status).toBe("started");
+    await adapter.taskPause({ p_task_id: IDS.task });
+  });
+});

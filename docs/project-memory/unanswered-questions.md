@@ -16,3 +16,5 @@ Format: **[date]** - the question, why it matters, what would answer it.
 **[2026-09-23, session 2 triage]** - Resolved and logged in the timeline: team, department gating, time box, first-review format (partly). Still open: event portal and exact dates; the judging rubric per round (review 1 = deck + demo, rubric unknown); Expo account + Apple ID for TestFlight (after review 1 per D4).
 
 **[2026-09-23]** - Date and time of the final demo / next review. Matters now: Supabase realtime partitions were created only through 26 Sep (Track B B4), and Twilio trial credit must last until then. Answer: Shlok / organiser schedule.
+
+**[2026-11-12, F10]** - Contract asks (additive): `ppe.override_granted` should carry `valid_until` and the granting supervisor name; the Task screen now derives expiry as event sim time + 15 min and says "your supervisor". Also open: the task snapshot carries no ETA model version, so the Detailed Task view has no model-version row (screens.md L4).
