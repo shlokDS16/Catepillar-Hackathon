@@ -7,7 +7,7 @@
 .landing {
   --k: 1;
   background: var(--rock-front);
-  color: var(--on-ink);
+  color: var(--on-frame);
   font-family: var(--ff-body);
 }
 
@@ -65,7 +65,7 @@
   z-index: -2;
   width: 100%;
   height: 100%;
-  transition: opacity 0.7s var(--ease-quint);
+  transition: opacity 0.6s var(--ease-quint) 0.45s;
 }
 
 [data-gl="on"] .l-poster {
@@ -93,7 +93,9 @@
 .l-kicker,
 .l-caption,
 .l-hint {
+  --lh: 1.56em;
   margin: 0;
+  text-transform: uppercase;
   font-family: var(--ff-mono);
   font-size: 12.5px;
   line-height: 19.5px;
@@ -112,17 +114,16 @@
 }
 
 .l-kicker {
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--on-ink) 78%, transparent);
+  color: var(--on-frame-2);
 }
 
 .l-h1 {
   margin: 0;
   font-family: var(--ff-display);
-  font-weight: 700;
+  font-weight: 800;
   font-size: clamp(46px, 9.2vw, 118px);
   line-height: 0.98;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.03em;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
@@ -138,7 +139,7 @@
   max-width: 52ch;
   font-size: 17px;
   line-height: 25px;
-  color: color-mix(in srgb, var(--on-ink) 82%, transparent);
+  color: color-mix(in srgb, var(--on-frame) 82%, transparent);
 }
 
 .l-b {
@@ -202,11 +203,11 @@
 
 .l-cta:focus-visible,
 .l-link:focus-visible {
-  outline-color: var(--on-ink);
+  outline-color: var(--on-frame);
 }
 
 .l-link {
-  color: var(--on-ink);
+  color: var(--on-frame);
   font-weight: 500;
   text-underline-offset: 4px;
 }
@@ -216,7 +217,7 @@
   left: var(--gutter);
   right: var(--gutter);
   bottom: var(--s-5);
-  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+  color: color-mix(in srgb, var(--on-frame) 70%, transparent);
 }
 
 .l-hint {
@@ -224,7 +225,7 @@
   right: var(--gutter);
   bottom: var(--s-5);
   display: none;
-  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+  color: color-mix(in srgb, var(--on-frame) 70%, transparent);
 }
 
 @media (min-width: 900px) {
@@ -305,7 +306,7 @@
   transform-origin: var(--gutter) 50%;
   transform: scale(calc(1 - 0.5 * var(--f, 0)));
   border-radius: calc(var(--f, 0) * 20px);
-  transition: opacity 0.7s var(--ease-quint);
+  transition: opacity 0.5s linear;
 }
 
 [data-gl="on"] .l-canvas {
@@ -314,7 +315,8 @@
 
 @media (max-width: 767px) {
   .l-canvas {
-    transform-origin: 50% 92px;
+    transform-origin: 50% 76px;
+    transform: scale(calc(1 - 0.66 * var(--f, 0)));
   }
 }
 
@@ -325,10 +327,12 @@
 }
 
 .l-copy-left .l-sub {
+  color: var(--on-frame);
   max-width: 38ch;
 }
 
-/* One full-frame grade over the canvas replaces per-block shading. */
+/* One scrim over the canvas: ink at 55 % fading to nothing across the left 45 % of the width, so
+   copy reads over any frame. On phones the copy spans the width, so the scrim rises from the bottom. */
 .l-grade {
   position: sticky;
   top: 0;
@@ -338,17 +342,26 @@
   margin-bottom: -100svh;
   pointer-events: none;
   background:
-    linear-gradient(to right, color-mix(in srgb, var(--rock-front) 48%, transparent), transparent 58%),
-    radial-gradient(120% 90% at 60% 45%, transparent 55%, color-mix(in srgb, var(--rock-front) 55%, transparent));
+    linear-gradient(to right, color-mix(in srgb, var(--frame) 74%, transparent) 0, color-mix(in srgb, var(--frame) 60%, transparent) 30%, transparent 60%),
+    radial-gradient(70% 55% at 0% 100%, color-mix(in srgb, var(--frame) 55%, transparent), transparent),
+    radial-gradient(120% 90% at 60% 45%, transparent 55%, color-mix(in srgb, var(--frame) 45%, transparent));
+}
+
+@media (max-width: 1099px) {
+  .l-grade {
+    background:
+      linear-gradient(to top, color-mix(in srgb, var(--frame) 90%, transparent) 0, color-mix(in srgb, var(--frame) 80%, transparent) 40%, transparent 82%),
+      linear-gradient(to bottom, color-mix(in srgb, var(--frame) 45%, transparent), transparent 26%);
+  }
 }
 
 .l-h2 {
   margin: 0;
   font-family: var(--ff-display);
-  font-weight: 700;
+  font-weight: 800;
   font-size: clamp(44px, 5.3vw, 76.8px);
   line-height: 0.98;
-  letter-spacing: -0.045em;
+  letter-spacing: -0.03em;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
@@ -360,6 +373,7 @@
 }
 
 .l-callouts {
+  isolation: isolate;
   position: absolute;
   right: var(--gutter);
   top: 50%;
@@ -388,7 +402,7 @@
   left: 0;
   right: 0;
   height: 1px;
-  background: color-mix(in srgb, var(--on-ink) 70%, transparent);
+  background: color-mix(in srgb, var(--on-frame) 70%, transparent);
   transform: scaleX(var(--e));
   transform-origin: left;
 }
@@ -397,11 +411,12 @@
   font-family: var(--ff-mono);
   font-size: 12.5px;
   line-height: 24px;
-  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+  color: color-mix(in srgb, var(--on-frame) 70%, transparent);
   opacity: var(--e);
 }
 
 .callout-t {
+  text-shadow: 0 0 12px color-mix(in srgb, var(--frame) 75%, transparent), 0 1px 3px color-mix(in srgb, var(--frame) 60%, transparent);
   font-family: var(--ff-display);
   font-weight: 600;
   font-size: 22px;
@@ -441,7 +456,7 @@
   font-size: 12.5px;
   letter-spacing: 0.04em;
   text-transform: uppercase;
-  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+  color: color-mix(in srgb, var(--on-frame) 70%, transparent);
 }
 
 .l-stats dd {
@@ -470,9 +485,9 @@
 .lg .chip {
   min-width: 148px;
   justify-content: center;
-  border: 1.5px solid color-mix(in srgb, var(--on-ink) 65%, transparent);
+  border: 1.5px solid color-mix(in srgb, var(--on-frame) 65%, transparent);
   background: transparent;
-  color: var(--on-ink);
+  color: var(--on-frame);
   transition:
     background var(--dur-lhover) var(--ease-quint),
     color var(--dur-lhover) var(--ease-quint);
@@ -480,7 +495,7 @@
 
 .landing[data-ring="1"] .lg[data-lv="1"] .chip {
   background: var(--state-clear);
-  color: var(--on-ink);
+  color: var(--on-frame);
 }
 .landing[data-ring="2"] .lg[data-lv="2"] .chip {
   background: var(--state-caution);
@@ -492,7 +507,7 @@
 }
 .landing[data-ring="4"] .lg[data-lv="4"] .chip {
   background: var(--state-critical);
-  color: var(--on-ink);
+  color: var(--on-frame);
 }
 
 @media (max-width: 767px) {
@@ -509,9 +524,13 @@
 .l-card {
   position: absolute;
   right: var(--gutter);
-  bottom: var(--s-8);
+  top: 0;
+  bottom: 0;
+  height: fit-content;
+  margin-block: auto;
   display: flex;
   flex-direction: column;
+  justify-content: center;
   align-items: flex-start;
   gap: var(--s-4);
   width: min(440px, calc(100% - 2 * var(--gutter)));
@@ -520,6 +539,10 @@
 @media (max-width: 767px) {
   .l-card {
     left: var(--gutter);
+    top: auto;
+    bottom: var(--s-8);
+    margin-block: 0;
+    justify-content: flex-end;
     width: auto;
   }
 }
@@ -535,7 +558,7 @@
   font-size: 12.5px;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--on-ink) 78%, transparent);
+  color: color-mix(in srgb, var(--on-frame) 78%, transparent);
 }
 
 .scrub-track {
@@ -543,7 +566,7 @@
   height: 4px;
   margin-top: var(--s-3);
   border-radius: 2px;
-  background: color-mix(in srgb, var(--on-ink) 28%, transparent);
+  background: color-mix(in srgb, var(--on-frame) 28%, transparent);
 }
 
 .scrub-track::before {
@@ -591,8 +614,16 @@
 
 /* 6 · Ledger: a light, paper stage. */
 .stage-light {
-  background: var(--paper);
+  background: var(--frame);
   color: var(--ink);
+}
+
+.l-paper {
+  position: absolute;
+  inset: 0;
+  background: var(--paper);
+  border-top: var(--bw-hair) solid var(--frame-rule);
+  transform: translateY(calc((1 - var(--e)) * 100%));
 }
 
 .stage-light .l-kicker,
@@ -632,12 +663,13 @@
   justify-self: start;
 }
 
+/* Clean crossfade in one grid cell: "verified" leaves in the first half, "broken" arrives in the second. */
 .st-ok {
-  opacity: calc(1 - var(--e));
+  opacity: clamp(0, calc(1 - var(--e) * 2), 1);
 }
 
 .st-bad {
-  opacity: var(--e);
+  opacity: clamp(0, calc(var(--e) * 2 - 1), 1);
 }
 
 .l-ledger {
@@ -667,7 +699,18 @@
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
   opacity: var(--e);
-  transform: translateY(calc((1 - var(--e)) * 28px));
+  transform: translateY(calc((1 - var(--e)) * -48px));
+}
+
+/* The tampered row flashes the critical state once, in the window where the chain breaks. */
+.lrow-tamper::after {
+  content: "";
+  position: absolute;
+  inset: calc(var(--bw) * -1);
+  z-index: -1;
+  background: var(--state-critical);
+  opacity: var(--ov);
+  pointer-events: none;
 }
 
 .lrow + .lrow {
@@ -729,9 +772,18 @@
   border-color: color-mix(in srgb, var(--ink) calc((1 - var(--et)) * 100%), var(--state-critical));
 }
 
+/* Flash: red fill with light text (--on-frame on critical is above 6:1) while --ov is high, then the
+   row settles on paper: ink text, a 3 px critical left plate, critical border, critical flag line. */
 .lrow-tamper {
-  background: color-mix(in srgb, var(--surface) calc((1 - var(--et)) * 100%), var(--state-critical));
-  color: color-mix(in srgb, var(--ink) calc((1 - var(--et)) * 100%), var(--on-ink));
+  --ov: clamp(0, calc(12 * var(--et) * (1 - var(--et))), 1);
+  --fx: clamp(0, calc((var(--ov) - 0.8) * 20), 1);
+  isolation: isolate;
+  border-left-width: calc(2px + var(--et) * 1px);
+  color: color-mix(in srgb, var(--on-frame) calc(var(--fx) * 100%), var(--ink));
+}
+
+.lrow-tamper .lrow-flag {
+  color: color-mix(in srgb, var(--on-frame) calc(var(--fx) * 100%), var(--state-critical));
 }
 
 .lrow-tamper .lrow-sev,
@@ -763,14 +815,42 @@
     padding: var(--s-2) var(--s-3);
   }
   .lrow + .lrow {
-    margin-top: var(--s-3);
+    margin-top: var(--s-2);
   }
   .lrow + .lrow::before {
-    height: var(--s-3);
+    height: var(--s-2);
   }
   .l-copy-light .l-sub {
     display: none;
   }
+  .l-copy-light .l-h2 {
+    font-size: 32px;
+  }
+  .l-copy-light {
+    gap: var(--s-3);
+  }
+  .lrow {
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+  .lrow-hash {
+    grid-column: 1 / -1;
+  }
+  /* Phones: the connector rule between rows carries "previous"; the hash line stays. */
+  .lrow-prev {
+    display: none;
+  }
+}
+
+/* An ink plate keeps the title and scrubber readable over bright terrain. */
+.l-card {
+  padding: var(--s-5);
+  background: color-mix(in srgb, var(--frame) 90%, transparent);
+  border: var(--bw-hair) solid var(--frame-rule);
+}
+
+.l-card .chip {
+  max-width: 100%;
+  white-space: normal;
 }
 
 /* 7 · Close: ink stage, then the footer curtain. */
@@ -793,7 +873,7 @@
 }
 
 .stage-close {
-  background: var(--ink);
+  background: var(--frame);
 }
 
 .close-h {
@@ -851,6 +931,346 @@
   color: var(--ink-2);
 }
 
+/* Headline line masks: each line slides up from its own overflow mask, quint ease, 0.16 of the
+   block's window apart (scroll-driven, no script). Hero lines play once on load; the close plays
+   once when seen. */
+.ln-w {
+  display: block;
+}
+
+.ln {
+  display: block;
+  overflow: hidden;
+  padding: 0 0.04em 0.12em;
+  margin: 0 -0.04em -0.12em;
+}
+
+.ln-i {
+  --lt: clamp(0, calc((var(--t) - var(--i) * 0.16) / 0.6), 1);
+  --u: calc(1 - var(--lt));
+  display: block;
+  transform: translateY(calc(var(--u) * var(--u) * var(--u) * var(--u) * var(--u) * 105%));
+}
+
+.stage[data-stage="1"] .ln-i {
+  transform: none;
+}
+
+@media (prefers-reduced-motion: no-preference) {
+  .stage-close .ln-i {
+    transform: none;
+    transition: transform 0.9s var(--ease-quint) calc(var(--i) * 60ms);
+  }
+  [data-js] .stage-close:not([data-seen]) .ln-i {
+    transform: translateY(105%);
+  }
+}
+
+@keyframes ln-rise {
+  from {
+    transform: translateY(105%);
+  }
+  to {
+    transform: none;
+  }
+}
+
+/* Kicker "0N / 07": the digit rolls from the previous number as the block arrives. */
+.roll {
+  display: inline-block;
+  height: var(--lh);
+  overflow: hidden;
+  vertical-align: top;
+}
+
+.roll-col {
+  display: block;
+  transform: translateY(calc((var(--n) - 1 + var(--e, 1)) * var(--lh) * -1));
+}
+
+.roll-col > span {
+  display: block;
+  height: var(--lh);
+}
+
+/* Stat counters roll digit by digit (the engine builds the columns on first sight). */
+.l-num {
+  --dg-h: 1em;
+}
+
+.dg {
+  display: inline-block;
+  height: var(--dg-h);
+  overflow: hidden;
+  vertical-align: top;
+}
+
+.dg-c {
+  display: block;
+  transition: transform 1.1s var(--ease-quint);
+}
+
+.dg-c > span {
+  display: block;
+  height: var(--dg-h);
+  line-height: var(--dg-h);
+}
+
+/* An ink scrim behind the right-hand callouts, like the copy's on the left, so the labels read over
+   the bright bench and tracks. */
+.l-callouts::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: calc(var(--s-6) * -1) calc(var(--gutter) * -1) calc(var(--s-6) * -1) calc(var(--s-6) * -1);
+  background: radial-gradient(
+    ellipse at 70% 50%,
+    color-mix(in srgb, var(--ink) 72%, transparent) 0%,
+    color-mix(in srgb, var(--ink) 55%, transparent) 55%,
+    transparent 100%
+  );
+  pointer-events: none;
+}
+
+/* Stage progress rail: seven ticks on the right edge, desktop only. */
+.l-rail {
+  position: fixed;
+  top: 50%;
+  right: var(--s-2);
+  z-index: var(--z-chrome);
+  display: none;
+  transform: translateY(-50%);
+  color: var(--on-frame);
+  transition: opacity var(--dur-lhover) var(--ease-quint);
+}
+
+.l-rail ol {
+  display: flex;
+  flex-direction: column;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.l-rail a {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  width: var(--hit-dense);
+  height: 40px;
+  color: inherit;
+}
+
+.l-rail a span {
+  display: block;
+  width: 14px;
+  height: 2px;
+  background: currentColor;
+  opacity: 0.5;
+  transition:
+    width var(--dur-lhover) var(--ease-quint),
+    opacity var(--dur-lhover) var(--ease-quint);
+}
+
+.l-rail a:focus-visible {
+  outline: 2px solid currentColor;
+  outline-offset: -2px;
+}
+
+@media (hover: hover) {
+  .l-rail a:hover span {
+    width: 26px;
+    opacity: 0.85;
+  }
+}
+
+.landing[data-now="1"] .l-rail li:nth-child(1) span,
+.landing[data-now="2"] .l-rail li:nth-child(2) span,
+.landing[data-now="3"] .l-rail li:nth-child(3) span,
+.landing[data-now="4"] .l-rail li:nth-child(4) span,
+.landing[data-now="5"] .l-rail li:nth-child(5) span,
+.landing[data-now="6"] .l-rail li:nth-child(6) span,
+.landing[data-now="7"] .l-rail li:nth-child(7) span {
+  width: 32px;
+  opacity: 1;
+}
+
+.landing[data-paper] .l-rail {
+  color: var(--ink);
+}
+
+.landing[data-now="8"] .l-rail {
+  opacity: 0;
+  pointer-events: none;
+}
+
+@media (min-width: 900px) {
+  .l-rail {
+    display: block;
+  }
+}
+
+/* Stage 2 leader lines, from callout labels to anchors on the machine. */
+.l-leaders {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.leader {
+  opacity: calc(var(--e) * var(--vis, 0));
+  transition: opacity var(--dur-lhover) linear;
+}
+
+.leader polyline {
+  fill: none;
+  stroke: var(--on-frame);
+  stroke-width: 1;
+}
+
+.leader circle {
+  fill: var(--on-frame);
+}
+
+/* Stage 5 to 6: the scene darkens to ink before the paper rises. */
+.l-ink {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: var(--frame);
+  opacity: var(--e);
+  pointer-events: none;
+}
+
+/* The poster's machine: placed in user units so it can sit differently on a portrait crop. */
+.dp-machine {
+  transform: translate(1010px, 660px) scale(1.2);
+}
+
+@media (max-width: 767px) {
+  .dp-machine {
+    transform: translate(610px, 590px) scale(1);
+  }
+}
+
+/* The wipe from a call to action: ink circle, then the portal's Ink Frame (status band, dock),
+   then the paper middle opens. Built by wipe-link.tsx. */
+.wipe {
+  position: fixed;
+  inset: 0;
+  z-index: 60;
+  pointer-events: none;
+  transition: opacity 300ms linear;
+}
+
+.wipe[data-leave] {
+  opacity: 0;
+}
+
+.wipe-circle {
+  position: absolute;
+  border-radius: 50%;
+  background: var(--frame);
+  transform: scale(0);
+  transition: transform 500ms var(--ease-inout);
+}
+
+.wipe[data-step] .wipe-circle {
+  transform: scale(1);
+}
+
+.wipe-band,
+.wipe-dock {
+  position: absolute;
+  left: 0;
+  right: 0;
+  display: flex;
+  align-items: center;
+  padding: 0 var(--gutter);
+  background: var(--frame);
+  color: transparent;
+  font-family: var(--ff-mono);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  opacity: 0;
+  transition:
+    opacity 120ms linear,
+    color 240ms linear 60ms;
+}
+
+.wipe-band {
+  top: 0;
+  box-sizing: border-box;
+  height: calc(var(--strip-h) + var(--safe-t) + var(--bw-hair)); /* the portal status band: 80 px plate + padding + rule, safe area included */
+  padding-top: var(--safe-t);
+  border-bottom: var(--bw-hair) solid var(--frame-rule);
+}
+
+.wipe-dock {
+  bottom: 0;
+  box-sizing: border-box;
+  height: var(--dock-total); /* the portal's phone dock, home-indicator inset included */
+  border-top: var(--bw-hair) solid var(--frame-rule);
+}
+
+/* From 1024 px the portal has no dock: the rail runs down the start edge and the band sits to its right. */
+.wipe-rail {
+  display: none;
+}
+
+.wipe[data-step="open"] .wipe-band,
+.wipe[data-step="open"] .wipe-dock {
+  opacity: 1;
+  color: var(--on-frame-2);
+}
+
+.wipe-paper {
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: calc(var(--strip-h) + var(--safe-t) + var(--bw-hair));
+  bottom: var(--dock-total);
+  background: var(--paper);
+  clip-path: inset(50% 0 50% 0);
+  transition: clip-path 360ms var(--ease-inout);
+}
+
+.wipe[data-step="open"] .wipe-paper {
+  clip-path: inset(0);
+}
+
+@media (min-width: 1024px) {
+  .wipe-dock {
+    display: none;
+  }
+  .wipe-rail {
+    display: block;
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: var(--rail-w);
+    background: var(--frame);
+    border-right: var(--bw-hair) solid var(--frame-rule);
+    opacity: 0;
+    transition: opacity 120ms linear;
+  }
+  .wipe[data-step="open"] .wipe-rail {
+    opacity: 1;
+  }
+  .wipe-band {
+    left: var(--rail-w);
+  }
+  .wipe-paper {
+    left: var(--rail-w);
+    bottom: 0;
+  }
+}
+
 /* Still mode (posters): the scene alone, no copy. */
 .landing[data-still] .l-copy,
 .landing[data-still] .l-callouts,
@@ -858,6 +1278,8 @@
 .landing[data-still] .l-card,
 .landing[data-still] .l-nav,
 .landing[data-still] .l-hint,
+.landing[data-still] .l-rail,
+.landing[data-still] .l-leaders,
 .landing[data-still] .l-caption {
   visibility: hidden;
 }
@@ -902,6 +1324,13 @@
     opacity: 1;
     transform: none;
   }
+  /* data-now and data-paper are not driven here, so the static rail carries its own ink plate and
+     reads over both the scene and the paper. */
+  .l-rail ol {
+    padding: var(--s-2) 0;
+    background: var(--frame);
+    color: var(--on-frame);
+  }
   .stage[data-stage="6"] {
     --p: 1;
   }
@@ -917,6 +1346,25 @@
   .l-canvas {
     display: none;
   }
+  .ln-i,
+  .stage[data-stage="1"] .ln-i,
+  .stage-close .ln-i {
+    transform: none !important;
+    animation: none;
+  }
+  .roll-col {
+    transform: translateY(calc(var(--n) * var(--lh) * -1));
+  }
+  .l-paper {
+    transform: none;
+  }
+  .l-ink,
+  .leader {
+    display: none;
+  }
+  .lrow-tamper::after {
+    display: none;
+  }
   .l-ledger-wrap {
     position: relative;
     min-height: 100svh;
@@ -928,4 +1376,20 @@
   .l-foot {
     position: static;
   }
+}
+
+/* Visually hidden text for screen readers (the rolled digits are aria-hidden). */
+.l-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+}
+
+.stage:focus {
+  outline: none;
 }

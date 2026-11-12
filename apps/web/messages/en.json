@@ -850,7 +850,7 @@
     },
     "s4": {
       "title": "Guardian rings",
-      "body": "Four rings, four states. A walker steps in and the ring steps up, in colour, in a symbol and in a word.",
+      "body": "Four rings, four states. A haul truck drives in and the ring steps up, in colour, in a symbol and in a word.",
       "walker": "Walker in range"
     },
     "s5": {
@@ -882,6 +882,13 @@
       "title": "Start the shift.",
       "body": "The operator cockpit opens on a simulated shift you can drive yourself.",
       "foot": "Spotter is a student project. It is not affiliated with or endorsed by Caterpillar Inc."
+    },
+    "rail": {
+      "label": "Story progress",
+      "go": "Part {n} of 7: {name}"
+    },
+    "wipe": {
+      "band": "Operator cockpit · simulated shift"
     }
   },
   "training": {
