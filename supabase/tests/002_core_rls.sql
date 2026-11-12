@@ -79,7 +79,7 @@ begin
   assert (select count(*) from public.shifts) = 1, 'OP sees own shifts only';
   assert (select count(*) from public.ppe_overrides) = 1, 'OP sees own overrides';
   assert (select count(*) from public.consents) = 1, 'OP sees own consents only';
-  assert (select count(*) from public.operator_pairings) = 1, 'pairings readable by every role';
+  assert (select count(*) from public.operator_pairings) = 0, 'an operator does not read a colleague''s pairing (005b, data-model §2.10)';
   assert (select count(*) from public.machines) >= 1, 'reference data readable';
   assert (select count(*) from public.task_history) = 0, 'OP sees no other operator history';
   assert (select count(*) from public.v_task_analytics) = 0, 'view follows RLS (OP has no test rows)';
@@ -151,7 +151,7 @@ begin
   assert (select count(*) from public.ppe_overrides) = 0, 'TR sees no overrides';
   assert (select count(*) from public.consents) = 0, 'TR sees no consents';
   assert (select count(*) from public.shifts) = 2, 'TR sees shifts';
-  assert (select count(*) from public.operator_pairings) = 1, 'TR sees pairings';
+  assert (select count(*) from public.operator_pairings) = 0, 'TR reads no pairings (005b)';
 end $$;
 
 -- ── as anon: no grants at all ───────────────────────────────────────────────────────────────────
