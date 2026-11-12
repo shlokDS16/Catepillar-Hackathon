@@ -388,9 +388,10 @@ end $$;
 do $$
 declare r jsonb;
 begin
+  -- B10: the engine now raises the real breach alert for this machine, so the fixture gets its own hazard_key
   insert into public.alerts (id, run_id, kind, hazard_key, tier, operator_id, site_id, needs_ack)
   values (pg_temp.id('alert_b'), pg_temp.id('run'), 'seatbelt_off_moving',
-          'seatbelt:' || pg_temp.id('op_ravi') || ':EXC-B91', 'warning', pg_temp.id('op_ravi'), pg_temp.id('site'), true);
+          'seatbelt:' || pg_temp.id('op_ravi') || ':EXC-B91:fixture', 'warning', pg_temp.id('op_ravi'), pg_temp.id('site'), true);
   insert into public.dispatches (alert_id, site_id, purpose, channel, recipient_ref, recipient_role,
     status, attempts, sending_at, escalation_level, provider_ref) values
     (pg_temp.id('alert_b'), pg_temp.id('site'), 'alert', 'telegram', 'TELEGRAM_SUPERVISOR_CHAT_ID', 'fleet_manager', 'sending', 0, now() - interval '60 seconds', 1, null),
