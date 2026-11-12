@@ -89,8 +89,10 @@ describe("camera pose by progress", () => {
     const a = wordmarkPose(0, 2.5);
     const b = wordmarkPose(TILT_DONE, 2.5);
     const c = wordmarkPose(1, 2.5);
-    expect(a.position[1]).toBeGreaterThan(Math.abs(a.position[2]) * 20); // near vertical
-    expect(b.position[1]).toBeLessThan(b.position[2]); // oblique
+    expect(a.position[1] - a.target[1]).toBeGreaterThan(Math.hypot(a.position[0] - a.target[0], a.position[2] - a.target[2]) * 20); // near vertical
+    const lift = (b.position[1] - b.target[1]) / Math.hypot(b.position[0] - b.target[0], b.position[2] - b.target[2]);
+    expect(lift).toBeGreaterThan(1); // steeper than 45 degrees: tops read as letters
+    expect(lift).toBeLessThan(1.6); // but still oblique: sides read as relief
     expect(c.position).toEqual(b.position);
     expect(c.target).toEqual(b.target);
   });
@@ -153,8 +155,8 @@ describe("camera framing (review: R cut off at the right edge)", () => {
         cam.lookAt(...pose.target);
         cam.updateProjectionMatrix();
         cam.updateMatrixWorld(true);
-        for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const y of [0, DEFAULT_BOX.h]) {
-          v.set(sx * DEFAULT_BOX.x, y, sz * DEFAULT_BOX.z).project(cam);
+        for (const sx of [-1, 1]) for (const sz of [-DEFAULT_BOX.z, DEFAULT_BOX.zFront as number]) for (const y of [0, DEFAULT_BOX.h]) {
+          v.set(sx * DEFAULT_BOX.x, y, sz).project(cam);
           expect(Math.abs(v.x)).toBeLessThanOrEqual(0.94);
           expect(Math.abs(v.y)).toBeLessThanOrEqual(0.94);
         }
@@ -168,5 +170,19 @@ describe("camera framing (review: R cut off at the right edge)", () => {
     const row = 125;
     expect(hf2.rise[row * w + 272]).toBeGreaterThan(RISE[0] + RISE[1] + RISE[2] - 0.5);
     expect(RISE[0] + RISE[1] + RISE[2] - hf2.rise[row * w + 267]).toBeGreaterThan(RISE[2] - 0.5);
+  });
+});
+
+describe("channels between letters", () => {
+  it("leaves bare ground midway between two glyphs, so flank benches never fuse", () => {
+    const m = new Float32Array(w * h);
+    // Two bars 30 cells (15 m) apart, like neighbouring letters at 0.22 em tracking.
+    for (let j = 75; j < 175; j++) {
+      for (let i = 200; i < 240; i++) m[j * w + i] = 1;
+      for (let i = 270; i < 310; i++) m[j * w + i] = 1;
+    }
+    const hf3 = buildHeightfield(m, w, h);
+    expect(hf3.rise[125 * w + 255]).toBeLessThan(0.05); // the midpoint of the gap
+    expect(hf3.rise[125 * w + 255 - 6]).toBeLessThan(1); // and 3 m either side is still below the first bench
   });
 });

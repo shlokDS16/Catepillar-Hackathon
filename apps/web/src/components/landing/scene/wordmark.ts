@@ -107,7 +107,7 @@ export function buildHeightfield(mask: Float32Array, w: number, h: number): Heig
       const b = b2[k];
       // The two lower benches are cut from the wide blur, so they fan out beyond the glyph; the top bench follows the
       // glyph edge, so the letter outline stays crisp and condensed.
-      const r = RISE[0] * smooth(0.08, 0.16, b) + RISE[1] * smooth(0.26, 0.34, b) + RISE[2] * smooth(0.35, 0.65, b1[k]);
+      const r = RISE[0] * smooth(0.1, 0.18, b) + RISE[1] * smooth(0.3, 0.38, b) + RISE[2] * smooth(0.35, 0.65, b1[k]);
       rise[k] = r;
       const ground = Math.max(-0.4, 0.55 * terrainHeight(wx * TERRAIN_K, wz * TERRAIN_K));
       const roll = 3.6 * (fbm(wx * 0.035 + 5, wz * 0.035 - 3) - 0.5) + 1.1 * (fbm(wx * 0.13, wz * 0.13 + 9) - 0.5);
@@ -155,8 +155,8 @@ export const TILT_DONE = 0.6;
 const FOV = 22;
 
 /** The word's bounding box in world metres: half width, half depth and height of its tallest bench. */
-export type WordBox = { x: number; z: number; h: number };
-export const DEFAULT_BOX: WordBox = { x: 142, z: 36, h: 16 };
+export type WordBox = { x: number; z: number; h: number; zFront?: number };
+export const DEFAULT_BOX: WordBox = { x: 142, z: 30, h: 18, zFront: 62 };
 const MARGIN = 0.07; // of the half frame, on every side
 
 /** Bounding box of the glyphs in a mask (world units), or the default when the mask is empty. */
@@ -192,9 +192,15 @@ const fitV = new THREE.Vector3();
 export function wordmarkPose(p: number, aspect: number, box: WordBox = DEFAULT_BOX): WordmarkPose {
   const t = smooth(0, TILT_DONE, clamp01(p));
   const e = t * t * (3 - 2 * t);
-  const elev = THREE.MathUtils.degToRad(lerp(89, 33, e));
-  const target: [number, number, number] = [0, box.h * 0.35, 0];
-  const at = (R: number): [number, number, number] => [target[0], target[1] + Math.sin(elev) * R, target[2] + Math.cos(elev) * R];
+  const elev = THREE.MathUtils.degToRad(lerp(89, 52, e));
+  const yaw = THREE.MathUtils.degToRad(lerp(0, 7, e)); // a slight turn for depth
+  const front = box.zFront ?? box.z;
+  const target: [number, number, number] = [0, box.h * 0.35, (front - box.z) / 2];
+  const at = (R: number): [number, number, number] => [
+    target[0] + Math.sin(yaw) * Math.cos(elev) * R,
+    target[1] + Math.sin(elev) * R,
+    target[2] + Math.cos(yaw) * Math.cos(elev) * R,
+  ];
   fitCam.aspect = Math.max(0.3, aspect);
   fitCam.fov = FOV;
   fitCam.updateProjectionMatrix();
@@ -204,9 +210,9 @@ export function wordmarkPose(p: number, aspect: number, box: WordBox = DEFAULT_B
     fitCam.lookAt(target[0], target[1], target[2]);
     fitCam.updateMatrixWorld(true);
     for (const sx of [-1, 1]) {
-      for (const sz of [-1, 1]) {
+      for (const sz of [-box.z, front]) {
         for (const y of [-0.5, box.h]) {
-          fitV.set(sx * box.x, y, sz * box.z).project(fitCam);
+          fitV.set(sx * box.x, y, sz).project(fitCam);
           if (Math.abs(fitV.x) > 1 - MARGIN || Math.abs(fitV.y) > 1 - MARGIN) return false;
         }
       }
@@ -252,7 +258,7 @@ async function drawMask(canvas: HTMLCanvasElement): Promise<Mask> {
   g.textBaseline = "alphabetic";
   const probe = 200;
   g.font = `${weight} ${probe}px ${fam}`;
-  const gap = 0.025; // of the em
+  const gap = 0.22; // of the em: a ground channel between every pair of letters, wider than a flank bench
   const widths = [...WORD].map((c) => g.measureText(c).width);
   const em = (widths.reduce((a, b) => a + b, 0) + gap * probe * (WORD.length - 1)) / probe;
   const size = (w * 0.93) / em;
@@ -277,7 +283,7 @@ async function drawMask(canvas: HTMLCanvasElement): Promise<Mask> {
 
 const INK = new THREE.Color("#16150F");
 const GROUND = new THREE.Color("#24221A");
-const TOP = new THREE.Color("#7A715C");
+const TOP = new THREE.Color("#A79B80");
 
 function noopController(): WordmarkController {
   return { setProgress() {}, resize() {}, dispose() {} };
@@ -287,7 +293,11 @@ export async function mountWordmark(canvas: HTMLCanvasElement, opts: WordmarkOpt
   if (opts.reducedMotion || opts.compact) return noopController();
   const { mask, letters } = await drawMask(canvas);
   const hf = buildHeightfield(mask, GRID.w, GRID.h);
-  const box = maskBox(mask, GRID.w, GRID.h);
+  const box0 = maskBox(mask, GRID.w, GRID.h);
+  const MX = (letters[WORD.indexOf("O")].cx / (GRID.w - 1) - 0.5) * GRID.width + 36;
+  const MZ = 44;
+
+  const box: WordBox = { x: Math.max(box0.x, MX + 19), z: box0.z, h: Math.max(box0.h, 15), zFront: Math.min(GRID.depth / 2, MZ + 19) };
 
   let renderer: THREE.WebGLRenderer;
   try {
@@ -392,13 +402,13 @@ export async function mountWordmark(canvas: HTMLCanvasElement, opts: WordmarkOpt
 
   /* The machine, parked on the O. */
   const exc = buildExcavator();
-  exc.group.scale.setScalar(4.2);
+  exc.group.scale.setScalar(3.6);
   const oi = WORD.indexOf("O");
-  const perch = findPerch(mask, GRID.w, GRID.h, letters[oi].cx);
-  if (perch) exc.group.position.set(perch.x, sampleHeight(hf, perch.x, perch.z), perch.z);
+  // Parked on the ground in front of the word, just right of the O, on the haul road: it never covers a top face.
+  exc.group.position.set(MX, sampleHeight(hf, MX, MZ), MZ);
+  exc.group.rotation.y = -0.7; // three-quarter to the oblique camera
   exc.setPose({ boom: 0.55, stick: -1.85, bucket: -0.3 });
   exc.house.rotation.y = 0.35;
-  exc.group.rotation.y = -0.7; // three-quarter to the oblique camera
   exc.group.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.isMesh) m.castShadow = true;
