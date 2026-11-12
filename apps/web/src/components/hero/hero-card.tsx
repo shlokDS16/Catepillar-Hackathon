@@ -12,6 +12,7 @@ import { currentTask, nextPlanned, workState } from "@/hero/work-state";
 import { safetyTone, type SafetyState } from "@/alerts/selectors";
 import { KIND_PICTO } from "@/alerts/kinds";
 import type { AlertRecord } from "@/data/types";
+import { mergeWeatherHeat } from "@/task/task-state";
 
 export type HeroCardProps = {
   machine: Machine | null;
@@ -44,7 +45,10 @@ export function HeroCard({ machine, tasks, safety, topAlert, asOf, notUpdated, l
   const eta50 = useTweenNumber(task?.eta_p50_min ?? 0);
   const eta90 = useTweenNumber(task?.eta_p90_min ?? 0);
   const detailed = mode === "detailed";
-  const factors = (task?.eta_factors ?? []).slice(0, 2);
+  const factors = mergeWeatherHeat(task?.eta_factors)
+    .filter((f) => f.multiplier !== 1)
+    .sort((a, b) => Math.abs(b.multiplier - 1) - Math.abs(a.multiplier - 1))
+    .slice(0, 2);
   const pictoName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? SAFETY_PICTO.nosignal : SAFETY_PICTO.clear;
   const codeModel = machine ? (machine.model_name ? t("hero.machine", { code: machine.code, model: machine.model_name }) : machine.code) : "—";
   const machineLine =
@@ -140,6 +144,7 @@ export function HeroCard({ machine, tasks, safety, topAlert, asOf, notUpdated, l
 function factorLabel(key: string, t: ReturnType<typeof useTranslations>): string {
   const [group, value] = key.split(":");
   if (group === "skill" && value) return t.has(`enums.factor.${value}`) ? t(`enums.factor.${value}`) : value;
+  if (group === "weather_heat") return t("enums.factor.weather_heat");
   const name = group === "age" ? "machine_age" : group === "circadian" ? "shift_hour" : group;
   return t.has(`enums.factor.${name}`) ? t(`enums.factor.${name}`) : key;
 }

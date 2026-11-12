@@ -1,4 +1,7 @@
-/** Demo rows for /fm/analytics until the live view is wired (IP5). Simulated, shaped like `v_task_analytics`. */
+/**
+ * The DEMO_EVIDENCE values below are typed constants: no script, SQL view or test output in this repo computes them
+ * (checked 2026-11-12), so the screen labels them "illustrative, not measured". Do not present them as results.
+ * Demo rows for /fm/analytics until the live view is wired (IP5). Simulated, shaped like `v_task_analytics`. */
 import type { LooseRow, EvidenceLite } from "./analytics";
 
 const row = (task_type: LooseRow["task_type"], condition: LooseRow["condition"], n: number, a: number | null, o: number | null,

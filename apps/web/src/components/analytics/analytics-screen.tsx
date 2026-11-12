@@ -64,6 +64,7 @@ export function AnalyticsScreen({ rows: rawRows, evidence, source }: Props) {
         <p className="plate an-empty t-body" role="status">{t("noTasks")}</p>
       ) : (
         <>
+          <p className="t-meta an-pop">{t("population", { cond: t(`cond.${cond}`), n: totalN(groups) })}{verdict ? ` ${t("verdictPop", { n: verdict.n, total: totalN(groups) })}` : ""}</p>
           <p className="an-verdict t-body">
             <Mark kind="info" />
             <span>
@@ -123,7 +124,7 @@ export function AnalyticsScreen({ rows: rawRows, evidence, source }: Props) {
       )}
 
       <p className="t-meta an-source">{t(demo ? "sourceDemo" : "source")}</p>
-      <EvidenceCard evidence={evidence} />
+      <EvidenceCard evidence={evidence} rowsN={rows.reduce((s, r) => s + (r.n ?? 0), 0)} />
     </section>
   );
 }
@@ -179,7 +180,7 @@ function ConditionSelector({ present, value, onChange }: { present: WeatherKey[]
 
 const pct = (v: number) => `${Math.round(v * 100)}%`;
 
-function EvidenceCard({ evidence }: { evidence: EvidenceLite[] }) {
+function EvidenceCard({ evidence, rowsN }: { evidence: EvidenceLite[]; rowsN: number }) {
   const evId = useId();
   const t = useTranslations("analytics.ev");
   const no = t("none");
@@ -214,15 +215,26 @@ function EvidenceCard({ evidence }: { evidence: EvidenceLite[] }) {
   return (
     <section className="plate an-evidence" data-rule="heavy" aria-labelledby={evId}>
       <h2 id={evId} className="t-title">{t("title")}</h2>
+      <p className="t-meta">{t("illustrative")}</p>
       <div className="an-ev-grid">
         <div className="an-ev-block">
           <h3 className="t-label">{t("detection")}</h3>
+          <p className="t-meta">{t("popDetection", { n: get("detector.precision", "idle_excess")?.n ?? 0 })}</p>
           <ul className="an-ev-list">
-            {(["idle_excess", "overheat"] as const).flatMap((ty) => [
+            {(["idle_excess"] as const).flatMap((ty) => [
               meter(`${t("precision")} · ${t(`type.${ty}`)}`, get("detector.precision", ty)),
               meter(`${t("recall")} · ${t(`type.${ty}`)}`, get("detector.recall", ty)),
             ])}
+            <li className="an-ev-row">
+              <span className="t-label">{t("type.overheat")}</span>
+              <span className="t-meta an-ev-none">{t("noDetector")}</span>
+            </li>
+            <li className="an-ev-row">
+              <span className="t-label">{t("driftLabel")}</span>
+              <span className="t-meta an-ev-none">{t("driftNone")}</span>
+            </li>
           </ul>
+          <p className="t-meta">{t("thresholds")}</p>
         </div>
         <div className="an-ev-block">
           <h3 className="t-label">{t("eta")}</h3>
@@ -230,17 +242,20 @@ function EvidenceCard({ evidence }: { evidence: EvidenceLite[] }) {
             ? pair({ l: t("maeOurs"), e: get("eta.mae.model"), p: "hatch" }, { l: t("maeOrganiser"), e: get("eta.mae.organiser"), p: "outline" }, (v) => `${fmtMin(v)} min`)
             : <p className="t-meta an-ev-none">{no}</p>}
           <ul className="an-ev-list">{meter(t("p90"), get("eta.p90_coverage"))}</ul>
+          <p className="t-meta">{t("popEta", { n: get("eta.mae.model")?.n ?? 0, rows: rowsN })}</p>
         </div>
         <div className="an-ev-block">
           <h3 className="t-label">{t("impact")}</h3>
-          <p className="t-meta">{t("impactNote")}</p>
+          <p className="t-meta">{t("impactNote")} · {t("illustrativeTag")}</p>
           {get("loop.repeat_rate.assigned") || get("loop.repeat_rate.control")
             ? pair({ l: t("assigned"), e: get("loop.repeat_rate.assigned"), p: "hatch" }, { l: t("control"), e: get("loop.repeat_rate.control"), p: "outline" }, pct)
             : <p className="t-meta an-ev-none">{no}</p>}
+          <p className="t-meta">{t("popImpact", { n: get("loop.repeat_rate.assigned")?.n ?? 0 })}</p>
         </div>
         <div className="an-ev-block">
           <h3 className="t-label">{t("ops")}</h3>
           <ul className="an-ev-list">{meter(t("idle"), get("fleet.idle_pct"))}</ul>
+          <p className="t-meta">{t("popOps", { n: get("fleet.idle_pct")?.n ?? 0 })}</p>
         </div>
         <div className="an-ev-block">
           <h3 className="t-label">{t("ask")}</h3>

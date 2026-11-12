@@ -85,16 +85,26 @@ describe("factor rows", () => {
     { key: "heat:extreme", multiplier: 1.22, assumed: false },
     { key: "circadian:post_lunch_dip", multiplier: 1.05, assumed: true },
   ];
+  it("hot weather and the heat band merge into one factor with the product multiplier", () => {
+    const rows = factorRows(factors, { all: true });
+    expect(rows.map((r) => r.group)).not.toContain("heat");
+    expect(rows.map((r) => r.group)).not.toContain("weather");
+    expect(rows.find((r) => r.group === "weather_heat")?.pct).toBe(Math.round((1.1 * 1.22 - 1) * 100));
+  });
   it("core shows the two biggest, detail shows all", () => {
-    expect(factorRows(factors, { all: false }).map((r) => r.key)).toEqual(["skill:novice", "heat:extreme"]);
-    expect(factorRows(factors, { all: true })).toHaveLength(5);
+    expect(factorRows(factors, { all: false }).map((r) => r.key)).toEqual(["weather_heat:combined", "skill:novice"]);
+    expect(factorRows(factors, { all: true })).toHaveLength(4);
+  });
+  it("clear weather leaves the heat factor alone", () => {
+    const rows = factorRows([{ key: "weather:clear", multiplier: 1, assumed: false }, { key: "heat:high", multiplier: 1.09, assumed: false }], { all: true });
+    expect(rows.map((r) => r.group).sort()).toEqual(["heat", "weather"]);
   });
   it("tags come from the provenance registry; an assumed factor says assumed", () => {
     const rows = Object.fromEntries(factorRows(factors, { all: true }).map((r) => [r.group, r]));
-    expect(rows.heat?.tag.kind).toBe("source");
+    expect(rows.weather_heat?.tag.kind).toBe("source");
     expect(rows.skill?.tag.kind).toBe("none");
     expect(rows.circadian?.tag).toEqual({ kind: "assumed" });
-    expect(rows.heat?.pct).toBe(22);
+    expect(rows.weather_heat?.pct).toBe(34);
   });
   it("null factors give no rows", () => {
     expect(factorRows(null, { all: true })).toEqual([]);

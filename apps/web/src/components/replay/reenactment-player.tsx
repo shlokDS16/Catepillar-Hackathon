@@ -65,7 +65,7 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
       <p className="t-meta deb-cap">{t(model.eventExact ? "captionExact" : "caption")}</p>
 
       <div className="site-plan">
-        <SitePlanFrame center={center} points={points} zones={zones} label={t("mapLabel")}>
+        <SitePlanFrame center={center} points={points} zones={zones} label={t("mapLabel")} avoid={flagAt ? [flagAt] : undefined}>
           {({ toXY, path, u, box }) => {
             const machine = s.machine ? toXY(s.machine) : null;
             const operator = s.operator ? toXY(s.operator) : null;
