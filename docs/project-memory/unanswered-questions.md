@@ -24,3 +24,11 @@ Format: **[date]** - the question, why it matters, what would answer it.
   sign-in off). A stranger can create an account, but it gets no profile, so RLS gives it no data. The lead left it
   unchanged (auth settings are Shlok's call). Option: turn sign-up off in the Supabase dashboard (Authentication >
   Sign In / Providers), since the demo users are created by scripts/seed-demo-users.ts with the service key.
+
+## 2026-11-12 (lead session 4) — Production deploys stopped for main (for Shlok, blocking the demo URL)
+- https://spotter-five-brown.vercel.app serves 5bb9474. No Vercel deployment of any state exists for main pushes
+  6668dd1, 17aac73, 0389806, d02084e, a720218, 4205ddd, eecea75, f47f124 (or later); lane branch previews keep building
+  READY. Project prj_ljiSOnCM7DZOnSmphRmRleDKpjfQ was updated 20 s after the 6668dd1 push, so a setting may have
+  changed then. Agents may not trigger production deploys (auto-mode refused it). Action: Vercel > spotter >
+  Deployments > Redeploy or Create Deployment from main; check Settings > Git (production branch = main, Ignored
+  Build Step empty). Until then the newest preview (behind Vercel SSO) is spotter-q2zs93bg5-shlok-goenkas-projects.vercel.app.
