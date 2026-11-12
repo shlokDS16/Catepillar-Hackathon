@@ -26,6 +26,7 @@ L3 landing v1, portal B phase 1 chrome (afb4f07) and phase 2 Debrief ink theatre
 - After B10b merges: the web Debrief should read event_ms / seatbelt_fastened (TODO in apps/web/src/replay/reenact.ts).
 
 ## Queue (priority order)
+0. Shlok feedback (2026-11-12, relayed): (a) "Map could be better" (op /op/map and FM /fm/map: design pass in the B ink frame, fix the ~400x320 FM canvas, richer Guardian rings/trail within Site Signage); (b) "visual animated learning": animated lesson cards and illustrations on the Lesson route (motion carve-out, visual-language §5.1; reduced-motion stills; no autoplay audio). Check with the Track F session first that it is not already building either.
 3. L1 B10b/B11: replay scoring server-side (must match apps/web/src/replay/fixture-scoring.ts scoreReplay and data-model §2.8; weights chosen there because §2.8 gives none: procedure = 1/2 protocol Kendall pairs + 1/2 investigation, investigation = 1/2 net relevance + 1/2 order agreement with ideal; safety over safety-axis steps; efficiency = ms within time_limit_s; record them in §2.8 as the canonical weights); add additive contract fields reenactment.event_ms and machine_track[].seatbelt_fastened.
 4. Portal B phase 4: FM Inbox split view / mobile triage, FM map sizing fix, Ledger auto-verify on open.
 5. F11 Safety + A13, F17 Lessons, F20 Analytics (currently a stub), F19 Ask.
