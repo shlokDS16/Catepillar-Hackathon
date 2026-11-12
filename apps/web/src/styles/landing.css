@@ -227,8 +227,12 @@
 .rv {
   --a: 0.5;
   --b: 0.65;
+  --c: 0.86;
+  --d: 0.97;
   --t: clamp(0, calc((var(--p) - var(--a)) / (var(--b) - var(--a))), 1);
   --e: calc(var(--t) * var(--t) * (3 - 2 * var(--t)));
+  --to: clamp(0, calc((var(--p) - var(--c)) / (var(--d) - var(--c))), 1);
+  --eo: calc(var(--to) * var(--to) * (3 - 2 * var(--to)));
 }
 
 .rv-in {
@@ -243,6 +247,12 @@
   transform: translateY(calc(var(--e) * -28px));
 }
 
+/* In at --a..--b, out at --c..--d. */
+.rv-io {
+  opacity: calc(var(--e) * (1 - var(--eo)));
+  transform: translateY(calc((1 - var(--e)) * 28px - var(--eo) * 28px));
+}
+
 .stage[data-stage="1"] .l-b {
   --a: 0.62;
   --b: 0.74;
@@ -255,6 +265,284 @@
   border-radius: 12px;
   padding: 0 var(--s-4);
   font-size: 15px;
+}
+
+/* Scene wrapper: one sticky canvas behind five pinned stages (stages 1-5). */
+.l-scene {
+  position: relative;
+  isolation: isolate;
+  background: var(--rock-front);
+}
+
+.stage {
+  z-index: 2;
+}
+
+.l-canvas {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100svh;
+  margin-bottom: -100svh;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: var(--gutter) 50%;
+  transform: scale(calc(1 - 0.5 * var(--f, 0)));
+  border-radius: calc(var(--f, 0) * 20px);
+  transition: opacity 0.7s var(--ease-quint);
+}
+
+[data-gl="on"] .l-canvas {
+  opacity: 1;
+}
+
+@media (max-width: 767px) {
+  .l-canvas {
+    transform-origin: 50% 92px;
+  }
+}
+
+/* Left text blocks for stages 2-5. A soft shade keeps white type legible over the bright sky. */
+.l-copy-left {
+  max-width: 440px;
+  bottom: calc(var(--s-8) + var(--s-2));
+}
+
+.l-copy-left::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: calc(-1 * var(--s-7)) calc(-1 * var(--s-7)) calc(-1 * var(--s-6)) calc(-1 * var(--gutter));
+  background: radial-gradient(ellipse at 30% 60%, color-mix(in srgb, var(--rock-front) 72%, transparent), transparent 72%);
+}
+
+.l-h2 {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: clamp(38px, 5.4vw, 66px);
+  line-height: 1;
+  letter-spacing: -0.04em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+:lang(hi) .l-h2,
+:lang(ta) .l-h2 {
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.l-callouts {
+  position: absolute;
+  right: var(--gutter);
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  width: min(300px, 44vw);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transform: translateY(-50%);
+}
+
+.callout {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-3);
+  padding-top: var(--s-3);
+}
+
+.callout::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--on-ink) 70%, transparent);
+  transform: scaleX(var(--e));
+  transform-origin: left;
+}
+
+.callout-n {
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
+  line-height: 24px;
+  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+  opacity: var(--e);
+}
+
+.callout-t {
+  font-family: var(--ff-display);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.15;
+  opacity: var(--e);
+  transform: translateY(calc((1 - var(--e)) * 18px));
+}
+
+@media (max-width: 767px) {
+  .l-callouts {
+    top: 92px;
+    left: var(--gutter);
+    width: auto;
+    gap: var(--s-4);
+    transform: none;
+  }
+  .callout-t {
+    font-size: 18px;
+  }
+}
+
+.l-stats {
+  display: flex;
+  gap: var(--s-7);
+  margin: var(--s-2) 0 0;
+}
+
+.l-stats > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.l-stats dt {
+  margin: 0;
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+}
+
+.l-stats dd {
+  margin: 0;
+}
+
+.l-num {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: clamp(44px, 6vw, 72px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Guardian legend: dim until the walker's distance puts the scene in that state. */
+.l-legend {
+  position: absolute;
+  right: var(--gutter);
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  translate: 0 -50%;
+}
+
+.lg {
+  opacity: 0.4;
+  transition:
+    opacity var(--dur-lhover) var(--ease-quint),
+    transform var(--dur-lhover) var(--ease-quint);
+}
+
+.landing[data-ring="1"] .lg[data-lv="1"],
+.landing[data-ring="2"] .lg[data-lv="2"],
+.landing[data-ring="3"] .lg[data-lv="3"],
+.landing[data-ring="4"] .lg[data-lv="4"] {
+  opacity: 1;
+  transform: scale(1.08) translateX(calc(-1 * var(--s-2)));
+}
+
+@media (max-width: 767px) {
+  .l-legend {
+    top: 92px;
+    left: var(--gutter);
+    right: var(--gutter);
+    flex-direction: row;
+    flex-wrap: wrap;
+    translate: none;
+  }
+}
+
+/* Stage 5: the canvas shrinks to a card on the left; the hand-off card sits on the right. */
+.l-card {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--s-8);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-4);
+  width: min(440px, calc(100% - 2 * var(--gutter)));
+}
+
+@media (max-width: 767px) {
+  .l-card {
+    left: var(--gutter);
+    width: auto;
+  }
+}
+
+.scrub {
+  width: 100%;
+}
+
+.scrub-top {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--on-ink) 78%, transparent);
+}
+
+.scrub-track {
+  position: relative;
+  height: 4px;
+  margin-top: var(--s-3);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--on-ink) 28%, transparent);
+}
+
+.scrub-track::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc((1 - var(--e)) * 100%);
+  border-radius: 2px;
+  background: var(--line-glow);
+}
+
+.scrub-head {
+  position: absolute;
+  top: 50%;
+  left: calc((1 - var(--e)) * 100%);
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: var(--line-glow);
+}
+
+/* Still mode (posters): the scene alone, no copy. */
+.landing[data-still] .l-copy,
+.landing[data-still] .l-callouts,
+.landing[data-still] .l-legend,
+.landing[data-still] .l-card,
+.landing[data-still] .l-nav,
+.landing[data-still] .l-hint,
+.landing[data-still] .l-caption {
+  visibility: hidden;
 }
 
 /* Reduced motion: still stages, no pinning, everything visible, nothing loops. */
