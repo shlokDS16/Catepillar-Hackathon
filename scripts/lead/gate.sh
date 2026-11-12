@@ -13,7 +13,14 @@ DEPS=$(git diff main...origin/"$B" -- apps/web/package.json packages/shared/pack
 if ! git merge --no-ff -q origin/"$B" -m "$MSG
 
 Co-Authored-By: Claude Opus 5.5 <noreply@anthropic.com>"; then
-  echo "GATE: MERGE CONFLICT, aborting"; git merge --abort; exit 3
+  U=$(git diff --name-only --diff-filter=U)
+  if [ -n "$U" ] && ! echo "$U" | grep -v -q -E '^docs/sessions/track-[a-z]+\.md$'; then
+    # Append-only lane logs: keep both sides.
+    for f in $U; do sed -i -E '/^(<<<<<<< .*|=======|>>>>>>> .*)$/d' "$f"; git add "$f"; done
+    git commit -q --no-edit && echo "GATE: auto-resolved log-only conflict in: $U"
+  else
+    echo "GATE: MERGE CONFLICT, aborting:"; echo "$U"; git merge --abort; exit 3
+  fi
 fi
 fail=0
 pnpm install --frozen-lockfile --silent >/dev/null 2>&1 || { echo "GATE: install failed"; fail=1; }
