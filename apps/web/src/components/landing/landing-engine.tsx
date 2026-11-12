@@ -112,7 +112,11 @@ export function LandingEngine() {
       }
       const cr = canvas.getBoundingClientRect();
       const pr = pin2.getBoundingClientRect();
-      const mobile = window.innerWidth < 768;
+      // Phones and tablets: the labels sit over or far from the machine, so leaders would only clutter it.
+      if (window.innerWidth < 1100) {
+        leaders.forEach((g) => g.style.setProperty("--vis", "0"));
+        return;
+      }
       const hasIds = a.some((p) => p.id);
       leaders.forEach((g, i) => {
         const p = hasIds ? a.find((q) => q.id === LEADER_ID[i]) : a[LEADER_FALLBACK[i]];
@@ -126,11 +130,11 @@ export function LandingEngine() {
         const r = el.getBoundingClientRect();
         const ax = p.x + cr.left - pr.left;
         const ay = p.y + cr.top - pr.top;
-        const lx = mobile ? r.left - pr.left + 12 : r.left - pr.left - 8;
-        const ly = mobile ? r.bottom - pr.top : r.top - pr.top + 14;
+        const lx = r.left - pr.left - 8;
+        const ly = r.top - pr.top + 14;
         // One elbow: leave the label straight, then run to the anchor, so neighbouring lines stay apart.
-        const ex = mobile ? lx : lx - 28 - i * 10;
-        const ey = mobile ? ly + 10 + i * 6 : ly;
+        const ex = lx - 28 - i * 10;
+        const ey = ly;
         poly.setAttribute("points", `${lx.toFixed(1)},${ly.toFixed(1)} ${ex.toFixed(1)},${ey.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`);
         dot.setAttribute("cx", ax.toFixed(1));
         dot.setAttribute("cy", ay.toFixed(1));
