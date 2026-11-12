@@ -2,43 +2,42 @@ import { getLocale, getTranslations } from "next-intl/server";
 import { LangSwitch } from "@/components/landing/wipe-link";
 
 /**
- * Dusk (landing v3 spec §5): a plate of contour lines from our own terrain function, the word
- * SPOTTER cut out of them (a clip path, so the same lines run brighter inside the letters), the
- * shift's trail in first light, and the closing "14:00" of the shift clock. The contour map is
- * `/landing/contours.svg#map` (generated from `terrain.ts`), pulled in with <use> and styled only
- * through custom properties set in landing.css. The wordmark stays Latin in every locale: it is a
- * logotype, and the h2 and the alt text carry the localized brand.
+ * Dusk (landing v3 spec §5). The plate is the word SPOTTER built as a hill out of the simulated quarry:
+ * each letter a mesa with benches and contour lines, the excavator parked on the O, the shift's trail
+ * traced across the letters (scene/wordmark.ts). The engine mounts it on a canvas when the footer nears
+ * the viewport, drives it with the footer's scroll-in progress, and disposes it when it leaves.
+ *
+ * Stills stand in wherever the canvas does not run (spec §9): `wordmark-top` is the no-script picture
+ * (the flat, straight-down view), `wordmark-3d` is the oblique one for phones, reduced motion and no
+ * WebGL. The wordmark stays Latin in every locale (it is a logotype); the h2 and the alt text carry
+ * the localized brand.
  */
+function Still({ name, className }: { name: "wordmark-top" | "wordmark-3d"; className: string }) {
+  return (
+    <picture className={className}>
+      <source media="(max-width: 767px)" srcSet={`/landing/${name}-m.webp`} type="image/webp" width={750} height={330} />
+      <source media="(max-width: 767px)" srcSet={`/landing/${name}-m.avif`} type="image/avif" width={750} height={330} />
+      <source srcSet={`/landing/${name}.webp`} type="image/webp" width={1440} height={600} />
+      <source srcSet={`/landing/${name}.avif`} type="image/avif" width={1440} height={600} />
+      <img src={`/landing/${name}.webp`} alt="" width={1440} height={600} loading="lazy" decoding="async" />
+    </picture>
+  );
+}
+
 export async function LandingFooter() {
   const t = await getTranslations("landing");
   const locale = await getLocale();
   const other = locale === "hi" ? "en" : "hi";
-  const wordStyle = { fontFamily: "var(--ff-display)", fontWeight: 800, fontSize: "400px", letterSpacing: "8px" } as const;
   return (
     <footer className="l-foot" aria-labelledby="l-foot-h">
       <h2 id="l-foot-h" className="l-sr">
         {t("brand")}
       </h2>
-      <div className="l-plate">
-        <svg className="l-plate-svg" viewBox="0 0 1440 560" preserveAspectRatio="xMidYMid slice" role="img" aria-label={t("foot.map")}>
-          <defs>
-            <clipPath id="l-word">
-              <text x="720" y="438" textAnchor="middle" style={wordStyle}>
-                SPOTTER
-              </text>
-            </clipPath>
-          </defs>
-          <use href="/landing/contours.svg#map" className="l-map-dim" transform="translate(0 -20) scale(2.4)" />
-          <g clipPath="url(#l-word)">
-            <rect width="1440" height="560" className="l-word-fill" />
-            <use href="/landing/contours.svg#map" className="l-map-lit" transform="translate(0 -20) scale(2.4)" />
-          </g>
-          <text className="l-word-edge" x="720" y="438" textAnchor="middle" style={wordStyle}>
-            SPOTTER
-          </text>
-          <use href="/landing/contours.svg#map" className="l-map-trail" transform="translate(0 -20) scale(2.4)" />
-        </svg>
-        <p className="l-plate-legend">
+      <div className="l-plate" role="img" aria-label={t("foot.map")}>
+        <Still name="wordmark-top" className="l-wm-top" />
+        <Still name="wordmark-3d" className="l-wm-3d" />
+        <canvas className="l-wm-canvas" aria-hidden="true" />
+        <p className="l-plate-legend" aria-hidden="true">
           <span>
             <i className="ct" />
             {t("foot.contours")}

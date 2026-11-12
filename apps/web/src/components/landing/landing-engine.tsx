@@ -66,6 +66,12 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
     let L = { top: 0, h: 1, travel: 1 };
     let P = { top: 0, h: 1, travel: 1 };
     let footTop = Infinity;
+    const plateEl = root.querySelector<HTMLElement>(".l-plate");
+    const wmCanvas = root.querySelector<HTMLCanvasElement>(".l-wm-canvas");
+    let plateBox = { top: 0, h: 1 };
+    let wm: { setProgress(p: number): void; resize(): void; dispose(): void } | null = null;
+    let wmP = -1;
+    let wmToken = 0;
     // Layout read once per measure, never per frame: label and plate offsets inside their stage block.
     let labelPos: Array<{ left: number; top: number }> = [];
     let platePos: { left: number; top: number } | null = null;
@@ -96,6 +102,10 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
         P = { top: r.top + y, h: r.height, travel: Math.max(1, r.height - vh) };
       }
       if (footEl) footTop = footEl.getBoundingClientRect().top + y;
+      if (plateEl) {
+        const r = plateEl.getBoundingClientRect();
+        plateBox = { top: r.top + y, h: Math.max(1, r.height) };
+      }
       const st2 = stEls[1]?.getBoundingClientRect();
       const st4 = stEls[3]?.getBoundingClientRect();
       labelPos = st2
@@ -219,6 +229,14 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
       toggle(root, "tapeHide", hidden);
       toggle(root, "paper", navPaper);
       toggle(root, "navhide", y + 40 > footTop);
+      if (wm) {
+        // 0 when the plate's top reaches the bottom of the screen, 1 a little after it has fully arrived.
+        const wp = clamp01((y + vh - plateBox.top) / (plateBox.h + vh * 0.4));
+        if (Math.abs(wp - wmP) > 0.002) {
+          wmP = wp;
+          wm.setProgress(wp);
+        }
+      }
       if (heroEl) heroEl.inert = curSt !== 1;
       if (tape) tape.el.inert = hidden;
       apply();
@@ -316,6 +334,7 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
     const onResize = () => {
       measure();
       ctl?.resize();
+      wm?.resize();
       request();
     };
     window.addEventListener("resize", onResize);
@@ -323,6 +342,50 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
     ro.observe(root);
     const onVis = () => syncRunning();
     document.addEventListener("visibilitychange", onVis);
+
+    // The 3D wordmark: mounted when the footer nears the viewport, disposed when it leaves. On phones and
+    // with no WebGL a still stands in (the CSS shows it from data-wm="poster"); nothing loads before that.
+    const unmountWm = () => {
+      wmToken++;
+      wm?.dispose();
+      wm = null;
+      wmP = -1;
+      if (root.dataset.wm === "canvas") root.dataset.wm = "poster";
+    };
+    const mountWm = async () => {
+      if (wm || !wmCanvas || phone.matches) return;
+      const token = ++wmToken;
+      if (!webglAvailable()) {
+        root.dataset.wm = "poster";
+        return;
+      }
+      try {
+        const { mountWordmark } = await import("@/components/landing/scene/wordmark");
+        const c = await mountWordmark(wmCanvas, { reducedMotion: reduced.matches, compact: phone.matches });
+        if (disposed || token !== wmToken) {
+          c.dispose();
+          return;
+        }
+        wm = c;
+        root.dataset.wm = "canvas";
+        measure();
+        request();
+      } catch {
+        root.dataset.wm = "poster";
+      }
+    };
+    const wio = plateEl
+      ? new IntersectionObserver(
+          (entries) => {
+            for (const e of entries) {
+              if (e.isIntersecting) void mountWm();
+              else unmountWm();
+            }
+          },
+          { rootMargin: "700px 0px" },
+        )
+      : null;
+    if (plateEl) wio?.observe(plateEl);
 
     const sceneEl = root.querySelector<HTMLElement>(".l-scene");
     const io = new IntersectionObserver(
@@ -359,6 +422,8 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
       document.removeEventListener("visibilitychange", onVis);
       ro.disconnect();
       io.disconnect();
+      wio?.disconnect();
+      wm?.dispose();
       ticks.forEach((a) => a.removeEventListener("click", onTick));
       if (hasIdle) window.cancelIdleCallback(idleId);
       else window.clearTimeout(idleId);

@@ -1068,8 +1068,8 @@
       "pctFmt": "{n} %"
     },
     "foot": {
-      "map": "The word Spotter drawn from the contour lines of the simulated quarry, with the shift's trail on the pit floor.",
-      "contours": "Bench contours, every 1.6 m (3.2 m on steep faces)",
+      "map": "The word Spotter built as a hill from the simulated quarry: each letter is a mesa with benches and contour lines, the excavator is parked on the O, and the shift's trail runs across the letters.",
+      "contours": "Contour lines of the simulated terrain",
       "road": "Haul road",
       "trail": "Today's trail",
       "product": "Product",
@@ -1082,7 +1082,7 @@
       "simTitle": "What is simulated",
       "sim": "Everything on this page runs on demo data: the shift, the machine readings, the ledger hashes and the app screens. No real site, operator or customer appears.",
       "madeTitle": "How it is made",
-      "made": "The quarry and these contour lines come from one terrain function in our code, and the excavator is built in code too. No stock photos, no generated images."
+      "made": "The quarry and the lettering are built in code from our terrain function, and so is the excavator. No stock photos, no generated images."
     }
   },
   "training": {

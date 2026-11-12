@@ -1516,7 +1516,7 @@ li[data-role="3"] > .l-role {
 
 .l-plate {
   position: relative;
-  height: 560px;
+  aspect-ratio: 1440 / 600;
   overflow: hidden;
   border-bottom: 1px solid var(--frame-rule);
 }
@@ -1528,40 +1528,49 @@ li[data-role="3"] > .l-role {
   height: 100%;
 }
 
-/* Contours are styled through custom properties: <use> clones cannot be reached by selectors. */
-.l-map-dim {
-  --cm: rgb(242 240 234 / 0.08);
-  --wm: 0.4;
-  --cM: rgb(242 240 234 / 0.2);
-  --wM: 0.55;
-  --rd: rgb(185 181 170 / 0.5);
-  --rg: rgb(241 185 149 / 0.3);
+/* The plate: a 3D wordmark on a canvas where WebGL runs, a still everywhere else. */
+.l-wm-top,
+.l-wm-3d,
+.l-wm-canvas {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
 }
 
-.l-map-lit {
-  --cf: rgb(242 240 234 / 0.5);
-  --wf: 0.32;
-  --cm: rgb(242 240 234 / 0.72);
-  --wm: 0.45;
-  --cM: rgb(242 240 234 / 1);
-  --wM: 0.7;
+.l-wm-top img,
+.l-wm-3d img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
 }
 
-.l-map-trail {
-  --tr: #f1b995;
-  --tw: 1.1;
+.l-wm-3d {
+  display: none;
 }
 
-.l-word-fill {
-  fill: #f2f0ea;
-  fill-opacity: 0.06;
+.l-wm-canvas {
+  display: block;
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.4s linear;
 }
 
-.l-word-edge {
-  fill: none;
-  stroke: #f2f0ea;
-  stroke-opacity: 0.55;
-  stroke-width: 1.25;
+.landing[data-wm="canvas"] .l-wm-canvas {
+  opacity: 1;
+}
+
+.landing[data-wm="canvas"] :is(.l-wm-top, .l-wm-3d) {
+  display: none;
+}
+
+.landing[data-wm="poster"] .l-wm-top {
+  display: none;
+}
+
+.landing[data-wm="poster"] .l-wm-3d {
+  display: block;
 }
 
 .l-plate-legend {
@@ -2203,16 +2212,25 @@ li[data-role="3"] > .l-role {
   }
 
   .l-plate {
+    aspect-ratio: auto;
     height: auto;
-    padding: 28px 0 0;
+    padding: 0;
   }
 
-  .l-plate-svg {
-    position: static;
+  .l-wm-top {
+    display: none;
+  }
+
+  .l-wm-3d,
+  .landing[data-wm="poster"] .l-wm-3d {
     display: block;
-    width: 100%;
+    position: static;
+    aspect-ratio: 750 / 330;
     height: auto;
-    aspect-ratio: 1440 / 560;
+  }
+
+  .l-wm-canvas {
+    display: none;
   }
 
   .l-plate-legend {
@@ -2314,6 +2332,18 @@ li[data-role="3"] > .l-role {
 
   .l-plate-legend {
     position: static;
+  }
+
+  .l-wm-top {
+    display: none;
+  }
+
+  .l-wm-3d {
+    display: block;
+  }
+
+  .l-wm-canvas {
+    display: none;
   }
 
   .l-tape-static {
