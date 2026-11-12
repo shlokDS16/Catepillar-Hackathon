@@ -25,6 +25,13 @@ describe("landing ledger demo", () => {
     for (const r of rows) expect(r.recomputed === r.stored).toBe(r.seq !== TAMPER_AT);
   });
 
+  it("carries the shift clock time of each entry and the 4 to 1 edit on row 4", async () => {
+    const { rows } = await buildLedgerDemo();
+    expect(rows.map((r) => r.at)).toEqual([392, 485, 530, 644, 725, 800]);
+    expect(rows.map((r) => r.severity)).toEqual(["3", "1", "2", "1", "2", "3"]);
+    expect(rows[3].honestSeverity).toBe("4");
+  });
+
   it("groups a hash in fours", () => {
     expect(groups("0123456789abcdef0000")).toBe("0123 4567 89ab cdef");
   });

@@ -2,6 +2,8 @@
 
 import { useRouter } from "next/navigation";
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
+import { setLocaleCookie } from "@/i18n/set-locale";
+import type { Locale } from "@/i18n/locales";
 
 /**
  * A link that leaves the landing with the circle wipe, ending in the portal's Ink Frame
@@ -106,5 +108,23 @@ export function WipeLink({
     <a className={className} href={href} onClick={onClick}>
       {children}
     </a>
+  );
+}
+
+/** Footer language switch: sets the locale cookie and re-renders the same URL (as the language sheet does). */
+export function LangSwitch({ to, lang, children }: { to: Locale; lang: string; children: ReactNode }) {
+  const router = useRouter();
+  return (
+    <button
+      type="button"
+      className="l-lang-switch"
+      lang={lang}
+      onClick={() => {
+        setLocaleCookie(to);
+        router.refresh();
+      }}
+    >
+      {children}
+    </button>
   );
 }

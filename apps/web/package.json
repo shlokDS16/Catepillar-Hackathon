@@ -8,6 +8,7 @@
     "prebuild": "node scripts/copy-maplibre-worker.mjs",
     "build": "next build",
     "start": "next start",
+    "landing:contours": "tsx scripts/landing-contours.ts",
     "lint": "eslint",
     "test": "vitest run",
     "typecheck": "tsc --noEmit -p tsconfig.json"

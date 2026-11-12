@@ -36,7 +36,9 @@ for f in frames:
     first = (p["text"][0] if p["text"] else "").replace("|", "/")
     lines.append(f"| {i} | {p['y']} | {p['words']} | {sd:.0f} | {verdict} | {first} |")
 sheet.save(out / "contact.png")
-summary = f"{len(frames)} frames at {w}x{h}, {bad} dead, thin or flat"
+gl_file = out / "webgl.txt"
+gl = gl_file.read_text().strip() if gl_file.exists() else "unknown"
+summary = f"{len(frames)} frames at {w}x{h}, {bad} dead, thin or flat (WebGL: {gl})"
 (out / "report.md").write_text(f"# Scroll audit\n\n{summary}\n\n" + "\n".join(lines) + "\n", encoding="utf-8")
 print(summary)
 sys.exit(1 if bad else 0)
