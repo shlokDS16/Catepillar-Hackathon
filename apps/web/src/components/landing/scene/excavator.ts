@@ -462,7 +462,8 @@ export function buildExcavator(): Excavator {
 
   /* ---------- Anchors for callouts ---------- */
   const cabA = new THREE.Object3D();
-  cabA.position.set(1.0, 1.95, -0.92);
+  // Mid-cab (behind the side glass), about 1 m below the roof beacon so the two leaders separate.
+  cabA.position.set(1.0, 1.0, -0.94);
   house.add(cabA);
   const cylA = new THREE.Object3D();
   boom.add(cylA);
