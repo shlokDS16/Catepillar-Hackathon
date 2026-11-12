@@ -25,3 +25,27 @@ What passes: the shared change is additive only (new `fixtures/ask.ts` plus one 
 ## Verdict
 
 CHANGES REQUIRED. Fix 1-5 and decide on 6.
+
+## Re-review: 04f6532..2af4fce (c0ee50d, 2af4fce)
+
+Checks run on 2af4fce: web `tsc --noEmit` no errors; `eslint` clean; web vitest 425/425; shared vitest 144/144, shared tsc exit 0.
+
+| # | Status | Evidence |
+|---|---|---|
+| 1 High | Resolved | `ASK_SUGGESTIONS` routes the en/hi suggestions by exact text first, and Devanagari keywords route typed questions (`fixtures/ask.ts:100-118`). `ask.test.ts` covers the en and hi suggestion lists, checks that the message files agree with the table, and tests 3 typed Hindi questions. |
+| 2 Medium | Resolved | Lock and replay now hide only the chip and the Ask sheet. The IncidentSheet stays mounted (`ask-chip.tsx:53-83`), so a draft or a send in flight survives the lock. |
+| 3 Medium | Resolved | The sheet is now closed instead of unmounted, so `Sheet` returns focus to the chip. |
+| 4 Medium | Resolved | `ledgerSeq` is read from `ledgerSeqByCause[eventId]`. |
+| 5 Medium | Resolved | Review and log is secondary; Ask is the only primary button. |
+| 6 Medium | Resolved | The citations are retitled "(demo)", and the OSHA attribution is gone from the F19 fixtures. main's older `askResponse` fixture still cites OSHA 3120, but it is not rendered by S6. |
+
+The Lows are also fixed: steps are capped at 3, the photo Blob is kept with a 15 MB cap, an unknown type leaves the kind null, `/override/` is no longer a policy refusal, the degraded fixture is consistent, `idPrefix` removes the duplicate ids, and the SIM caption plus the injection and policy copy are tested.
+
+New-problem check: the radio `name`s are shared by the two A13 instances, but each sits in its own `<form>`, so the groups do not clash. The Safety screen is unchanged: `idPrefix` defaults to "incident".
+
+Still open (Low, none blocking):
+- R1. The `requestAnimationFrame` focus call in `closeIncident` (`ask-chip.tsx:42`) is now redundant, because `Sheet` restores focus itself. Remove it so the code is easier to explain.
+- R2. The `pickAskFixture` JSDoc now sits above `ASK_SUGGESTIONS` (`fixtures/ask.ts:94-100`). Move it back to the function.
+- R3. There is no test of the AskChip A18 wiring (no DOM test environment). Cover it in the F21 browser QA.
+
+Verdict: APPROVE.

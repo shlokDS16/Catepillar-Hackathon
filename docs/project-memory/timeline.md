@@ -83,3 +83,6 @@ in `claude/`. End-of-session routine runs before any session finishes.
 ## 2026-11-12 — Final build window (lead L0 session)
 - Merged and deployed: landing v1+v2, portal B phases 1-4, map redesign, animated lessons, R3/R4 Replay, F10, F11, F14, F15, F20; backend near-miss privacy 003d-003h, B10 detectors, B10b replay + scoring, B12 alert engine (dry run).
 - SECURITY NOTE: a backend subagent (lane/l1-safety-seeds) sourced .env into its shell and the secret values were printed into that agent's local transcript. Nothing was committed (diff scanned). Shlok to decide on rotation: Supabase secret key + DB password, Twilio auth token, Telegram bot token, Groq/Gemini/Pinecone/Voyage/LlamaCloud/Sarvam keys.
+## 2026-11-12 18:10 — Lead L0 session 3 starts (66 % weekly, Fable 8 %)
+- Judge-content was already re-reviewed (APPROVE @7073d57) and merged at 17aac73 by the previous lead; F19 at 6668dd1. Review files copied to main.
+- Dispatched four Sonnet lanes: lane/l2-lane-a (judge #2/#3/#4/#5/#9 + idea.md §7), lane/l1-live-path (D18, signed-in design), lane/l3-bay-machine (D17 T2+T3), lane/l2-bay-band-tape (D17 T1+T4).

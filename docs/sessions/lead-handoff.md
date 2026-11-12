@@ -1,4 +1,4 @@
-# Lead (L0) handoff, 2026-11-12 (session 2)
+# Lead (L0) handoff, 2026-11-12 (session 3; session 2 notes kept below)
 
 Paste this into a fresh Claude Code session (model Opus, never Fable) opened in the main folder
 `C:\Users\Shlok\Downloads\Catepillar Hackathon`:
@@ -14,6 +14,36 @@ Paste this into a fresh Claude Code session (model Opus, never Fable) opened in 
 > SMS, Telegram or SOS trigger, never /api/sos-demo (D15). Hand off again at ~250k tokens of context.
 > Note: subagents in worktrees cannot write to the main folder (write guard); ask them to write reports in their own
 > worktree and give the absolute path.
+
+## Session 3 (lead L0, 66 % -> ~68 % weekly): status at handoff
+- Judge-content (17aac73) and F19 (6668dd1) were already merged; their review files are now in docs/sessions/reviews/.
+- MERGED: lane/l3-bay-machine (D17 T2+T3) at 0389806: optional `machine.parts`, machine drawing, parts list. Review: reviews/bay-machine-review.md (APPROVE; open Low: Engine and Rear-sensor tags overlap ~29x24 px at 1440, move one tag's `ty`).
+- See "Merged in session 3" and "In flight at handoff" below.
+- D18 design changed (decisions.md D18 amendment): seeded demo users, passwords only in the main folder .env
+  (DEMO_OPERATOR_*/DEMO_FM_*), sign-in page /director/live; judges see fixtures. The shared DB now holds the seeded
+  DEMO-LIVE site (scripts/seed-demo-users.ts). sqltests must scope to their own rows (live-path review High).
+- Gate gotcha: implementers' Playwright sometimes writes screenshots into the MAIN folder's docs/design/qa/, which
+  blocks the merge ("untracked files would be overwritten"). Move them to a scratch folder first, then rerun the gate.
+
+## Merged in session 3 (all with an Opus review APPROVE; files in docs/sessions/reviews/)
+- 0389806 lane/l3-bay-machine (D17 T2+T3). d02084e lane/l2-bay-band-tape (D17 T1+T4: band "Demo data · hh:mm · 10×
+  speed", Sync cell only when offline, shift tape). a720218 lane/l2-lane-a (judge #2/#3/#4/#5/#9, idea.md §7, ETA
+  provenance, takeover clear of SOS, Lesson buttons; browser-checked at 360/768/1024/1440 by the reviewer).
+- Open Lows: bay tags Engine/Rear-sensor overlap ~29x24 px at 1440; every shift-tape mark uses the seatbelt
+  pictogram; ppe.restored not scoped per operator; IDS.anomaly stands in for EXC-014's id; nav/shell not `inert`
+  under a Beat 3 Warning (keyboard can Tab beneath).
+
+## D18 live path: MERGED 4205ddd (backend-reviewer APPROVE @36ac9c4, sqltest 14/14 by the lane)
+- Sign in at /director/live with DEMO_OPERATOR_* or DEMO_FM_* from the main folder .env. Nothing is in flight.
+
+## Queue after session 3 (priority order)
+1. A quick browser pass on production of /op, /op/training, /director.
+2. D17 phase 2: T5 Bay layout (home-screen.tsx + new styles/home.css; MachineBay, LoopCard, ShiftTape are now
+   separate mounts on Home to arrange) and T6 While-you-wait (loop-card variant). Phase 3: T7 inbox detail, T8 fleet
+   strip, T9 band ledger cell + triage. Specs: study.md (e). Up to 3 lanes on disjoint files.
+3. D17 phase 4 (3D desktop stage, T10-T11), phase 5 QA, judge-simulator re-score.
+4. Demo video (video-studio skill), never SOS.
+5. Open items from session 2's list below.
 
 ## Done in session 2 (63 % -> ~66 % weekly)
 - QA3 re-run of the wave-2 fixes: 12/12 PASS (docs/design/qa/QA3-report.md).
