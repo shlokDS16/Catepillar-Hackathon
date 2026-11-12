@@ -25,6 +25,10 @@ export type AppState = {
   ledgerSeq: Record<string, number>;
   /** Vest and friends restored by sensor, or currently missing (from ppe.* events). */
   ppeMissing: string[];
+  /** The live supervisor override from `ppe.override_granted` (15 min from the event's sim time); cleared when the vest is restored or the task completes. */
+  ppeOverride: { taskId: string; validUntil: string; missing: string[] } | null;
+  /** Sim time each task was started (first `task.started`), for the elapsed figure. */
+  taskStartedAt: Record<string, string>;
   /** Guardian hazards keyed by anomaly id, so the map can draw them and the takeover can explain them. */
   guardian: Record<string, z.infer<typeof GuardianHazard>>;
   /** The same hazards keyed by the alert id their event carried, so the takeover picks its own hazard (F06-F08 review 6). */
@@ -50,6 +54,8 @@ export const initialState: AppState = {
   dispatch: {},
   ledgerSeq: {},
   ppeMissing: [],
+  ppeOverride: null,
+  taskStartedAt: {},
   guardian: {},
   guardianByAlert: {},
   anomalies: {},
@@ -82,6 +88,9 @@ const nearestOf = (p: PayloadOf<"safety.proximity">) => ({ kind: p.other_kind, i
 function patchTask(tasks: Task[], id: string, patch: Partial<Task>): Task[] {
   return tasks.map((t) => (t.id === id ? { ...t, ...patch } : t));
 }
+
+/** A supervisor override lasts 15 minutes (interaction-map §7). */
+export const OVERRIDE_MS = 15 * 60_000;
 
 export function reduce(state: AppState, action: Action): AppState {
   switch (action.type) {
@@ -205,8 +214,13 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
     case "task.completed":
     case "task.progress": {
       const t = payload(e, "task.progress");
+      const startedAt = { ...state.taskStartedAt };
+      if (e.type === "task.started" && !startedAt[t.task_id]) startedAt[t.task_id] = e.sim_ts ?? e.recorded_at;
+      if (e.type === "task.completed") delete startedAt[t.task_id];
       return {
         ...base,
+        taskStartedAt: startedAt,
+        ppeOverride: e.type === "task.completed" && state.ppeOverride?.taskId === t.task_id ? null : state.ppeOverride,
         tasks: patchTask(state.tasks, t.task_id, {
           status: t.status,
           progress_pct: t.progress_pct,
@@ -231,13 +245,16 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
       return {
         ...base,
         ppeMissing: state.ppeMissing.filter((i) => !restored.has(i)),
+        ppeOverride: null,
         operator: state.operator
           ? { ...state.operator, ppe: { ...state.operator.ppe, ...Object.fromEntries(items.map((i) => [i, true])) } }
           : state.operator,
       };
     }
-    case "ppe.override_granted":
-      return { ...base, ppeMissing: [] };
+    case "ppe.override_granted": {
+      const o = payload(e, "ppe.override_granted");
+      return { ...base, ppeMissing: [], ppeOverride: { taskId: o.task_id, validUntil: new Date(Date.parse(e.sim_ts ?? e.recorded_at) + OVERRIDE_MS).toISOString(), missing: o.missing } };
+    }
 
     // ── Machine and operator ──
     case "safety.seatbelt_breach":

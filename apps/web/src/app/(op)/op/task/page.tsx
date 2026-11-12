@@ -1,5 +1,5 @@
-import { Stub } from "@/components/ui/stub";
+import { TaskScreen } from "@/components/task/task-screen";
 
 export default function Page() {
-  return <Stub task="F10" />;
+  return <TaskScreen />;
 }

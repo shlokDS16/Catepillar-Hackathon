@@ -489,5 +489,99 @@
     },
     "today": "Today",
     "overrideGranted": "Override granted"
+  },
+  "task": {
+    "noTask": "No task assigned right now.",
+    "start": "Start task",
+    "resume": "Resume",
+    "pause": "Pause",
+    "complete": "Complete",
+    "needsPpe": "Needs {items}",
+    "progressLabel": "Progress",
+    "elapsed": "{min} min so far",
+    "elapsedNone": "Elapsed: not started",
+    "plannedStart": "planned {time}",
+    "completed": "{task} completed",
+    "confirmTitle": "Complete {task}?",
+    "confirmBody": "{pct} % done, {min} min so far.",
+    "confirmBodyNoTime": "{pct} % done.",
+    "confirm": "Complete task",
+    "back": "Back",
+    "errors": {
+      "notSent": "Not sent. Try again.",
+      "notPaired": "Pair your machine first.",
+      "pairLink": "Go to start",
+      "invalidState": "The task changed. Check it and try again."
+    },
+    "ppe": {
+      "label": "Protective equipment",
+      "wear": "Wear {item}",
+      "notified": "Supervisor notified",
+      "detected": "{items} detected",
+      "allItems": "Vest",
+      "override": "Override by {name} · until {time}",
+      "overrideNote": "Allowed without: {items}. Recorded in the ledger.",
+      "expired": "Override expired",
+      "supervisorName": "Anita",
+      "item": {
+        "helmet": "helmet",
+        "vest": "vest",
+        "boots": "boots",
+        "gloves": "gloves"
+      }
+    },
+    "why": {
+      "title": "Why this estimate",
+      "none": "No estimate yet.",
+      "pct": "{sign}{pct} %",
+      "noChange": "no change",
+      "group": {
+        "weather": "Weather",
+        "skill": "Operator skill",
+        "age": "Machine age",
+        "heat": "Heat",
+        "wind": "Wind",
+        "circadian": "Shift hour"
+      },
+      "value": {
+        "weather": {
+          "clear": "clear",
+          "hot": "hot",
+          "rain": "rain",
+          "windy": "windy",
+          "cold": "cold",
+          "fog": "fog",
+          "dust": "dust"
+        },
+        "skill": {
+          "novice": "novice",
+          "intermediate": "intermediate",
+          "expert": "expert"
+        },
+        "age": {
+          "lt5": "under 5 years",
+          "5to10": "5 to 10 years",
+          "10to20": "10 to 20 years",
+          "20plus": "over 20 years"
+        },
+        "heat": {
+          "cold": "cold",
+          "normal": "normal",
+          "warm": "warm",
+          "high": "high",
+          "extreme": "extreme"
+        },
+        "wind": {
+          "calm": "calm",
+          "fresh": "fresh",
+          "strong": "strong"
+        },
+        "circadian": {
+          "normal": "normal",
+          "night_trough": "night low",
+          "post_lunch_dip": "after-lunch dip"
+        }
+      }
+    }
   }
 }

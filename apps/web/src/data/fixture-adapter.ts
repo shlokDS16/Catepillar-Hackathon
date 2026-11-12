@@ -246,8 +246,11 @@ export class FixtureAdapter implements DataPort {
   async taskStart(input: { p_task_id: string; p_request_id: string }) {
     await wait(this.latencyMs);
     const missing = this.snapshotValue.operator_state?.ppe.vest === false;
-    if (missing && !this.vestRestored) {
+    const overrideLive = this.overrideUntilMs !== null && this.simMs <= this.overrideUntilMs;
+    if (missing && !this.vestRestored && !overrideLive) {
       this.push(this.event("task.start_blocked", { task_id: input.p_task_id, missing: ["vest"] }), this.event("ppe.missing", { task_id: input.p_task_id, missing: ["vest"] }, { tier: "caution" }));
+      // An override that has run out blocks again with the contract's `override_expired` (interaction-map §7).
+      if (this.overrideUntilMs !== null) throw new RpcError("override_expired");
       return { status: "blocked" as const, task_id: input.p_task_id, missing: ["vest" as const] };
     }
     this.push(this.event("task.started", { ...EVENT_PAYLOADS["task.started"], task_id: input.p_task_id, status: "in_progress", progress_pct: 0 }));
@@ -256,6 +259,8 @@ export class FixtureAdapter implements DataPort {
     return { status: "started" as const, task_id: input.p_task_id, started_at: new Date().toISOString() };
   }
   private vestRestored = false;
+  /** Sim-time ms until which a supervisor override lets Start through. */
+  private overrideUntilMs: number | null = null;
   private progressTimer: ReturnType<typeof setInterval> | null = null;
   private progress = 0;
   private startProgress(taskId: string) {
@@ -309,9 +314,9 @@ export class FixtureAdapter implements DataPort {
   }
   async ppeOverride() {
     await wait(this.latencyMs);
-    this.vestRestored = true;
+    this.overrideUntilMs = this.simMs + 15 * 60_000;
     this.push(this.event("ppe.override_granted", EVENT_PAYLOADS["ppe.override_granted"]));
-    return rpc.ppeOverrideOut;
+    return { ...rpc.ppeOverrideOut, valid_until: new Date(this.overrideUntilMs).toISOString() };
   }
   async ledgerVerify() {
     await wait(this.latencyMs);
@@ -344,5 +349,6 @@ export class FixtureAdapter implements DataPort {
   /** Beat 1's "vest on" also unblocks Start for the fixture's PPE check. */
   markVestRestored() {
     this.vestRestored = true;
+    this.overrideUntilMs = null;
   }
 }
