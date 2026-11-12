@@ -7,24 +7,30 @@ import type { AppEvent, Snapshot } from "@/data/types";
 import type { SiteMapData } from "@/map/site-map";
 import type { LedgerScenario } from "@/ledger/fixtures";
 import type { InboxItem } from "@/inbox/inbox";
+import { clearPersisted, loadPersisted, savePersisted, MAX_EVENTS } from "@/data/fixture-persist";
 
 /**
  * The FixtureAdapter: every read answers from @cat/shared/fixtures, every RPC succeeds after a short
  * wait and emits the events the server would, and the five demo beats (spec §7) can be played from
  * the director. Nothing here reaches the network. The SupabaseAdapter (F13) has the same shape.
  */
+/** The baseline PPE caution and its FM inbox row share this id. */
+const PPE_ALERT_ID = "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1";
 const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 type Listener = (m: PortMessage) => void;
 
-/** 6 and 7 are Ledger-only helpers: 6 = tamper with a re-hash (rewrite), 7 = reset the ledger to intact. */
-export type Beat = 1 | 2 | 3 | 4 | 5 | 6 | 7;
+/**
+ * 6 and 7 are Ledger-only helpers: 6 = tamper with a re-hash (rewrite), 7 = reset the ledger to intact.
+ * 8 = seatbelt fastened and the machine stopped: clears Beat 2's Warning takeover and the motion lock.
+ */
+export type Beat = 1 | 2 | 3 | 4 | 5 | 6 | 7 | 8;
 
 export class FixtureAdapter implements DataPort {
   private listeners = new Set<Listener>();
   private seq = 1000;
-  /** Id of the seatbelt breach event from beat 2, so the lesson and replay can say what they came from. */
-  private breachEventId: string = IDS.event;
+  /** Every event pushed so far, replayed after each snapshot so a reload lands where the demo was. */
+  private log: AppEvent[] = [];
   private simMs = Date.parse(mySnapshot.run.sim_now);
   private ticker: ReturnType<typeof setInterval> | null = null;
   private snapshotValue: Snapshot;
@@ -32,13 +38,16 @@ export class FixtureAdapter implements DataPort {
   ledgerScenario: LedgerScenario = "intact";
   /** The director tab and the operator tab are separate JS contexts; beats travel over this channel. */
   private channel: BroadcastChannel | null = null;
+  /** Off on the server render and after a reset, so a late timer cannot write old state back. */
+  private persistOn = typeof window !== "undefined";
 
   constructor(private latencyMs = 250) {
     // Browser only: the server render has no business listening for director beats (F06-F08 review).
     if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
       this.channel = new BroadcastChannel("spotter-director");
-      this.channel.onmessage = (m: MessageEvent<{ beat?: Beat; failNextIncident?: boolean }>) => {
-        if (m.data.failNextIncident) this.failNextIncidentOnce = true;
+      this.channel.onmessage = (m: MessageEvent<{ beat?: Beat; failNextIncident?: boolean; reset?: boolean }>) => {
+        if (m.data.reset) this.applyReset();
+        else if (m.data.failNextIncident) this.failNextIncidentOnce = true;
         else if (m.data.beat) void this.playBeat(m.data.beat);
       };
     }
@@ -46,20 +55,69 @@ export class FixtureAdapter implements DataPort {
     const base = MySnapshotOut.parse(mySnapshot);
     this.snapshotValue = {
       ...base,
-      active_alerts: [],
+      // The vest is off at the start (Beat 1 restores it), so every surface starts on the same PPE caution:
+      // the task is blocked, the safety chip reads Caution and Safety lists it. The id matches the FM inbox row.
+      active_alerts: [{
+        ...EVENT_PAYLOADS["alert.raised"], alert_id: PPE_ALERT_ID, kind: "ppe_missing" as const, tier: "caution" as const, needs_ack: false,
+        protocol_card_id: null, escalate_at: null, occurrences: 1, upgraded_from: null, status: "open" as const, first_seen: "2026-09-24T09:43:00.000+05:30",
+      }],
       machine: base.machine ? { ...base.machine, moving: false, speed_kmh: 0, seatbelt_fastened: true } : null,
       operator_state: base.operator_state ? { ...base.operator_state, motion_locked: false, call_allowed: true, nearest: { kind: "person", id: IDS.zone, distance_m: 22, zone: "awareness" }, ppe: { helmet: true, vest: false, boots: true, gloves: true } } : null,
       tasks: [
-        { ...base.tasks[0], status: "planned", progress_pct: 0 },
+        { ...base.tasks[0], status: "blocked_ppe", progress_pct: 0 },
         { ...base.tasks[0], id: IDS.zone, task_type: "trenching", status: "planned", planned_start: "2026-09-24T11:00:00.000+05:30", progress_pct: 0 },
       ],
-      assignments: [],
-      recent_events: [],
+      // The 09:40 seatbelt-on-slope lesson and replay are assigned from the start, so /op/training shows the
+      // Replay card on a cold visit. Beat 4 re-announces the same assignment id and the reducer keeps one.
+      assignments: base.assignments,
+      recent_events: [{ ...seatbeltBreachEvent, audiences: [...seatbeltBreachEvent.audiences] }],
     };
+    const saved = typeof window === "undefined" ? null : loadPersisted();
+    if (saved) {
+      this.log = saved.events;
+      this.ledgerScenario = saved.ledgerScenario;
+      this.vestRestored = saved.vestRestored;
+      this.overrideUntilMs = saved.overrideUntilMs;
+      this.seq = saved.seq;
+      this.simMs = saved.simMs;
+      this.progress = saved.progress;
+      // A task that was running when the page reloaded keeps running.
+      const last = [...saved.events].reverse().find((e) => e.type.startsWith("task."));
+      if (last && (last.type === "task.started" || last.type === "task.progress") && saved.progress < 100) {
+        this.startProgress((last.payload as { task_id: string }).task_id);
+      }
+    }
+  }
+
+  /** Write the replayable state to sessionStorage (never throws). */
+  private persist() {
+    if (!this.persistOn) return;
+    savePersisted({ events: this.log, ledgerScenario: this.ledgerScenario, vestRestored: this.vestRestored, overrideUntilMs: this.overrideUntilMs, seq: this.seq, simMs: this.simMs, progress: this.progress });
+  }
+
+  private applyReset() {
+    this.persistOn = false;
+    clearPersisted();
+    if (typeof window !== "undefined") window.location.reload();
+  }
+
+  /** From the director tab: clear the stored state here and in every other open tab, then reload them all. */
+  resetDemo() {
+    this.channel?.postMessage({ reset: true });
+    this.applyReset();
   }
 
   async snapshot(): Promise<Snapshot> {
     await wait(this.latencyMs);
+    // Replay what already happened (a reload mid-demo) once the store has taken the snapshot. Alert
+    // escalation clocks are re-armed so a restored Warning is not born expired.
+    if (this.log.length > 0) {
+      const past = this.log.map((e) => {
+        const p = e.payload as Record<string, unknown>;
+        return e.type === "alert.raised" && typeof p.escalate_at === "string" ? ({ ...e, payload: { ...p, escalate_at: new Date(Date.now() + 20_000).toISOString() } } as AppEvent) : e;
+      });
+      setTimeout(() => past.forEach((e) => this.emit({ kind: "event", event: e })), 0);
+    }
     return this.snapshotValue;
   }
 
@@ -106,6 +164,8 @@ export class FixtureAdapter implements DataPort {
 
   private push(...events: AppEvent[]) {
     for (const e of events) this.emit({ kind: "event", event: e });
+    this.log = [...this.log, ...events].slice(-MAX_EVENTS);
+    this.persist();
   }
 
   /** From the director tab: play here and in every other open tab. */
@@ -127,7 +187,6 @@ export class FixtureAdapter implements DataPort {
       case 2: {
         // Seatbelt off on a slope while moving: breach, warning, motion lock.
         const breach = this.event("safety.seatbelt_breach", EVENT_PAYLOADS["safety.seatbelt_breach"], { tier: "warning" });
-        this.breachEventId = breach.id;
         this.push(
           this.event("operator.motion_lock_changed", { motion_locked: true, call_allowed: false, reason: "moving" }),
           breach,
@@ -171,15 +230,25 @@ export class FixtureAdapter implements DataPort {
       }
       case 4: // The Loop: replay ready from the seatbelt event, lesson assigned.
         this.push(
-          this.event("training.lesson_assigned", { ...EVENT_PAYLOADS["training.lesson_assigned"], because_event_id: this.breachEventId }),
-          this.event("training.replay_ready", { ...EVENT_PAYLOADS["training.replay_ready"], source_event_id: this.breachEventId }),
+          // Same assignment id and source event as the seeded 09:40 card: the reducer keeps one assignment.
+          this.event("training.lesson_assigned", EVENT_PAYLOADS["training.lesson_assigned"]),
+          this.event("training.replay_ready", EVENT_PAYLOADS["training.replay_ready"]),
         );
         return;
       case 6:
         this.ledgerScenario = "rewrite";
+        this.persist();
         return;
       case 7:
         this.ledgerScenario = "intact";
+        this.persist();
+        return;
+      case 8: // The operator fastens the belt and stops: the sensor resolves the alert and the lock lifts.
+        this.push(
+          this.event("safety.seatbelt_resolved", { frame_seq: 2460 }),
+          this.event("alert.resolved", { alert_id: IDS.alert, via: "sensor" }),
+          this.event("operator.motion_lock_changed", { motion_locked: false, call_allowed: true, reason: "parked" }),
+        );
         return;
       case 5: // Ledger: the checkpoint is published, then a tamper is detected.
         this.ledgerScenario = "chain_break";
@@ -197,7 +266,10 @@ export class FixtureAdapter implements DataPort {
             protocol_card_id: null,
             escalate_at: null,
           }),
+          // A dry run: nothing leaves the app, and the line says so.
+          this.event("dispatch.sent", { ...EVENT_PAYLOADS["dispatch.sent"], status: "dry_run" }, { alert_id: IDS.root }),
         );
+        this.persist();
         return;
     }
   }
@@ -264,13 +336,13 @@ export class FixtureAdapter implements DataPort {
       explanation: { en: "EXC-014 hydraulic oil is at 86 °C, rising above its normal 71 °C.", hi: "EXC-014 का हाइड्रोलिक तेल 86 °C है, सामान्य 71 °C से ऊपर।" },
     });
     return [
-      row({ id: IDS.root, kind: "ledger_tamper", tier: "critical", firstSeen: at("09:41"), needsAck: true, dispatch: "telegram:sent" }),
-      row({ id: "a1a1a1a1-a1a1-4a1a-8a1a-a1a1a1a1a1a1", kind: "ppe_missing", tier: "caution", firstSeen: at("09:43"), needsAck: true, operatorName: "Ravi", machineCode: "EXC-007", taskId: IDS.task, taskBlocked: true, missing: ["vest"], dispatch: "telegram:delivered" }),
-      row({ id: IDS.dispatch, kind: "guardian_hazard", tier: "warning", firstSeen: at("09:47"), needsAck: true, operatorName: "Ravi", machineCode: "EXC-014", anomaly: hydraulic, dispatch: "telegram:sent" }),
+      // No ledger_tamper row here: the ledger is intact until Beat 5, which raises it live (the store adds the row).
+      row({ id: PPE_ALERT_ID, kind: "ppe_missing", tier: "caution", firstSeen: at("09:43"), needsAck: true, operatorName: "Ravi", machineCode: "EXC-007", taskId: IDS.task, taskBlocked: true, missing: ["vest"], dispatch: "telegram:dry_run" }),
+      row({ id: IDS.dispatch, kind: "guardian_hazard", tier: "warning", firstSeen: at("09:47"), needsAck: true, operatorName: "Ravi", machineCode: "EXC-014", anomaly: hydraulic, dispatch: "telegram:dry_run" }),
       row({ id: IDS.anomaly, kind: "idle_excess", tier: "caution", firstSeen: at("09:20"), occurrences: 3, machineCode: "EXC-007", anomaly: idle }),
       row({ id: "a2a2a2a2-a2a2-4a2a-8a2a-a2a2a2a2a2a2", kind: "alert_flood", tier: "caution", firstSeen: at("09:30"), needsAck: true, occurrences: 12 }),
       row({ id: "a3a3a3a3-a3a3-4a3a-8a3a-a3a3a3a3a3a3", kind: "near_miss", tier: "caution", firstSeen: at("09:10"), nonPunitive: true }),
-      row({ id: IDS.alert, kind: "seatbelt_off_moving", tier: "warning", firstSeen: at("09:40"), status: "acknowledged", needsAck: true, operatorName: "Ravi", machineCode: "EXC-007", dispatch: "telegram:answered" }),
+      row({ id: IDS.alert, kind: "seatbelt_off_moving", tier: "warning", firstSeen: at("09:40"), status: "acknowledged", needsAck: true, operatorName: "Ravi", machineCode: "EXC-007", dispatch: "telegram:dry_run" }),
       row({ id: "a4a4a4a4-a4a4-4a4a-8a4a-a4a4a4a4a4a4", kind: "proximity_zone", tier: "warning", firstSeen: at("08:55"), status: "resolved", needsAck: true, operatorName: "Meena", machineCode: "DMP-003" }),
       row({ id: "a5a5a5a5-a5a5-4a5a-8a5a-a5a5a5a5a5a5", kind: "idle_excess", tier: "caution", firstSeen: at("08:30"), status: "suppressed", machineCode: "EXC-011" }),
     ];
@@ -307,9 +379,13 @@ export class FixtureAdapter implements DataPort {
   private progress = 0;
   private startProgress(taskId: string) {
     if (this.progressTimer) clearInterval(this.progressTimer);
+    // The ETA counts down from the task's own estimate, so the first tick never jumps to another number.
+    const task = this.snapshotValue.tasks.find((t) => t.id === taskId);
+    const eta50 = task?.eta_p50_min ?? 52;
+    const eta90 = task?.eta_p90_min ?? 61;
     this.progressTimer = setInterval(() => {
       this.progress = Math.min(100, this.progress + 10);
-      this.push(this.event("task.progress", { ...EVENT_PAYLOADS["task.progress"], task_id: taskId, progress_pct: this.progress, eta_p50_min: Math.max(0, 52 - this.progress / 2), eta_p90_min: Math.max(0, 61 - this.progress / 2) }));
+      this.push(this.event("task.progress", { ...EVENT_PAYLOADS["task.progress"], task_id: taskId, progress_pct: this.progress, eta_p50_min: Math.max(0, eta50 * (1 - this.progress / 100)), eta_p90_min: Math.max(0, eta90 * (1 - this.progress / 100)) }));
       if (this.progress >= 100 && this.progressTimer) clearInterval(this.progressTimer);
     }, 6000);
   }
@@ -384,6 +460,7 @@ export class FixtureAdapter implements DataPort {
   async ppeOverride() {
     await wait(this.latencyMs);
     this.overrideUntilMs = this.simMs + 15 * 60_000;
+    this.persist();
     this.push(this.event("ppe.override_granted", EVENT_PAYLOADS["ppe.override_granted"]));
     return { ...rpc.ppeOverrideOut, valid_until: new Date(this.overrideUntilMs).toISOString() };
   }
@@ -452,5 +529,6 @@ export class FixtureAdapter implements DataPort {
   markVestRestored() {
     this.vestRestored = true;
     this.overrideUntilMs = null;
+    this.persist();
   }
 }

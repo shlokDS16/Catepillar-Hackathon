@@ -81,6 +81,13 @@ describe("mapStateAt", () => {
     ]);
   });
 
+  it("my own machine's moving flag follows the machine state (Home), not the walking trail", () => {
+    const own = (ownMoving?: boolean | null) => mapStateAt(model({ ownMoving }), END).machines.find((m) => m.tier === "own");
+    expect(own(false)?.moving).toBe(false);
+    expect(own(true)?.moving).toBe(true);
+    expect(own(null)?.moving).toBe(own(undefined)?.moving); // unknown: inferred from the track as before
+  });
+
   it("gives the moving machine a heading and the parked one none", () => {
     const s = mapStateAt(model(), END);
     const dump = s.machines.find((m) => m.code === "DMP-003");

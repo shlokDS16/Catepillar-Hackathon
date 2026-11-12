@@ -22,3 +22,15 @@ export const IDS = {
 export const T0 = "2026-09-24T09:40:00.000+05:30";   // sim time of the demo seatbelt breach
 export const T1 = "2026-09-24T09:40:01.250+05:30";   // wall time it was recorded
 export const i18n = (en: string, hi: string) => ({ en, hi });
+
+/** Display names for the fixture operators and machines, so a screen shows "Ravi" and "EXC-007", not an id. Simulated roster. */
+export const DISPLAY_NAMES: Readonly<Record<string, string>> = {
+  [IDS.operator]: "Ravi",
+  "22222223-2222-4222-8222-222222222222": "Meena",
+  "22222224-2222-4222-8222-222222222222": "Arjun",
+  "22222225-2222-4222-8222-222222222222": "Sunita",
+  [IDS.machine]: "EXC-007",
+  "e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e1e1": "DMP-003",
+  "e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e2e2": "EXC-011",
+  [IDS.anomaly]: "EXC-014",
+};

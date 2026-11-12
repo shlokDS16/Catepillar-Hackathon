@@ -15,7 +15,7 @@
     "sosActive": "SOS active",
     "live": "Live",
     "reconnecting": "Reconnecting…",
-    "fixture": "Simulated shift",
+    "fixture": "Demo data",
     "openSync": "Connection",
     "comingSoon": "Coming in a later task.",
     "languageNamed": "Language: {name}",
@@ -25,9 +25,10 @@
     "skipToContent": "Skip to content",
     "sosHold": "SOS: hold for 1.5 seconds to send",
     "sosOpen": "Tap to open",
-    "fixtureStatus": "Simulated shift · {time} · {speed}× speed",
+    "fixtureStatus": "Demo data · {time} · {speed}× speed",
+    "syncOffline": "{n, plural, =0 {Offline} other {Offline, {n} queued}}",
+    "syncLabel": "Sync",
     "source": {
-      "demo": "Demo data",
       "live": "Live data",
       "fallback": "Live data unavailable, showing demo data",
       "liveParts": "Live: snapshot, Replay, ledger check. Demo data: tasks, alerts, map, inbox, lessons, Ask. SOS is always a dry run.",
@@ -51,7 +52,7 @@
       "ready": "Ready",
       "working": "Working",
       "paused": "Paused",
-      "blocked": "Blocked",
+      "blocked": "Needs PPE",
       "done": "Done",
       "fault": "Fault"
     },
@@ -80,7 +81,7 @@
       "paused": "Paused",
       "completed": "Done",
       "cancelled": "Cancelled",
-      "blocked_ppe": "Blocked"
+      "blocked_ppe": "Needs PPE"
     }
   },
   "nav": {
@@ -146,7 +147,8 @@
     "simulated": "simulated",
     "someAssumed": "Some values are assumed",
     "sourceWeather": "Weather: Open-Meteo archive, CC BY 4.0",
-    "sourceOpenMeteo": "Open-Meteo archive, CC BY 4.0"
+    "sourceOpenMeteo": "Open-Meteo archive, CC BY 4.0",
+    "sourceScenarioWeather": "Scenario weather + Open-Meteo, CC BY 4.0"
   },
   "hero": {
     "machine": "{code} · {model}",
@@ -196,6 +198,20 @@
     }
   },
   "home": {
+    "tape": {
+      "title": "Your shift",
+      "now": "Now {time}",
+      "working": "Working",
+      "waiting": "Waiting",
+      "break": "Break",
+      "planned": "Planned",
+      "heat": "Heat peak {time} (scenario forecast)",
+      "event": "Safety event",
+      "openReplay": "Open the replay.",
+      "marksTitle": "Marks on your shift",
+      "pinHeat": "Heat peak {time}",
+      "range": "{from} to {to}"
+    },
     "conditions": "Conditions",
     "wbgt": "WBGT {c} °C",
     "temp": "{c} °C",
@@ -593,7 +609,7 @@
     "notChecked": "Not checked yet",
     "witnessLabel": "Telegram witness",
     "witnessAnswer": "The database matches what you received outside it",
-    "matches": "Matches your Telegram checkpoint · {n}",
+    "matches": "Matches the checkpoint line · {n}",
     "noMatch": "Does not match",
     "verifiedSealed": "{v} verified · {s} sealed, chain checked",
     "notRechecked": "Not re-checked in this browser",
@@ -606,7 +622,7 @@
     "pasteNeeded": "Paste the Telegram line to compare",
     "verify": "Verify ledger",
     "compareTitle": "Compare with Telegram",
-    "step1": "Open the SPOTTER-LEDGER message in your Telegram.",
+    "step1": "Get the SPOTTER-LEDGER checkpoint line (a live run sends it by Telegram; this demo sends nothing, copy it from /director).",
     "pasteLabel": "Telegram line",
     "from": "From",
     "to": "To",
@@ -618,7 +634,7 @@
     "busy": "Ledger is busy recording, try again",
     "network": "Could not reach the ledger.",
     "tryAgain": "Try again",
-    "fromTelegram": "From your Telegram",
+    "fromTelegram": "From the checkpoint line",
     "recomputed": "Recomputed from ledger rows now",
     "root": "Root",
     "head": "Head",
@@ -629,6 +645,7 @@
     "serverAgrees": "same root as this browser",
     "serverDiffers": "different root from this browser",
     "tableTitle": "Entries",
+    "simulatedTag": "Simulated",
     "colSeq": "#",
     "colTime": "Time",
     "colType": "Type",
@@ -712,7 +729,7 @@
       "no_answer": "no answer",
       "failed": "failed",
       "suppressed": "suppressed",
-      "dry_run": "dry run (not sent)"
+      "dry_run": "dry run, nothing sent"
     },
     "acknowledge": "Acknowledge",
     "grantOverride": "Grant override",

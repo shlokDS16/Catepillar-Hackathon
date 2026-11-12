@@ -148,6 +148,17 @@
   flex-wrap: wrap;
   gap: var(--hit-gap);
   margin-top: auto;
+  /* Back and Next stay on screen without scrolling (1440x900 and 375x812): pinned above the dock, or to the bottom edge from 1024 px where the rail replaces the dock. */
+  position: sticky;
+  bottom: calc(var(--dock-total) + var(--s-2));
+  z-index: 1;
+  padding-block: var(--s-2);
+  background: var(--surface);
+}
+@media (min-width: 1024px) {
+  .lesson-actions {
+    bottom: var(--s-3);
+  }
 }
 .lesson-end {
   justify-content: center;

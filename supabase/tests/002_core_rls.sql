@@ -77,7 +77,7 @@ begin
   assert (select count(*) from public.app_config) = 0, 'app_config hidden from OP';
   assert (select count(*) from public.operator_gps_trail) = 1, 'OP sees own trail only';
   assert (select count(*) from public.shifts) = 1, 'OP sees own shifts only';
-  assert (select count(*) from public.ppe_overrides where operator_id in (select id from public.operators where site_id = pg_temp.id('site'))) = 1, 'OP sees own overrides';
+  assert (select count(*) from public.ppe_overrides) = 1, 'OP sees own overrides';
   assert (select count(*) from public.consents) = 1, 'OP sees own consents only';
   assert (select count(*) from public.operator_pairings) = 0, 'an operator does not read a colleague''s pairing (005b, data-model §2.10)';
   assert (select count(*) from public.machines) >= 1, 'reference data readable';
@@ -150,7 +150,7 @@ begin
   assert (select count(*) from public.operator_state) = 0, 'TR sees no operator state';
   assert (select count(*) from public.ppe_overrides) = 0, 'TR sees no overrides';
   assert (select count(*) from public.consents) = 0, 'TR sees no consents';
-  assert (select count(*) from public.shifts where operator_id in (select id from public.operators where site_id = pg_temp.id('site'))) = 2, 'TR sees shifts';
+  assert (select count(*) from public.shifts) = 2, 'TR sees shifts';
   assert (select count(*) from public.operator_pairings) = 0, 'TR reads no pairings (005b)';
 end $$;
 

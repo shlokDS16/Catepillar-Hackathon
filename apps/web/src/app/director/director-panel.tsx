@@ -9,6 +9,7 @@ import type { Beat } from "@/data/fixture-adapter";
 const BEATS: Array<{ beat: Beat; label: string }> = [
   { beat: 1, label: "Beat 1 · vest on (PPE restored)" },
   { beat: 2, label: "Beat 2 · seatbelt off on a slope (warning + motion lock)" },
+  { beat: 8, label: "Beat 2b · seatbelt fastened, machine stopped (clears the warning)" },
   { beat: 3, label: "Beat 3 · Guardian: EXC-014 hydraulic drift (on foot)" },
   { beat: 4, label: "Beat 4 · replay ready + lesson assigned" },
   { beat: 5, label: "Beat 5 · ledger checkpoint, then tamper (edit: chain breaks)" },
@@ -53,6 +54,12 @@ export function DirectorPanel() {
       <Button block variant="secondary" href="/director/live">
         Live switch (sign in to read the real backend)
       </Button>
+      <section aria-label="Reset demo" className="flex flex-col gap-2">
+        <h2 className="t-label">Reset</h2>
+        <Button block onClick={() => fixtureAdapter().resetDemo()}>
+          Reset demo (clears the saved state here and in every open tab, then reloads them)
+        </Button>
+      </section>
       <section aria-label="Incident report failure (fixtures)" className="flex flex-col gap-2">
         <h2 className="t-label">Incident sheet</h2>
         <Button

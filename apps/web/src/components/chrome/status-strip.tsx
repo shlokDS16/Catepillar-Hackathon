@@ -8,7 +8,9 @@ import { useSafetyState } from "@/alerts/use-safety-state";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { useAppState } from "@/data/store";
+import { dataLabel } from "@/chrome/data-label";
 import { useDataSource } from "@/data/use-data-source";
+import { syncState } from "@/chrome/sync-state";
 import { useMotionLock } from "@/hero/use-motion-lock";
 
 const FALLBACK_PICTO: Record<"clear" | "nosignal", PictogramName> = { clear: "seatbelt", nosignal: "sos" };
@@ -28,35 +30,16 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
   const clock = useAppState((s) => s.clock);
   const serverLocked = useAppState((s) => s.operator?.motion_locked ?? false);
   const lockShown = useMotionLock(serverLocked);
-  const source = useDataSource();
-  const runStatus = useAppState((s) => s.snapshot?.run?.status ?? null);
 
   const safetyWord = t(`enums.safety.${safety}`);
   const picto: PictogramName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? FALLBACK_PICTO.nosignal : FALLBACK_PICTO.clear;
 
-  let connText: string;
-  switch (connectivity.kind) {
-    case "live":
-      connText = clock ? t("chrome.simStatus", { time: format.dateTime(new Date(clock.sim_now), "time"), speed: clock.speed }) : t("chrome.live");
-      break;
-    case "reconnecting":
-      connText = t("chrome.reconnecting");
-      break;
-    case "nosignal":
-      connText = t("chrome.noSignalStatus", { time: format.dateTime(new Date(connectivity.syncedAtMs), "time") });
-      break;
-    default:
-      connText = clock ? t("chrome.fixtureStatus", { time: format.dateTime(new Date(clock.sim_now), "time"), speed: clock.speed }) : t("chrome.fixture");
-  }
-
-  // D18: say which data this is. A failed live call shows the plain notice instead of the clock.
-  // Live: the run's own state, never the fixture clock. Tooltip names what is still demo data.
-  connText =
-    source === "fallback"
-      ? t("chrome.source.fallback")
-      : source === "live"
-        ? `${t("chrome.source.live")} · ${t(`chrome.source.run.${runStatus ?? "none"}`)}`
-        : `${t("chrome.source.demo")} · ${connText}`;
+  const source = useDataSource();
+  const runStatus = useAppState((s) => s.snapshot?.run?.status ?? null);
+  const connText = dataLabel({ connectivity, clock, t, formatTime: (ms) => format.dateTime(new Date(ms), "time"), source, runStatus });
+  const sync = syncState(connectivity);
+  // No outbox exists yet, so "Saved" or "n queued" would claim something nothing measured: the cell shows only when offline.
+  const syncText = sync.kind === "offline" ? t("chrome.syncOffline", { n: sync.n }) : null;
 
   return (
     <header className="strip" inert={lockShown || undefined}>
@@ -73,9 +56,17 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
         </Chip>
       ) : null}
       {title}
-      <span className="strip-cap t-caption" data-conn={connectivity.kind} title={source === "live" ? t("chrome.source.liveParts") : undefined}>
-        {connText}
-      </span>
+      <div className="strip-cells">
+        <span className="strip-cap t-caption" data-conn={connectivity.kind} title={source === "live" ? t("chrome.source.liveParts") : undefined}>
+          {connText}
+        </span>
+        {syncText ? (
+          <span className="strip-sync t-caption" data-state={sync.kind}>
+            <span className="sr-only">{t("chrome.syncLabel")}: </span>
+            {syncText}
+          </span>
+        ) : null}
+      </div>
       <div className="strip-actions">{actions}</div>
     </header>
   );

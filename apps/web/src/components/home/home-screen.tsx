@@ -4,6 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useSafetyState } from "@/alerts/use-safety-state";
 import { HeroCard } from "@/components/hero/hero-card";
 import { LoopCard } from "@/components/home/loop-card";
+import { ShiftTape } from "@/components/home/shift-tape";
 import { MachineBay } from "@/components/machine/machine-bay";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram } from "@/components/ui/pictogram";
@@ -72,6 +73,8 @@ export function HomeScreen() {
         <MachineBay />
 
         <LoopCard />
+
+        <ShiftTape />
 
         <section aria-label={t("home.todaysTasks")} className="flex flex-col gap-2">
           <h2 className="t-title">{t("home.todaysTasks")}</h2>
