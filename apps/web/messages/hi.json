@@ -163,25 +163,20 @@
     "forecast": "{time} तक {c} °C का अनुमान (परिदृश्य पूर्वानुमान)",
     "etaImpact": "बचा समय {pct, number, +#;-#} %",
     "loopTitle": "आज की वजह से",
-    "becauseToday": "आज की वजह से",
-    "practise": "अभ्यास · लगभग 3 मिनट",
-    "lessonCards": "पाठ · {n} कार्ड",
     "todaysTasks": "आज के काम",
     "noTasks": "आज कोई काम नहीं। सुपरवाइज़र से पूछें।",
     "modeLabel": "दृश्य",
     "simple": "सरल",
     "detailed": "विस्तृत",
     "modeNotSaved": "इस डिवाइस पर सेव नहीं हुआ",
-    "lessonLink": "पाठ",
     "lesson": {
       "seatbelt_slopes": "ढलान पर सीटबेल्ट खुली",
       "faulty_machine_nearby": "पास में ख़राब मशीन"
     },
-    "startLesson": "पाठ शुरू करें · {n} कार्ड",
-    "startLessonPlain": "पाठ शुरू करें",
     "recurrence": "{topic}: {days} दिन में {n} बार दोबारा",
     "recurrenceTitle": "आपके पाठ के बाद",
-    "recurrenceSim": "नकली आँकड़ा"
+    "recurrenceSim": "नकली आँकड़ा",
+    "secLoop": "02 — अभ्यास"
   },
   "map": {
     "mapLabel": "साइट नक्शा",
@@ -787,7 +782,6 @@
     "emptyTitle": "कुछ बाकी नहीं। शाबाश।",
     "openLessonsTitle": "जब चाहें खोलें",
     "because": "{time} की वजह से",
-    "becauseToday": "आज की वजह से",
     "kind": {
       "replay": "अभ्यास",
       "lesson": "पाठ"
@@ -809,7 +803,11 @@
     "topic": {
       "seatbelt_slopes": "सीटबेल्ट",
       "faulty_machine_nearby": "मशीन की ख़राबी"
-    }
+    },
+    "secAssigned": "01 — आपके लिए",
+    "secOpen": "02 — जब चाहें",
+    "becauseUnknown": "पहले की घटना की वजह से",
+    "doneNote": "पूरे हुए काम इस डिवाइस की हाल की गतिविधि से दिखते हैं।"
   },
   "lesson": {
     "kind": {
@@ -839,6 +837,9 @@
     "loading": "पाठ आ रहा है…",
     "loadFailed": "पाठ नहीं मिला। फिर कोशिश करें।",
     "backToTraining": "← अभ्यास",
-    "choicesLabel": "एक जवाब चुनें"
+    "choicesLabel": "एक जवाब चुनें",
+    "notFound": "यह पाठ उपलब्ध नहीं है।",
+    "reviewNote": "आप यह पाठ पहले पूरा कर चुके हैं। यह दोहराव है: स्कोर सेव नहीं होगा।",
+    "secLesson": "पाठ"
   }
 }

@@ -3,10 +3,7 @@ import { emptyProgress, lastLessonDone, nextItem, trainingItems } from "@/traini
 
 const A = { id: "a1", lesson_code: "seatbelt_slopes", because_event_id: "e1", replay_id: "r1" };
 const B = { id: "a2", lesson_code: "faulty_machine_nearby", because_event_id: "e2", replay_id: null };
-const events = [
-  { id: "e1", sim_ts: "2026-11-12T10:42:00Z", recorded_at: "2026-11-12T10:42:05Z" },
-  { id: "e2", sim_ts: null, recorded_at: "2026-11-12T09:00:00Z" },
-];
+const events = { e1: "2026-11-12T10:42:00Z", e2: "2026-11-12T09:00:00Z" };
 
 describe("trainingItems", () => {
   it("puts a replay before its own lesson and gives lesson-only assignments one row", () => {

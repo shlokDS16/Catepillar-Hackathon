@@ -4,7 +4,6 @@ import { useTranslations } from "next-intl";
 import { GuideEntry } from "@/components/training/guide-entry";
 import { ItemAction, useBecause, useLessonTitle } from "@/components/training/training-bits";
 import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import { Plate } from "@/components/ui/plate";
 import { useAppState } from "@/data/store";
 import { nextItem, OPEN_LESSONS, trainingItems, type TrainingItem } from "@/training/assignments";
@@ -19,6 +18,7 @@ export function TrainingScreen() {
   const snapshot = useAppState((s) => s.snapshot);
   const assignments = useAppState((s) => s.assignments);
   const progress = useAppState((s) => s.training);
+  const times = useAppState((s) => s.eventTimes);
 
   if (!snapshot) {
     return (
@@ -29,15 +29,16 @@ export function TrainingScreen() {
     );
   }
 
-  const items = trainingItems(assignments, progress, snapshot.recent_events);
+  const items = trainingItems(assignments, progress, times);
   const next = nextItem(items);
+  const anyDone = items.some((i) => i.status === "done");
 
   return (
     <div className="training">
       {items.length > 0 ? (
         <section className="tr-section" aria-labelledby="tr-assigned">
-          <h2 id="tr-assigned" className="t-title">
-            {t("assignedTitle")}
+          <h2 id="tr-assigned" className="t-caption sec-label">
+            {t("secAssigned")}
           </h2>
           <ul className="tr-list" aria-label={t("listLabel")}>
             {items.map((item) => (
@@ -46,15 +47,16 @@ export function TrainingScreen() {
               </li>
             ))}
           </ul>
+          {anyDone ? <p className="t-meta text-ink-3">{t("doneNote")}</p> : null}
         </section>
       ) : (
         <section className="tr-section" aria-labelledby="tr-empty">
-          <Plate rule="heavy" className="tr-empty">
+          <Plate className="tr-empty">
             <h2 id="tr-empty" className="t-title">
               {t("emptyTitle")}
             </h2>
           </Plate>
-          <h3 className="t-label text-ink-2">{t("openLessonsTitle")}</h3>
+          <h3 className="t-caption sec-label">{t("secOpen")}</h3>
           <ul className="tr-list">
             {OPEN_LESSONS.map((code) => (
               <li key={code}>
@@ -76,22 +78,15 @@ function AssignmentRow({ item, primary }: { item: TrainingItem; primary: boolean
   const done = item.status === "done";
   return (
     <Plate as="article" className="tr-row" data-status={item.status} aria-label={title ? t(item.kind === "replay" ? "replayTitle" : "lessonTitle", { title }) : undefined}>
-      <div className="tr-row-top">
-        <Chip tone="outline" word>
-          {t(`kind.${item.kind}`)}
-        </Chip>
-        <Chip tone={done ? "ink" : "outline"} word>
-          {t(`status.${item.status}`)}
-        </Chip>
-      </div>
+      <p className="t-caption sec-because">
+        {t(`kind.${item.kind}`)} · <span className="tr-status" data-status={item.status}>{t(`status.${item.status}`)}</span>
+      </p>
       {title ? <p className="t-title">{title}</p> : null}
-      <p className="t-meta text-ink-2 tnum">{because}</p>
-      {done && item.kind === "replay" && item.scores ? (
-        <p className="t-label tnum">{t("scores", item.scores)}</p>
-      ) : null}
+      <p className="t-caption sec-because tnum">{because}</p>
+      {done && item.kind === "replay" && item.scores ? <p className="t-label tnum">{t("scores", item.scores)}</p> : null}
       {done && item.kind === "lesson" && item.quizScore != null ? <p className="t-label tnum">{t("quiz", { n: item.quizScore })}</p> : null}
       <div className="tr-row-action">
-        <ItemAction item={item} primary={primary} />
+        <ItemAction item={item} primary={primary} block />
       </div>
     </Plate>
   );
@@ -102,12 +97,10 @@ function OpenLessonRow({ code }: { code: string }) {
   const title = useLessonTitle(code);
   return (
     <Plate as="article" className="tr-row">
-      <Chip tone="outline" word>
-        {t("kind.lesson")}
-      </Chip>
+      <p className="t-caption sec-because">{t("kind.lesson")}</p>
       {title ? <p className="t-title">{title}</p> : null}
       <div className="tr-row-action">
-        <Button href={`/op/training/lesson/${code}`} prefetch={false}>
+        <Button block href={`/op/training/lesson/${code}`} prefetch={false}>
           {t("lessonStartPlain")}
         </Button>
       </div>

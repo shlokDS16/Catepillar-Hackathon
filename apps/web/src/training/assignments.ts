@@ -19,13 +19,12 @@ export type TrainingItem =
   | { key: string; kind: "replay"; assignmentId: string; lessonCode: string; replayId: string; status: "todo" | "done"; scores: ReplayScores | null; eventAt: string | null }
   | { key: string; kind: "lesson"; assignmentId: string; lessonCode: string; replayId: string | null; status: "todo" | "done"; quizScore: number | null; eventAt: string | null };
 
-type EventRef = { id: string; sim_ts: string | null; recorded_at: string };
+/** Event id to its time, as the store keeps it (AppState.eventTimes). */
+export type EventTimes = Readonly<Record<string, string>>;
 
-/** The time of the event an assignment came from, when that event is among the recent ones. */
-export function eventTime(events: readonly EventRef[], eventId: string | null): string | null {
-  if (!eventId) return null;
-  const e = events.find((x) => x.id === eventId);
-  return e ? (e.sim_ts ?? e.recorded_at) : null;
+/** The time of the event an assignment came from, or null when that event is not known. */
+export function eventTime(times: EventTimes, eventId: string | null): string | null {
+  return eventId ? (times[eventId] ?? null) : null;
 }
 
 /**
@@ -34,10 +33,10 @@ export function eventTime(events: readonly EventRef[], eventId: string | null): 
  * before its lesson, as in the loop (event, replay, lesson). Done rows follow, in the same order.
  * Equal times keep the order the assignments arrived in.
  */
-export function trainingItems(assignments: readonly Assignment[], progress: TrainingProgress, events: readonly EventRef[] = []): TrainingItem[] {
+export function trainingItems(assignments: readonly Assignment[], progress: TrainingProgress, times: EventTimes = {}): TrainingItem[] {
   const rows: Array<{ item: TrainingItem; order: number }> = [];
   assignments.forEach((a, i) => {
-    const eventAt = eventTime(events, a.because_event_id);
+    const eventAt = eventTime(times, a.because_event_id);
     if (a.replay_id) {
       const scores = progress.replayDone[a.replay_id] ?? null;
       rows.push({

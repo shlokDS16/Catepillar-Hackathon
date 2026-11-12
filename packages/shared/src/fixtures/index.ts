@@ -190,16 +190,34 @@ export const lessonContent = {
   cards: [
     { id: "k1", kind: "rule" as const, title: i18n("The rule", "नियम"), body: i18n("Fasten before moving.", "चलने से पहले लगाएँ।"),
       pictogram: "belt", image_path: null, audio_id: "lesson.seatbelt_slopes.k1" },
-    { id: "k2", kind: "why" as const, title: i18n("Why", "क्यों"), body: i18n("Rollovers throw you out.", "पलटने पर बाहर गिरते हैं।"),
+    { id: "k2", kind: "why" as const, title: i18n("Why", "क्यों"), body: i18n("On a slope a machine can roll over. Without a belt you are thrown out.", "ढलान पर मशीन पलट सकती है। बिना बेल्ट आप बाहर गिर जाते हैं।"),
       pictogram: "rollover", image_path: null, audio_id: null },
     { id: "k3", kind: "check" as const, title: i18n("Check", "जाँच"), body: i18n("Click, tug, go.", "क्लिक, खींचो, चलो।"),
       pictogram: "check", image_path: null, audio_id: null },
   ],
-  quiz: [1, 2, 3].map((n) => ({
-    id: `q${n}`, prompt: i18n(`Question ${n}`, `प्रश्न ${n}`),
-    choices: [{ id: "a", label: i18n("Yes", "हाँ"), pictogram: "yes" }, { id: "b", label: i18n("No", "नहीं"), pictogram: "no" }],
-    correct_id: "a", why: i18n("Because.", "क्योंकि।"),
-  })),
+  quiz: [
+    { id: "q1", prompt: i18n("The machine is on a slope and your seatbelt is off. What do you do?", "मशीन ढलान पर है और आपकी सीटबेल्ट खुली है। आप क्या करेंगे?"),
+      choices: [
+        { id: "a", label: i18n("Stop and fasten the belt", "रुकें और सीटबेल्ट लगाएँ"), pictogram: "belt" },
+        { id: "b", label: i18n("Keep going to flat ground", "समतल जगह तक चलते रहें"), pictogram: "info" },
+      ],
+      correct_id: "a",
+      why: i18n("On a slope the machine can tip. The belt keeps you in the seat, so fasten it first.", "ढलान पर मशीन पलट सकती है। सीटबेल्ट आपको सीट पर रखती है, इसलिए पहले उसे लगाएँ।") },
+    { id: "q2", prompt: i18n("When do you fasten the seatbelt?", "सीटबेल्ट कब लगानी है?"),
+      choices: [
+        { id: "a", label: i18n("When I reach the slope", "जब ढलान पर पहुँचूँ"), pictogram: "info" },
+        { id: "b", label: i18n("Before the machine moves", "मशीन चलने से पहले"), pictogram: "belt" },
+      ],
+      correct_id: "b",
+      why: i18n("The belt goes on before the first move. You may not get time to do it on the slope.", "पहली हरकत से पहले बेल्ट लगती है। ढलान पर इसका समय नहीं मिलता।") },
+    { id: "q3", prompt: i18n("Your seatbelt will not click. What now?", "आपकी सीटबेल्ट नहीं लग रही। अब क्या करें?"),
+      choices: [
+        { id: "a", label: i18n("Work carefully without it", "सावधानी से बिना बेल्ट के काम करें"), pictogram: "info" },
+        { id: "b", label: i18n("Stop and tell my supervisor", "रुकें और सुपरवाइज़र को बताएँ"), pictogram: "sos" },
+      ],
+      correct_id: "b",
+      why: i18n("A belt that will not click is a fault. Do not use the machine until it is fixed.", "जो बेल्ट नहीं लगती वह ख़राबी है। ठीक होने तक मशीन न चलाएँ।") },
+  ],
   video_path: null, source_refs: ["osha:1926.602"],
 };
 

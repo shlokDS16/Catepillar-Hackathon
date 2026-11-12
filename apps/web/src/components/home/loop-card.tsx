@@ -9,39 +9,44 @@ import { useAppState, useDataPort } from "@/data/store";
 import { lastLessonDone, nextItem, trainingItems, type TrainingItem } from "@/training/assignments";
 
 /**
- * S1 L4, the end of the loop: my next assignment with one primary action (Practise for a replay,
- * Start lesson for a lesson), and once a lesson is done the recurrence hint
- * ("Seatbelt: 0 repeats in 7 days", labelled simulated). Nothing is shown when nothing is
- * assigned and nothing is done.
+ * S1 L4, the end of the loop: my next assignment as a full-width Practise (primary) over a
+ * full-width Lesson button, and once a lesson is done the recurrence hint
+ * ("Seatbelt: 0 repeats in 7 days", marked SIMULATED). Nothing is shown when nothing is assigned
+ * and nothing is done.
  */
 export function LoopCard() {
   const snapshot = useAppState((s) => s.snapshot);
   const assignments = useAppState((s) => s.assignments);
   const progress = useAppState((s) => s.training);
+  const times = useAppState((s) => s.eventTimes);
   if (!snapshot) return null;
-  const items = trainingItems(assignments, progress, snapshot.recent_events);
+  const items = trainingItems(assignments, progress, times);
   const next = nextItem(items);
+  // The lesson of the same assignment, offered beside Practise while it is still open.
+  const lesson = next?.kind === "replay" ? (items.find((i) => i.kind === "lesson" && i.assignmentId === next.assignmentId && i.status === "todo") ?? null) : null;
   const doneCode = lastLessonDone(assignments, progress);
   return (
     <>
-      {next ? <NextCard item={next} /> : null}
+      {next ? <NextCard item={next} lesson={lesson} /> : null}
       {doneCode ? <RecurrenceCard code={doneCode} /> : null}
     </>
   );
 }
 
-function NextCard({ item }: { item: TrainingItem }) {
+function NextCard({ item, lesson }: { item: TrainingItem; lesson: TrainingItem | null }) {
   const t = useTranslations("home");
   const title = useLessonTitle(item.lessonCode);
   const because = useBecause(item.eventAt);
   return (
-    <Plate as="section" rule="heavy" className="flex flex-col gap-3" aria-label={t("loopTitle")}>
-      <p className="t-label text-ink-2 tnum">{because}</p>
-      {title ? <p className="t-title">{title}</p> : null}
-      <div className="flex flex-wrap items-center gap-6">
-        <ItemAction item={item} primary />
-      </div>
-    </Plate>
+    <section className="loop" aria-label={t("loopTitle")}>
+      <p className="t-caption sec-label">{t("secLoop")}</p>
+      <Plate className="flex flex-col gap-3">
+        <p className="t-caption sec-because tnum">{because}</p>
+        {title ? <p className="t-title">{title}</p> : null}
+        <ItemAction item={item} primary block />
+        {lesson ? <ItemAction item={lesson} primary={false} block /> : null}
+      </Plate>
+    </section>
   );
 }
 
@@ -68,9 +73,11 @@ function RecurrenceCard({ code }: { code: string }) {
   const topic = training.has(`topic.${code}`) ? training(`topic.${code}`) : code;
   return (
     <Plate as="section" rule="hair" className="flex flex-col gap-1" aria-label={t("recurrenceTitle")}>
-      <p className="t-label text-ink-2">{t("recurrenceTitle")}</p>
+      <p className="t-caption sec-because">
+        {t("recurrenceTitle")}
+        {hint.simulated ? <> · <span className="sim-tag">{t("recurrenceSim")}</span></> : null}
+      </p>
       <p className="t-title tnum">{t("recurrence", { topic, n: hint.repeats, days: hint.days })}</p>
-      {hint.simulated ? <p className="t-meta text-ink-3">{t("recurrenceSim")}</p> : null}
     </Plate>
   );
 }

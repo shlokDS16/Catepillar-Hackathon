@@ -163,25 +163,20 @@
     "forecast": "peak {c} °C forecast by {time} (scenario forecast)",
     "etaImpact": "ETA {pct, number, +#;-#} %",
     "loopTitle": "Because of today",
-    "becauseToday": "Because of today",
-    "practise": "Practise · about 3 min",
-    "lessonCards": "Lesson · {n} cards",
     "todaysTasks": "Today's tasks",
     "noTasks": "No tasks today. Ask your supervisor.",
     "modeLabel": "View",
     "simple": "Simple",
     "detailed": "Detailed",
     "modeNotSaved": "Not saved on this device",
-    "lessonLink": "Lesson",
     "lesson": {
       "seatbelt_slopes": "Seatbelt off on a slope",
       "faulty_machine_nearby": "Faulty machine nearby"
     },
-    "startLesson": "Start lesson · {n} cards",
-    "startLessonPlain": "Start lesson",
     "recurrence": "{topic}: {n, plural, =0 {0 repeats} one {# repeat} other {# repeats}} in {days} days",
     "recurrenceTitle": "Since your lesson",
-    "recurrenceSim": "simulated"
+    "recurrenceSim": "SIMULATED",
+    "secLoop": "02 — PRACTISE"
   },
   "map": {
     "mapLabel": "Site map",
@@ -787,7 +782,6 @@
     "emptyTitle": "Nothing assigned. Well done.",
     "openLessonsTitle": "Lessons you can open any time",
     "because": "Because of {time}",
-    "becauseToday": "Because of today",
     "kind": {
       "replay": "Practice",
       "lesson": "Lesson"
@@ -809,7 +803,11 @@
     "topic": {
       "seatbelt_slopes": "Seatbelt",
       "faulty_machine_nearby": "Machine fault"
-    }
+    },
+    "secAssigned": "01 — ASSIGNED TO YOU",
+    "secOpen": "02 — OPEN ANY TIME",
+    "becauseUnknown": "Because of an earlier event",
+    "doneNote": "Finished items come from this device's recent activity."
   },
   "lesson": {
     "kind": {
@@ -839,6 +837,9 @@
     "loading": "Loading the lesson…",
     "loadFailed": "Lesson not available. Try again.",
     "backToTraining": "← Practice",
-    "choicesLabel": "Choose one answer"
+    "choicesLabel": "Choose one answer",
+    "notFound": "This lesson is not available.",
+    "reviewNote": "You finished this lesson before. This is a review: no score is saved.",
+    "secLesson": "LESSON"
   }
 }

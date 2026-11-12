@@ -8,13 +8,13 @@ import { localText } from "@/components/alerts/alert-takeover";
 import { Button } from "@/components/ui/button";
 import { Mark, Pictogram } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
-import { newRequestId } from "@/data/port";
+import { newRequestId, RpcError } from "@/data/port";
 import { useAppState, useDataPort } from "@/data/store";
 import type { Lang } from "@/data/types";
 import { lessonGlyph, lessonProgress, lessonReduce, quizCorrect, quizScore, startLesson, type LessonState } from "@/training/lesson";
 import { cx } from "@/lib/cx";
 
-type Load = { state: "loading" } | { state: "failed" } | { state: "ready"; lesson: LessonContent };
+type Load = { state: "loading" } | { state: "failed" } | { state: "missing" } | { state: "ready"; lesson: LessonContent };
 
 /**
  * S5c Lesson `/op/training/lesson/[code]` (T11, T12). Cards (RULE / WHY / HOW / EXAMPLE / CHECK),
@@ -36,8 +36,8 @@ export function LessonScreen({ code }: { code: string }) {
       .then((lesson) => {
         if (live) setLoad({ state: "ready", lesson });
       })
-      .catch(() => {
-        if (live) setLoad({ state: "failed" });
+      .catch((e: unknown) => {
+        if (live) setLoad(e instanceof RpcError && e.code === "not_found" ? { state: "missing" } : { state: "failed" });
       });
     return () => {
       live = false;
@@ -51,11 +51,17 @@ export function LessonScreen({ code }: { code: string }) {
 
   return (
     <div className="lesson">
-      <Button variant="secondary" size="dense" href="/op/training" prefetch={false} className="lesson-back">
+      <Button variant="secondary" href="/op/training" prefetch={false} className="lesson-back">
         {t("backToTraining")}
       </Button>
-      {load.state === "failed" ? (
-        <Plate as="section" rule="heavy" className="lesson-failed">
+      {load.state === "missing" ? (
+        <Plate as="section" className="lesson-failed">
+          <p className="t-body" role="alert">
+            {t("notFound")}
+          </p>
+        </Plate>
+      ) : load.state === "failed" ? (
+        <Plate as="section" className="lesson-failed">
           <p className="t-body" role="alert">
             {t("loadFailed")}
           </p>
@@ -82,7 +88,13 @@ function LessonPlayer({ lesson }: { lesson: LessonContent }) {
   const posted = useRef(false);
 
   // The assignment this lesson was set for; an open lesson (no assignment) is not posted.
-  const assignment = assignments.find((a) => a.lesson_code === lesson.code && done[a.id] == null) ?? assignments.find((a) => a.lesson_code === lesson.code);
+  // Fixed at mount: the completion event removes it from "open" while the end screen is still up.
+  // A lesson whose assignment is already done opens as a review: no score is posted again (T12, no retry in P0).
+  const [target] = useState(() => {
+    const open = assignments.find((a) => a.lesson_code === lesson.code && done[a.id] == null);
+    return { assignment: open ?? null, review: !open && assignments.some((a) => a.lesson_code === lesson.code) };
+  });
+  const assignment = target.assignment;
   const view = state.view;
   const title = localText(lesson.title, lang);
   const progress = lessonProgress(state, lesson);
@@ -113,8 +125,8 @@ function LessonPlayer({ lesson }: { lesson: LessonContent }) {
   return (
     <>
       <header className="lesson-head">
-        <p className="t-label">
-          {t("frame")} · <span lang={title.english ? "en" : undefined}>{title.value}</span>
+        <p className="t-caption sec-label">
+          {t("secLesson")} · <span lang={title.english ? "en" : undefined}>{title.value}</span>
         </p>
         {view.phase !== "end" ? (
           <p className="t-label tnum" aria-live="polite">
@@ -122,6 +134,8 @@ function LessonPlayer({ lesson }: { lesson: LessonContent }) {
           </p>
         ) : null}
       </header>
+
+      {target.review ? <p className="t-meta text-ink-2">{t("reviewNote")}</p> : null}
 
       {view.phase === "cards" ? (
         <CardView key={view.card} lesson={lesson} index={view.card} onNext={advance} onBack={() => dispatch({ type: "back" })} />
@@ -171,17 +185,19 @@ function CardView({ lesson, index, onNext, onBack }: { lesson: LessonContent; in
   const body = localText(card.body, lang);
   useAutoplay(card.audio_id);
   return (
-    <Plate as="section" rule="heavy" className="lesson-card" aria-labelledby="lesson-card-title">
-      <p className="t-label lesson-kind">{t(`kind.${card.kind}`)}</p>
+    <Plate as="section" className="lesson-card" aria-labelledby="lesson-card-title">
+      <p className="t-caption lesson-kind">{t(`kind.${card.kind}`)}</p>
       <div className="lesson-glyph">
         <Glyph name={card.pictogram} />
       </div>
-      <h2 id="lesson-card-title" className="t-title" lang={title.english ? "en" : undefined}>
-        {title.value}
-      </h2>
-      <p className="t-body lesson-body" lang={body.english ? "en" : undefined}>
-        {body.value}
-      </p>
+      <div className="lesson-text">
+        <h2 id="lesson-card-title" className="t-title" lang={title.english ? "en" : undefined}>
+          {title.value}
+        </h2>
+        <p className="t-body lesson-body" lang={body.english ? "en" : undefined}>
+          {body.value}
+        </p>
+      </div>
       <div className="lesson-actions">
         <Button variant="primary" onClick={onNext}>
           {t("next")}
@@ -217,8 +233,8 @@ function QuizView({ lesson, index, picked, onAnswer, onNext }: { lesson: LessonC
   }, [revealed]);
 
   return (
-    <Plate as="section" rule="heavy" className="lesson-card" aria-labelledby="lesson-q-title">
-      <p className="t-label lesson-kind">{t("quizLabel")}</p>
+    <Plate as="section" className="lesson-card" aria-labelledby="lesson-q-title">
+      <p className="t-caption lesson-kind">{t("quizLabel")}</p>
       <h2 id="lesson-q-title" className="t-title" lang={prompt.english ? "en" : undefined}>
         {prompt.value}
       </h2>
@@ -289,7 +305,7 @@ function EndView({ lesson, answers, save, onRetry }: { lesson: LessonContent; an
   const correct = quizCorrect(lesson, answers);
   const total = lesson.quiz.length;
   return (
-    <Plate as="section" rule="heavy" className="lesson-card lesson-end" aria-labelledby="lesson-end-title">
+    <Plate as="section" className="lesson-card lesson-end" aria-labelledby="lesson-end-title">
       <h2 id="lesson-end-title" className="t-figure tnum">
         {t("endTitle", { n: correct, total })}
       </h2>
