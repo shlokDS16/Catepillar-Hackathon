@@ -1,9 +1,8 @@
 # STATE (source of truth; only the integrator/orchestrator edits this file)
 
 > **2026-11-12 session 3 (lead L0, Opus, 66 % -> ~68 % weekly): merged D17 Machine Bay phase 1 (0389806 drawing +
-> parts, d02084e honest band + shift tape) and Lane A judge fixes (a720218).** D18 live path (lane/l1-live-path) is
-> approved apart from a merge-only fix; it signs in as seeded demo users (passwords only in the git-ignored .env).
-> Next: gate the live path, then D17 phases 2-5, then the demo video. Queue: docs/sessions/lead-handoff.md.
+> parts, d02084e honest band + shift tape) and Lane A judge fixes (a720218), and the D18 live path (4205ddd).** /director/live signs in as seeded demo users
+> (passwords only in the git-ignored .env); judges see fixtures. Next: D17 phases 2-5, then the demo video. Queue: docs/sessions/lead-handoff.md.
 
 > **2026-11-12 session 2 (lead L0, Opus): Shlok chose D17 Machine Bay revamp (3D on desktop), D18 thin live path;
 > he is unavailable (exam), build autonomously to 92 % weekly.** QA3 12/12 PASS; judge 6.75/10; phase-validator
