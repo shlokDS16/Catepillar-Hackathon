@@ -38,10 +38,10 @@ export function FactorRows({ factors, detailed }: { factors: Task["eta_factors"]
   );
 }
 
-function TagView({ tag, label }: { tag: FactorTag; label: (k: "assumed" | "simulated" | "sourceWeather" | "sourceOpenMeteo") => string }) {
+function TagView({ tag, label }: { tag: FactorTag; label: (k: "assumed" | "simulated" | "sourceWeather" | "sourceOpenMeteo" | "sourceScenarioWeather") => string }) {
   if (tag.kind === "none") return null;
   if (tag.kind === "source") {
-    const key = SOURCE_MESSAGE_KEY[tag.label] as "sourceWeather" | "sourceOpenMeteo" | undefined;
+    const key = SOURCE_MESSAGE_KEY[tag.label] as "sourceWeather" | "sourceOpenMeteo" | "sourceScenarioWeather" | undefined;
     return <span className="t-meta text-ink-3">{key ? label(key) : tag.label}</span>;
   }
   return <Chip tone="meta">{label(tag.kind)}</Chip>;

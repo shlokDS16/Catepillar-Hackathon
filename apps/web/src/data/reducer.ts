@@ -307,11 +307,15 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
     case "ppe.restored": {
       const items = payload(e, "ppe.restored").items;
       const restored = new Set<string>(items);
+      const stillMissing = state.ppeMissing.filter((i) => !restored.has(i));
       return {
         ...base,
-        ppeMissing: state.ppeMissing.filter((i) => !restored.has(i)),
+        ppeMissing: stillMissing,
         ppeOverride: null,
         ppeRestored: items,
+        // Nothing missing any more: a task blocked on PPE can start again and the PPE caution closes.
+        tasks: stillMissing.length === 0 ? state.tasks.map((t) => (t.status === "blocked_ppe" ? { ...t, status: "planned" as const } : t)) : state.tasks,
+        alerts: stillMissing.length === 0 ? state.alerts.map((a) => (a.kind === "ppe_missing" && a.status === "open" ? { ...a, status: "resolved" as const } : a)) : state.alerts,
         operator: state.operator
           ? { ...state.operator, ppe: { ...state.operator.ppe, ...Object.fromEntries(items.map((i) => [i, true])) } }
           : state.operator,
@@ -327,10 +331,12 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
       return state.machine ? { ...base, machine: { ...state.machine, seatbelt_fastened: false, speed_kmh: payload(e, "safety.seatbelt_breach").speed_kmh, moving: true } } : base;
     case "safety.seatbelt_resolved":
       return state.machine ? { ...base, machine: { ...state.machine, seatbelt_fastened: true } } : base;
-    case "operator.motion_lock_changed":
-      return state.operator
-        ? { ...base, operator: { ...state.operator, ...pick(payload(e, "operator.motion_lock_changed")) } }
-        : base;
+    case "operator.motion_lock_changed": {
+      const lock = payload(e, "operator.motion_lock_changed");
+      // "parked" means the machine has stopped: Home and the map must stop saying it is moving.
+      const machine = lock.reason === "parked" && state.machine ? { ...state.machine, moving: false, speed_kmh: 0 } : state.machine;
+      return state.operator ? { ...base, machine, operator: { ...state.operator, ...pick(lock) } } : { ...base, machine };
+    }
     case "safety.proximity":
       return state.operator
         ? {

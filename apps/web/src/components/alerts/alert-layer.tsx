@@ -1,13 +1,14 @@
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useLocale } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { useEffect, useState } from "react";
 import { cautionBanner, takeoverQueue } from "@/alerts/selectors";
 import { AlertBanner } from "@/components/alerts/alert-banner";
 import { AlertTakeover } from "@/components/alerts/alert-takeover";
 import { MotionLock } from "@/components/hero/motion-lock";
 import { newRequestId } from "@/data/port";
+import { parseDispatch } from "@/inbox/inbox";
 import { useAppState, useDataPort } from "@/data/store";
 import type { ProtocolCard } from "@/data/types";
 import { useMotionLock } from "@/hero/use-motion-lock";
@@ -22,6 +23,7 @@ export function AlertLayer() {
   const port = useDataPort();
   const router = useRouter();
   const lang = useLocale();
+  const ti = useTranslations("inbox");
   const alerts = useAppState((s) => s.alerts);
   const machine = useAppState((s) => s.machine);
   const tasks = useAppState((s) => s.tasks);
@@ -74,7 +76,9 @@ export function AlertLayer() {
   const hazard = top?.kind === "guardian_hazard" ? guardian[guardianByAlert[top.alert_id] ?? ""] : undefined;
   const anomaly = hazard ? anomalies[hazard.anomaly_id] : undefined;
   const explanation = anomaly ? (lang === "hi" ? anomaly.explanation.hi : anomaly.explanation.en) : undefined;
-  const dispatchLine = top && top.tier === "critical" ? dispatch[top.alert_id]?.at(-1) : undefined;
+  const rawDispatch = top && top.tier === "critical" ? parseDispatch(dispatch[top.alert_id]?.at(-1) ?? null) : null;
+  // A dry run reads as one: "Telegram: dry run, nothing sent", never "sent".
+  const dispatchLine = rawDispatch ? ti("dispatch", { channel: ti.has(`channel.${rawDispatch.channel}`) ? ti(`channel.${rawDispatch.channel}`) : rawDispatch.channel, status: ti.has(`dispatchStatus.${rawDispatch.status}`) ? ti(`dispatchStatus.${rawDispatch.status}`) : rawDispatch.status }) : undefined;
 
   return (
     <>

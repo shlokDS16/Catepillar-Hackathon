@@ -44,7 +44,7 @@
       "ready": "तैयार",
       "working": "चालू",
       "paused": "रुका",
-      "blocked": "अटका",
+      "blocked": "बनियान चाहिए",
       "done": "पूरा",
       "fault": "ख़राबी"
     },
@@ -139,7 +139,8 @@
     "simulated": "सिम्युलेटेड डेटा",
     "someAssumed": "कुछ मान अनुमानित हैं",
     "sourceWeather": "मौसम: Open-Meteo आर्काइव, CC BY 4.0",
-    "sourceOpenMeteo": "Open-Meteo आर्काइव, CC BY 4.0"
+    "sourceOpenMeteo": "Open-Meteo आर्काइव, CC BY 4.0",
+    "sourceScenarioWeather": "परिदृश्य मौसम + Open-Meteo, CC BY 4.0"
   },
   "hero": {
     "machine": "{code} · {model}",
@@ -593,6 +594,7 @@
     "serverAgrees": "इस ब्राउज़र जैसा ही रूट",
     "serverDiffers": "इस ब्राउज़र से अलग रूट",
     "tableTitle": "प्रविष्टियाँ",
+    "simulatedTag": "सिम्युलेटेड",
     "colSeq": "#",
     "colTime": "समय",
     "colType": "प्रकार",
@@ -676,7 +678,7 @@
       "no_answer": "जवाब नहीं",
       "failed": "असफल",
       "suppressed": "दबाया गया",
-      "dry_run": "ड्राई रन (भेजा नहीं गया)"
+      "dry_run": "ड्राई रन, कुछ भेजा नहीं गया"
     },
     "acknowledge": "स्वीकार करें",
     "grantOverride": "छूट दें",

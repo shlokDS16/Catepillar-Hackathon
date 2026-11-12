@@ -163,7 +163,22 @@ describe("rowView privacy", () => {
     expect(countSealed([nmRow, rows[1]!])).toBe(1);
     const typed = { ...rows[0]!, canonical_fields: { ...rows[0]!.canonical_fields, incident_type: "near_miss" } };
     expect(rowView(typed).sealed).toBe(true);
-    expect(rowView(rows[0]!).operator).toBe("22222221");
+    // Fixture ids show as their names, never as a raw id.
+    const v = rowView(rows[0]!);
+    expect(v.operator).toMatch(/^(Ravi|Meena|Arjun|Sunita)$/);
+    expect(v.machine).toMatch(/^(EXC|DMP)-\d{3}$/);
+  });
+  it("an unknown id keeps its short prefix", async () => {
+    const rows = await ledgerRows("intact");
+    const odd = { ...rows[0]!, canonical_fields: { ...rows[0]!.canonical_fields, operator_id: "99999999-9999-4999-8999-999999999990" } };
+    expect(rowView(odd).operator).toBe("99999999");
+  });
+  it("the seed varies types and time steps (not a fixed cycle at one-minute steps)", async () => {
+    const rows = await ledgerRows("intact");
+    const fields = rows.filter((r) => r.canonical_fields.sealed !== true).map((r) => r.canonical_fields);
+    expect(new Set(fields.map((f) => f.incident_type)).size).toBeGreaterThanOrEqual(5);
+    const gaps = new Set(fields.slice(1).map((f, i) => Math.round((Date.parse(String(f.occurred_at)) - Date.parse(String(fields[i]!.occurred_at))) / 60_000)));
+    expect(gaps.size).toBeGreaterThanOrEqual(5);
   });
 });
 

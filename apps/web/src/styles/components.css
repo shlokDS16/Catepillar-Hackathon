@@ -711,11 +711,12 @@
 }
 @media (min-width: 1024px) {
   .takeover {
-    inset: var(--strip-h) 0 0 var(--rail-w);
+    /* The rail sits under the takeover too: nothing beside it may stay visible or clickable. */
+    inset: var(--strip-h) 0 0 0;
     padding-bottom: var(--s-6);
   }
   .takeover[data-tier="critical"] {
-    inset: 0 0 0 var(--rail-w);
+    inset: 0;
   }
 }
 

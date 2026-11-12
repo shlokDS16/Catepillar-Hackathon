@@ -19,6 +19,7 @@ const SOURCE_LABEL: Partial<Record<ProvenanceTable, string>> = {
 export const SOURCE_MESSAGE_KEY: Record<string, string> = {
   "Weather: Open-Meteo archive, CC BY 4.0": "sourceWeather",
   "Open-Meteo archive, CC BY 4.0": "sourceOpenMeteo",
+  "Scenario weather + Open-Meteo archive, CC BY 4.0": "sourceScenarioWeather",
 };
 
 /** The raw registry answer, or null when the column is not listed (internal). */

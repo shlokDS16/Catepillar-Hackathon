@@ -44,7 +44,7 @@
       "ready": "Ready",
       "working": "Working",
       "paused": "Paused",
-      "blocked": "Blocked",
+      "blocked": "Needs vest",
       "done": "Done",
       "fault": "Fault"
     },
@@ -139,7 +139,8 @@
     "simulated": "simulated",
     "someAssumed": "Some values are assumed",
     "sourceWeather": "Weather: Open-Meteo archive, CC BY 4.0",
-    "sourceOpenMeteo": "Open-Meteo archive, CC BY 4.0"
+    "sourceOpenMeteo": "Open-Meteo archive, CC BY 4.0",
+    "sourceScenarioWeather": "Scenario weather + Open-Meteo, CC BY 4.0"
   },
   "hero": {
     "machine": "{code} · {model}",
@@ -593,6 +594,7 @@
     "serverAgrees": "same root as this browser",
     "serverDiffers": "different root from this browser",
     "tableTitle": "Entries",
+    "simulatedTag": "Simulated",
     "colSeq": "#",
     "colTime": "Time",
     "colType": "Type",
@@ -676,7 +678,7 @@
       "no_answer": "no answer",
       "failed": "failed",
       "suppressed": "suppressed",
-      "dry_run": "dry run (not sent)"
+      "dry_run": "dry run, nothing sent"
     },
     "acknowledge": "Acknowledge",
     "grantOverride": "Grant override",

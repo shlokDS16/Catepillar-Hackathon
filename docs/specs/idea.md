@@ -204,21 +204,27 @@ ends in a **coached debrief**. The simulations are the learning; video is option
 - A seeded Python generator (uv) with realistic correlations + injected labelled anomalies, which also
   exports **organiser-format CSVs** so judges can see their schema handled directly.
 
-## 7. Demo (≈5 min, 6 timed steps; backup video of every live-call step)
-1. **0:00-0:40** Ravi opens Spotter in Hindi → PPE blocks Start → vest on → the task starts. Hero card
-   with ETA 52 min (P90 61), and "why": heat +22 %, novice +15 %.
-2. **0:40-1:30** A live telemetry stream shows seatbelt off on a slope → Warning, vibration, Hindi TTS →
-   acknowledged → ledger entry.
-3. **1:30-2:40** **Guardian**: the detector flags EXC-014's hydraulic drift → the map lights up →
-   protocol card → Ravi is on foot, so **his phone rings** in Hindi, and the fleet manager gets Telegram.
-4. **2:40-3:40** **Replay** of Ravi's own seatbelt-on-slope breach from step 2 (the event the design
-   uses): Brief → Investigate (he picks the relevant evidence cards) → Decide (timed) → Debrief with
-   scores, his process vs the ideal, the rule, and the animated re-enactment of his real event. Then a
-   20 s interactive lesson card with Hindi audio. (Flow video clips are P1 and optional.)
+## 7. Demo (≈5 min, 6 timed steps; runs on the simulated shift, no calls or messages go out, D15)
+Every Telegram or call line in the app reads "dry run, nothing sent". The state survives a page reload
+(session storage); the director's **Reset demo** clears it.
+1. **0:00-0:40** Ravi opens Spotter in Hindi → the header shows a PPE caution ("Needs vest") and Start is
+   blocked → Beat 1 "vest detected" → the task starts. Hero card with ETA 52 min (P90 61), and "why":
+   heat +22 %, novice +15 %.
+2. **0:40-1:30** Beat 2: seatbelt off on a slope → Warning takeover, vibration, Hindi TTS → **Acknowledge**
+   → ledger entry. Beat "seatbelt fastened, machine stopped" clears the takeover and the motion lock.
+3. **1:30-2:40** **Guardian** (Beat 3): the detector flags EXC-014's hydraulic drift → the map lights up →
+   protocol card → Ravi is on foot, so the alert goes to him as a call, which the app shows as a dry run
+   (nothing rings); the fleet manager's Telegram line is a dry run too. Two **Acknowledge** taps clear the
+   stacked takeovers (the hazard, then Beat 2's warning if it is still open).
+4. **2:40-3:40** **Replay** of Ravi's own 09:40 seatbelt-on-slope breach (already assigned on /op/training;
+   Beat 4 only re-announces it): Brief → Investigate (he picks the relevant evidence cards) → Decide (timed)
+   → Debrief with scores, his process vs the ideal, the rule, and the animated re-enactment of his real
+   event. Then a 20 s interactive lesson card with Hindi audio.
 5. **3:40-4:30** Fleet manager console: evidence card (precision/recall, ETA MAE vs the planner's
-   estimate, the repeat-event trend labelled "how we would measure impact") → **Verify ledger** →
-   tamper a row live → the chain breaks. Anita compares the recomputed root with the root in her own
-   Telegram message: **tamper-evident, human-verifiable**.
+   estimate, the repeat-event trend labelled "how we would measure impact") → **Verify ledger** (clean:
+   the inbox has no ledger alert yet) → Beat 5 tampers a row live → the chain breaks and a Critical alert
+   appears. Anita compares the recomputed root with the root in her own Telegram message (pasted;
+   nothing is sent): **tamper-evident, human-verifiable**.
 6. **4:30-5:00** Close: how it plugs into VisionLink, Cat Detect and Cat AI Assistant; the KPIs; the roadmap.
 Q&A backups: **Ask Spotter** with a photo (P0), the offline chip, the Tamil script switch, and the
 anomaly explanation with ₹ cost.

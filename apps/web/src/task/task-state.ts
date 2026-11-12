@@ -112,6 +112,9 @@ export function splitFactorKey(key: string): { group: string; value: string } {
 /** The merged key for a hot-weather label and a temperature band that are both in the estimate. */
 export const WEATHER_HEAT_KEY = "weather_heat:combined";
 
+/** Source line for the merged weather and heat row: the label is the scenario, the temperature is Open-Meteo. */
+export const SCENARIO_WEATHER_SOURCE = "Scenario weather + Open-Meteo archive, CC BY 4.0";
+
 /**
  * The ETA model multiplies a `weather:hot|cold` label (the forecast category, e.g. hot +11 %) and a `heat:*` band (the
  * temperature, e.g. extreme +17 %). Both describe a hot day, so listing them apart reads as a double count
@@ -135,7 +138,8 @@ export function factorRows(factors: readonly EtaFactor[] | null | undefined, opt
   const rows = mergeWeatherHeat(factors).map((f): FactorRow => {
     const { group, value } = splitFactorKey(f.key);
     const field = FACTOR_FIELD[group];
-    const tag: FactorTag = f.assumed ? { kind: "assumed" } : field ? provenanceOf(field[0], field[1]) : { kind: "none" };
+    // The hot/cold label is a scenario field the organiser sets; only the temperature band is Open-Meteo data.
+    const tag: FactorTag = f.assumed ? { kind: "assumed" } : group === "weather_heat" ? { kind: "source", label: SCENARIO_WEATHER_SOURCE } : field ? provenanceOf(field[0], field[1]) : { kind: "none" };
     return { key: f.key, group, value, pct: Math.round((f.multiplier - 1) * 100), tag };
   });
   rows.sort((a, b) => Math.abs(b.pct) - Math.abs(a.pct));
