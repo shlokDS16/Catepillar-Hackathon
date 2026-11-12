@@ -8,8 +8,20 @@ export type SiteMapData = {
   zones: Zone[];
   /** The operator's GPS trail, oldest first. */
   trail: LatLon[];
-  /** Other machines on the site (mine comes from the snapshot). */
-  machines: Array<{ id: string; code: string; lat: number; lon: number; moving: boolean; health: "ok" | "caution" | "fault" }>;
+  /**
+   * Other machines on the site (mine comes from the snapshot). `track` is optional recent history,
+   * oldest first, each fix aged relative to the newest data (`ago_ms`); without it the machine has
+   * one fix, at lat/lon. The last track entry is the current position.
+   */
+  machines: Array<{
+    id: string;
+    code: string;
+    lat: number;
+    lon: number;
+    moving: boolean;
+    health: "ok" | "caution" | "fault";
+    track?: Array<{ ago_ms: number; lat: number; lon: number }>;
+  }>;
 };
 
 /** Guardian rings around the operator (ISO 21815-informed, not a certified collision-warning system). */
@@ -73,4 +85,50 @@ export function planBounds(points: LatLon[], center: LatLon, pad = 40): { x: num
   const minY = Math.min(0, ...ys) - pad;
   const maxY = Math.max(0, ...ys) + pad;
   return { x: minX, y: minY, w: maxX - minX, h: maxY - minY };
+}
+
+export type Px = { x: number; y: number };
+export type Padding = { top: number; right: number; bottom: number; left: number };
+
+/** The smallest lat/lon box around `points`, or null for none. */
+export function boundsOf(points: readonly LatLon[]): { south: number; west: number; north: number; east: number } | null {
+  if (points.length === 0) return null;
+  let south = Infinity;
+  let west = Infinity;
+  let north = -Infinity;
+  let east = -Infinity;
+  for (const p of points) {
+    south = Math.min(south, p.lat);
+    north = Math.max(north, p.lat);
+    west = Math.min(west, p.lon);
+    east = Math.max(east, p.lon);
+  }
+  return { south, west, north, east };
+}
+
+/** A site is never drawn tighter than this many metres across, so one point does not zoom to a pixel. */
+const MIN_EXTENT_M = 120;
+
+/**
+ * The paper plan's projector: lat/lon to pixels in a w x h box, fitting `points` with `pad` px
+ * around them, centred, north up, the same px per metre both ways. Pure, so the fallback and the
+ * overlay that sits on top of the basemap agree on where everything is.
+ */
+export function fitProjector(points: readonly LatLon[], size: { w: number; h: number }, padding: number | Padding = 40): (p: LatLon) => Px {
+  const pad: Padding = typeof padding === "number" ? { top: padding, right: padding, bottom: padding, left: padding } : padding;
+  const box = boundsOf(points) ?? { south: 0, west: 0, north: 0, east: 0 };
+  const centre: LatLon = { lat: (box.south + box.north) / 2, lon: (box.west + box.east) / 2 };
+  const sw = planProject({ lat: box.south, lon: box.west }, centre);
+  const ne = planProject({ lat: box.north, lon: box.east }, centre);
+  const extW = Math.max(MIN_EXTENT_M, Math.abs(ne.x - sw.x));
+  const extH = Math.max(MIN_EXTENT_M, Math.abs(sw.y - ne.y));
+  const availW = size.w - pad.left - pad.right;
+  const availH = size.h - pad.top - pad.bottom;
+  const scale = Math.max(0.01, Math.min(availW / extW, availH / extH));
+  const cx = pad.left + availW / 2;
+  const cy = pad.top + availH / 2;
+  return (p) => {
+    const m = planProject(p, centre);
+    return { x: cx + m.x * scale, y: cy + m.y * scale };
+  };
 }

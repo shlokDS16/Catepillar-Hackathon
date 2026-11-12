@@ -1,5 +1,33 @@
 import { describe, expect, it } from "vitest";
-import { bearingDeg, compassKey, distanceM, planBounds, planProject, ringPolygon, RING_M, type LatLon } from "./site-map";
+import { bearingDeg, boundsOf, compassKey, distanceM, fitProjector, planBounds, planProject, ringPolygon, RING_M, type LatLon } from "./site-map";
+
+describe("fitProjector", () => {
+  const pts: LatLon[] = [
+    { lat: 21.146, lon: 79.088 },
+    { lat: 21.147, lon: 79.089 },
+  ];
+  it("centres the points, north up, inside the padded box", () => {
+    const project = fitProjector(pts, { w: 400, h: 300 }, 20);
+    const a = project(pts[0]);
+    const b = project(pts[1]);
+    expect(b.y).toBeLessThan(a.y); // north is up
+    expect(b.x).toBeGreaterThan(a.x); // east is right
+    for (const p of [a, b]) {
+      expect(p.x).toBeGreaterThanOrEqual(20 - 0.01);
+      expect(p.x).toBeLessThanOrEqual(380 + 0.01);
+      expect(p.y).toBeGreaterThanOrEqual(20 - 0.01);
+      expect(p.y).toBeLessThanOrEqual(280 + 0.01);
+    }
+    expect((a.x + b.x) / 2).toBeCloseTo(200, 3);
+    expect((a.y + b.y) / 2).toBeCloseTo(150, 3);
+  });
+  it("does not blow a single point up, and boundsOf handles none", () => {
+    const project = fitProjector([pts[0]], { w: 400, h: 300 });
+    expect(project(pts[0])).toEqual({ x: 200, y: 150 });
+    expect(boundsOf([])).toBeNull();
+    expect(boundsOf(pts)).toEqual({ south: 21.146, west: 79.088, north: 21.147, east: 79.089 });
+  });
+});
 
 const SITE: LatLon = { lat: 21.1463, lon: 79.0882 };
 

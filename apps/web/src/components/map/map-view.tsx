@@ -2,20 +2,23 @@
 
 // maplibre-gl.css is imported in app/globals.css inside the `vendor` cascade layer, not here:
 // an unlayered vendor stylesheet would outrank every layered Spotter rule.
-import { useEffect, useRef, useState, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useTranslations } from "next-intl";
-import type { GeoJSONSource, Map as MapLibreMap, MapMouseEvent } from "maplibre-gl";
-import { Button } from "@/components/ui/button";
+import type { Map as MapLibreMap } from "maplibre-gl";
+import { MapOverlay, type Project } from "@/components/map/map-overlay";
 import { SitePlan } from "@/components/map/site-plan";
-import { ringPolygon, RING_M, type LatLon, type SiteMapData } from "@/map/site-map";
+import type { MapState } from "@/map/map-state";
+import { boundsOf, fitProjector, type LatLon, type SiteMapData } from "@/map/site-map";
 
 type Props = {
   data: SiteMapData;
-  /** The operator (or the paired machine when the operator has no fix): centre, rings and trail end. */
-  me: LatLon | null;
-  /** Anomaly positions to mark, from anomaly.detected payloads. */
-  anomalies?: Array<{ id: string; lat: number; lon: number }>;
-  /** FM: tapping a machine opens its anomaly detail. */
+  state: MapState;
+  /** Every point the site view should fit: zones, trails, machines, my rings. Stable between cursor moves. */
+  fitPoints: LatLon[];
+  /** Where the camera starts: me, my rings and what is near them. Defaults to every point. */
+  focusPoints?: LatLon[];
+  ownCode: string | null;
+  selectedId: string | null;
   onSelectMachine?: (machineId: string) => void;
   /** Offline: the basemap is not attempted at all; the plan carries the last known positions. */
   offline?: boolean;
@@ -24,6 +27,8 @@ type Props = {
 const STYLE_URL = "https://tiles.openfreemap.org/styles/positron";
 /** Served unhashed from public/ by scripts/copy-maplibre-worker.mjs; see that file for why. */
 const WORKER_URL = "/maplibre/maplibre-gl-worker.mjs";
+/** Room for marker labels, which hang below their markers. */
+const FIT_PADDING = { top: 72, right: 72, bottom: 112, left: 72 };
 
 /**
  * WebGL2 is MapLibre's requirement; on the server there is no canvas to ask. Probed once per page:
@@ -52,21 +57,30 @@ function useWebgl(): boolean {
 }
 
 /**
- * S4 map: my dot and the 15 m / 50 m Guardian rings (D11: the radar is folded into these rings),
- * my trail, the zones and the other machines by health, on the OpenFreeMap positron basemap.
+ * S4 map: the OpenFreeMap positron basemap when it is up, the paper plan otherwise, and ONE overlay
+ * (zones, my 15 m / 50 m Guardian rings, trails, machines) on either. The overlay is HTML and SVG
+ * positioned by a projector, so it is identical on the basemap and the plan, keyboard-reachable, and
+ * redrawn from the time cursor's state without touching MapLibre's layers.
  *
- * The paper site plan is not an error state but the ground floor: it draws the same geometry from
- * data we already hold, so it renders immediately and the basemap simply replaces it once the
- * style is up. An operator on a dead network therefore never waits on a timer or sees a blank
- * square, and no arbitrary timeout can mistake a slow network for a missing one.
+ * The paper plan is the ground floor, not an error state: it renders immediately and the basemap
+ * simply replaces it once the style is up, so an operator on a dead network never waits on a timer.
  */
-export function MapView({ data, me, anomalies = [], onSelectMachine, offline = false }: Props) {
+export function MapView({ data, state, fitPoints, focusPoints, ownCode, selectedId, onSelectMachine, offline = false }: Props) {
   const t = useTranslations("map");
+  const wrap = useRef<HTMLDivElement>(null);
   const container = useRef<HTMLDivElement>(null);
   const mapRef = useRef<MapLibreMap | null>(null);
+  const fitRef = useRef(fitPoints);
+  const focusRef = useRef(focusPoints ?? fitPoints);
   const webgl = useWebgl();
   const [mapState, setMapState] = useState<"loading" | "live" | "failed">("loading");
-  const center = me ?? data.center;
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  const [liveProject, setLiveProject] = useState<Project | null>(null);
+
+  useEffect(() => {
+    fitRef.current = fitPoints;
+    focusRef.current = focusPoints ?? fitPoints;
+  });
 
   // Offline and no-WebGL are known during render, so they are derived, never set from an effect.
   const blocked: "offline" | "no_webgl" | null = offline ? "offline" : webgl ? null : "no_webgl";
@@ -74,12 +88,27 @@ export function MapView({ data, me, anomalies = [], onSelectMachine, offline = f
   const reason: "loading" | "no_webgl" | "tiles_blocked" | "offline" =
     blocked ?? (mapState === "failed" ? "tiles_blocked" : "loading");
 
+  // The frame's size drives both projectors. The map is told too, or it would keep its first size.
+  useEffect(() => {
+    const node = wrap.current;
+    if (!node) return;
+    const measure = () => {
+      setSize({ w: node.clientWidth, h: node.clientHeight });
+      mapRef.current?.resize();
+    };
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(node);
+    return () => ro.disconnect();
+  }, []);
+
   useEffect(() => {
     if (blocked) return;
     const node = container.current;
     if (!node) return;
 
     let cancelled = false;
+    let frame = 0;
     void (async () => {
       try {
         const maplibre = await import("maplibre-gl");
@@ -88,14 +117,34 @@ export function MapView({ data, me, anomalies = [], onSelectMachine, offline = f
         // verdict from the previous map must not survive into this one.
         setMapState("loading");
         maplibre.setWorkerUrl(WORKER_URL);
+        const box = boundsOf(focusRef.current);
         const map = new maplibre.Map({
           container: node,
           style: STYLE_URL,
-          center: [center.lon, center.lat],
-          zoom: 16.5,
+          ...(box
+            ? { bounds: [[box.west, box.south], [box.east, box.north]] as [[number, number], [number, number]], fitBoundsOptions: { padding: FIT_PADDING, maxZoom: 18 } }
+            : { center: [79.0882, 21.1463] as [number, number], zoom: 16.5 }),
           attributionControl: { compact: true },
+          // North stays up: the overlay's heading arrows and the paper plan are screen-relative.
+          maxPitch: 0,
+          pitchWithRotate: false,
+          dragRotate: false,
         });
+        map.touchZoomRotate.disableRotation();
         mapRef.current = map;
+        // The overlay is positioned by map.project, so it must be redrawn on every camera frame.
+        const reproject = () => {
+          if (frame) return;
+          frame = requestAnimationFrame(() => {
+            frame = 0;
+            setLiveProject(() => (p: LatLon) => {
+              const q = map.project([p.lon, p.lat]);
+              return { x: q.x, y: q.y };
+            });
+          });
+        };
+        map.on("move", reproject);
+        map.on("resize", reproject);
         map.on("error", (e) => {
           // Third-party basemap: a missing tile or glyph is routine and recoverable, so only a
           // failure before the style is up means "no basemap". The plan is already on screen.
@@ -104,7 +153,7 @@ export function MapView({ data, me, anomalies = [], onSelectMachine, offline = f
         });
         map.on("load", () => {
           if (cancelled) return;
-          drawLayers(map, data, me, anomalies, onSelectMachine);
+          reproject();
           setMapState("live");
         });
       } catch {
@@ -114,134 +163,58 @@ export function MapView({ data, me, anomalies = [], onSelectMachine, offline = f
 
     return () => {
       cancelled = true;
+      if (frame) cancelAnimationFrame(frame);
       mapRef.current?.remove();
       mapRef.current = null;
+      setLiveProject(null);
     };
-    // Created once: later data lands through updateSources below, not by rebuilding the map.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
+    // Created once per blocked/unblocked: the overlay follows the store through props, not by rebuilding the map.
   }, [blocked]);
 
-  // Live updates: my position, rings and trail follow the store without recreating the map.
-  useEffect(() => {
-    const map = mapRef.current;
-    if (!map || status !== "live") return;
-    updateSources(map, data, me, anomalies);
-  }, [data, me, anomalies, status]);
+  const planProject = useMemo(() => fitProjector(fitPoints, size, FIT_PADDING), [fitPoints, size]);
+  const project: Project = status === "live" && liveProject ? liveProject : planProject;
+
+  const fitAll = useCallback(() => {
+    const box = boundsOf(fitRef.current);
+    if (box)
+      mapRef.current?.fitBounds(
+        [[box.west, box.south], [box.east, box.north]],
+        { padding: FIT_PADDING, maxZoom: 18 },
+      );
+  }, []);
 
   return (
-    <div className="map-wrap" data-status={status}>
+    <div className="map-wrap" data-status={status} data-mode={state.atLive ? "live" : "replay"}>
       {/*
         The container is never unmounted: the Map instance holds this exact node, so taking it away
-        on a failure would leave a live map drawing into a detached element — and a style that
-        recovered afterwards would flip us to "live" over an empty frame. The plan simply covers it
-        (inset 0) until the basemap is up. For assistive tech the canvas is an image; the machine
-        list below the map is the keyboard and screen-reader path to the same facts.
+        on a failure would leave a live map drawing into a detached element. The paper backdrop simply
+        covers it until the basemap is up. For assistive tech the canvas is an image; the machine
+        buttons over it and the list beside it are the keyboard and screen-reader path to the same facts.
       */}
-      <div ref={container} className="map-canvas" role="img" aria-label={t("mapLabel")} />
-      {status !== "live" ? (
-        <div className="map-plan">
-          <SitePlan data={data} me={me} machines={data.machines} reason={reason} />
-        </div>
-      ) : null}
-      {status === "live" ? (
-        <div className="map-controls">
-          <Button
-            onClick={() => {
-              if (me) mapRef.current?.flyTo({ center: [me.lon, me.lat], zoom: 17 });
-            }}
-          >
-            {t("centreOnMe")}
-          </Button>
-        </div>
-      ) : null}
+      <div ref={wrap} className="map-frame">
+        <div ref={container} className="map-canvas" role="img" aria-label={t("mapLabel")} />
+        {status !== "live" ? <SitePlan reason={reason} /> : null}
+        <MapOverlay data={data} state={state} project={project} size={size} ownCode={ownCode} selectedId={selectedId} onSelect={onSelectMachine} />
+        {status === "live" ? (
+          <div className="map-controls">
+            <button type="button" className="map-ctl" onClick={fitAll}>
+              {t("fitSite")}
+            </button>
+            {state.me ? (
+              <button
+                type="button"
+                className="map-ctl"
+                onClick={() => {
+                  if (state.me) mapRef.current?.flyTo({ center: [state.me.lon, state.me.lat], zoom: 17 });
+                }}
+              >
+                {t("centreOnMe")}
+              </button>
+            ) : null}
+          </div>
+        ) : null}
+        {!state.atLive ? <p className="map-replay-flag t-chip">{t("replayFlag")}</p> : null}
+      </div>
     </div>
   );
-}
-
-const line = (pts: LatLon[]) => ({ type: "Feature", geometry: { type: "LineString", coordinates: pts.map((p) => [p.lon, p.lat]) }, properties: {} });
-/** GeoJSON rings must be closed; a zone polygon from the data may list its corners only once. */
-const closed = (pts: LatLon[]) => {
-  const first = pts[0];
-  const last = pts[pts.length - 1];
-  return first && last && (first.lat !== last.lat || first.lon !== last.lon) ? [...pts, first] : pts;
-};
-const polygon = (pts: LatLon[], properties: Record<string, unknown> = {}) => ({
-  type: "Feature",
-  geometry: { type: "Polygon", coordinates: [closed(pts).map((p) => [p.lon, p.lat])] },
-  properties,
-});
-const points = (items: Array<{ id: string; lat: number; lon: number } & Record<string, unknown>>) => ({
-  type: "FeatureCollection",
-  features: items.map((i) => ({ type: "Feature", geometry: { type: "Point", coordinates: [i.lon, i.lat] }, properties: { ...i } })),
-});
-
-function sources(data: SiteMapData, me: LatLon | null, anomalies: Array<{ id: string; lat: number; lon: number }>) {
-  return {
-    zones: { type: "FeatureCollection", features: data.zones.map((z) => polygon(z.polygon, { name: z.name })) },
-    trail: line(data.trail),
-    rings: {
-      type: "FeatureCollection",
-      features: me ? [polygon(ringPolygon(me, RING_M.warning), { ring: "warning" }), polygon(ringPolygon(me, RING_M.danger), { ring: "danger" })] : [],
-    },
-    me: points(me ? [{ id: "me", lat: me.lat, lon: me.lon }] : []),
-    machines: points(data.machines),
-    anomalies: points(anomalies),
-  };
-}
-
-function updateSources(map: MapLibreMap, data: SiteMapData, me: LatLon | null, anomalies: Array<{ id: string; lat: number; lon: number }>) {
-  const next = sources(data, me, anomalies);
-  for (const [id, value] of Object.entries(next)) (map.getSource(id) as GeoJSONSource | undefined)?.setData(value as never);
-}
-
-/** Ink geometry first, then state colour: zones, trail, rings, machines, anomalies, me on top. */
-function drawLayers(
-  map: MapLibreMap,
-  data: SiteMapData,
-  me: LatLon | null,
-  anomalies: Array<{ id: string; lat: number; lon: number }>,
-  onSelectMachine?: (machineId: string) => void,
-) {
-  const src = sources(data, me, anomalies);
-  for (const [id, value] of Object.entries(src)) map.addSource(id, { type: "geojson", data: value as never });
-
-  map.addLayer({ id: "zones-fill", type: "fill", source: "zones", paint: { "fill-color": "#16150f", "fill-opacity": 0.06 } });
-  map.addLayer({ id: "zones-line", type: "line", source: "zones", paint: { "line-color": "#16150f", "line-width": 1.5, "line-dasharray": [3, 2] } });
-  map.addLayer({ id: "trail-line", type: "line", source: "trail", paint: { "line-color": "#4b483f", "line-width": 3, "line-opacity": 0.8 } });
-  map.addLayer({
-    id: "rings-line",
-    type: "line",
-    source: "rings",
-    paint: { "line-color": ["match", ["get", "ring"], "danger", "#b3102a", "#ff6a00"], "line-width": 2, "line-dasharray": [2, 2] },
-  });
-  map.addLayer({
-    id: "machines-dot",
-    type: "circle",
-    source: "machines",
-    paint: {
-      "circle-radius": 9,
-      "circle-color": ["match", ["get", "health"], "fault", "#b3102a", "caution", "#ffc700", "#f2f0ea"],
-      "circle-stroke-color": "#16150f",
-      "circle-stroke-width": 2,
-    },
-  });
-  map.addLayer({
-    id: "anomalies-dot",
-    type: "circle",
-    source: "anomalies",
-    paint: { "circle-radius": 14, "circle-color": "#ff6a00", "circle-opacity": 0.25, "circle-stroke-color": "#ff6a00", "circle-stroke-width": 2 },
-  });
-  map.addLayer({
-    id: "me-dot",
-    type: "circle",
-    source: "me",
-    paint: { "circle-radius": 7, "circle-color": "#16150f", "circle-stroke-color": "#f2f0ea", "circle-stroke-width": 3 },
-  });
-
-  if (onSelectMachine) {
-    map.on("click", "machines-dot", (e: MapMouseEvent & { features?: Array<{ properties?: { id?: string } }> }) => {
-      const id = e.features?.[0]?.properties?.id;
-      if (id) onSelectMachine(id);
-    });
-  }
 }

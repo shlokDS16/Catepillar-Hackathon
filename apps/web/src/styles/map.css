@@ -1,0 +1,631 @@
+/*
+ * S4 Map (F12, redesigned L2): the stage, the overlay, the time cursor, the key and the machine list.
+ * Ink on paper; the safety colours appear only on a live, fresh hazard and its rings (visual-language
+ * state rules). Replayed and stale data is drawn in ink, dashed. Sizes come from tokens.css.
+ */
+
+/* ---------- Layout: the stage fills the area between the band and the dock ---------- */
+.map-screen {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+.map-stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+  min-height: var(--map-stage-min);
+  /* band (+ top inset) above, dock (+ home indicator) below, a gutter either side of the stage */
+  height: calc(100dvh - var(--strip-h) - var(--safe-t) - var(--dock-total) - var(--s-6));
+}
+.map-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  min-width: 0;
+}
+.map-side-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+@media (min-width: 1024px) {
+  /* The rail replaces the dock: map and list side by side. */
+  .map-screen {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) var(--map-side-w);
+    gap: var(--s-5);
+    align-items: start;
+  }
+  .map-stage {
+    height: calc(100dvh - var(--strip-h) - var(--safe-t) - var(--s-7));
+  }
+  .map-side {
+    max-height: calc(100dvh - var(--strip-h) - var(--safe-t) - var(--s-7));
+    overflow-y: auto;
+    padding-inline-end: var(--s-1);
+  }
+}
+
+/* The loading plate before the data lands holds the stage's footprint, so nothing jumps. */
+.map-slot {
+  min-height: var(--map-stage-min);
+  border: var(--bw) solid var(--ink);
+}
+
+/* ---------- The map frame ---------- */
+.map-wrap {
+  position: relative;
+  flex: 1 1 0;
+  min-height: var(--map-min);
+  border: var(--bw) solid var(--ink);
+  background: var(--paper);
+}
+.map-wrap[data-mode="replay"] {
+  border-style: dashed;
+  border-width: var(--bw-heavy);
+}
+.map-frame {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background: var(--paper);
+}
+/* MapLibre adds .maplibregl-map (position: relative) to this node from its own stylesheet. Ours
+   wins because maplibre-gl.css is imported into the `vendor` layer, which is ordered before
+   `components` in globals.css, not because of selector specificity. */
+.map-canvas {
+  position: absolute;
+  inset: 0;
+}
+.map-canvas .maplibregl-ctrl-attrib {
+  background: var(--paper);
+  color: var(--ink-3);
+  font-size: var(--t-meta);
+}
+.map-canvas .maplibregl-ctrl-attrib a {
+  color: var(--ink-2);
+}
+
+/* The paper plan: ruled paper under the same overlay, until (or instead of) the basemap. */
+.map-backdrop {
+  position: absolute;
+  inset: 0;
+  background-color: var(--paper);
+  background-image:
+    linear-gradient(var(--rule-soft) var(--bw-hair), transparent var(--bw-hair)),
+    linear-gradient(90deg, var(--rule-soft) var(--bw-hair), transparent var(--bw-hair));
+  background-size: var(--s-7) var(--s-7);
+  display: flex;
+  align-items: flex-end;
+}
+.map-backdrop-note {
+  margin: var(--s-3);
+  padding: var(--s-1) var(--s-3);
+  background: var(--surface);
+  border: var(--bw-hair) solid var(--ink);
+  color: var(--ink-2);
+  max-width: calc(100% - var(--s-5));
+}
+
+/* ---------- Overlay: zones, rings, trails, pins ---------- */
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.map-zone {
+  fill: var(--ink);
+  fill-opacity: 0.06;
+  stroke: var(--ink);
+  stroke-width: var(--bw);
+  stroke-dasharray: 6 4;
+}
+.map-ring {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: var(--bw-heavy);
+  stroke-dasharray: 8 6;
+}
+.map-rings[data-live] .map-ring[data-ring="danger"] {
+  stroke: var(--state-critical);
+}
+.map-rings[data-live] .map-ring[data-ring="warning"] {
+  stroke: var(--state-warning);
+}
+.map-ring-label {
+  font-family: var(--ff-body);
+  font-size: var(--t-meta);
+  font-weight: var(--fw-label);
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: var(--s-1);
+  stroke-linejoin: round;
+}
+.map-trail {
+  fill: none;
+  stroke: var(--ink-3);
+  stroke-width: var(--bw);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-dasharray: 1 1; /* pathLength is 1: one dash as long as the path, so it can be drawn */
+}
+.map-trail[data-tier="own"] {
+  stroke: var(--ink);
+  stroke-width: var(--bw-heavy);
+}
+.map-trail[data-tier="hazard"] {
+  stroke: var(--ink-2);
+}
+.map-trail[data-stale] {
+  opacity: 0.5;
+}
+@keyframes map-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* A trail draws itself once when it arrives, to say "this is the path travelled". The scrubber and
+   Replay redraw it by moving the cursor, not by animating; reduced motion zeroes the duration. */
+@media (prefers-reduced-motion: no-preference) {
+  .map-trail {
+    animation: map-draw var(--dur-draw) var(--ease) both;
+  }
+}
+.map-pin {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: var(--bw);
+  stroke-dasharray: 4 4;
+}
+.map-pin[data-live] {
+  fill: var(--state-warning);
+  fill-opacity: 0.25;
+  stroke: var(--state-warning);
+  stroke-dasharray: none;
+}
+
+/* ---------- Machine markers: real buttons over the canvas ---------- */
+.map-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.map-marker {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: var(--marker);
+  height: var(--marker);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-marker:disabled {
+  cursor: default;
+}
+.map-marker[data-tier="hazard"] {
+  z-index: 2;
+}
+.map-marker[data-tier="own"] {
+  z-index: 3;
+}
+.map-marker[data-selected] {
+  outline: var(--focus-w) solid var(--ink);
+  outline-offset: calc(var(--bw) * -1);
+  background: var(--paper);
+  z-index: 4;
+}
+.map-glyph {
+  width: var(--glyph);
+  height: var(--glyph);
+  overflow: visible;
+}
+.map-glyph-body {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+}
+.map-marker[data-tier="own"] .map-glyph {
+  width: var(--glyph-own);
+  height: var(--glyph-own);
+}
+.map-marker[data-tier="own"] .map-glyph-body {
+  fill: var(--ink);
+  stroke: var(--paper);
+  paint-order: stroke;
+  stroke-width: 5;
+}
+.map-marker[data-tone="critical"] .map-glyph-body {
+  fill: var(--state-critical);
+}
+.map-marker[data-tone="warning"] .map-glyph-body {
+  fill: var(--state-warning);
+}
+.map-marker[data-tone="caution"] .map-glyph-body {
+  fill: var(--state-caution);
+}
+/* Not heard for a minute: hollow and dashed, never a safety colour. */
+.map-marker[data-stale] .map-glyph-body {
+  fill: var(--surface-sunk);
+  stroke-dasharray: 5 4;
+}
+.map-marker[data-tier="own"][data-stale] .map-glyph-body {
+  fill: var(--ink-3);
+}
+
+.map-marker-label {
+  position: absolute;
+  inset-block-start: calc(100% - var(--s-2));
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0;
+  padding: var(--s-1) var(--s-2);
+  background: var(--paper);
+  border: var(--bw-hair) solid var(--ink);
+  color: var(--ink);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  white-space: nowrap;
+  pointer-events: none;
+}
+/* Labels fan out by tier so the usual cluster does not stack: mine above, hazards below, others to the side. */
+.map-marker[data-tier="own"] .map-marker-label {
+  inset-block-start: auto;
+  inset-block-end: calc(100% - var(--s-2));
+}
+.map-marker[data-tier="other"] .map-marker-label {
+  inset-block-start: 50%;
+  inset-inline-start: calc(100% - var(--s-3));
+  transform: translateY(-50%);
+}
+.map-marker-code {
+  font-weight: var(--fw-title);
+}
+.map-marker-meta {
+  display: none;
+  gap: var(--s-2);
+  font-weight: var(--fw-label);
+}
+.map-marker[data-tier="hazard"] .map-marker-meta,
+.map-marker[data-selected] .map-marker-meta {
+  display: flex;
+}
+.map-marker-health {
+  font-weight: var(--fw-title);
+  text-transform: uppercase;
+}
+.map-marker[data-tone] .map-marker-label {
+  border-width: var(--bw);
+}
+.map-marker[data-stale] .map-marker-label {
+  border-style: dashed;
+}
+@media (min-width: 768px) {
+  .map-marker-meta {
+    display: flex;
+  }
+}
+
+/* ---------- Provenance stamp: Live / Replayed / Simulated + data age. Ink only. ---------- */
+.map-prov {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink);
+}
+.map-prov-kind {
+  padding: 0 var(--s-1);
+  border: var(--bw-hair) solid var(--ink);
+  font-weight: var(--fw-title);
+  background: var(--surface);
+}
+.map-prov[data-kind="live"] .map-prov-kind {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.map-prov[data-kind="replayed"] .map-prov-kind {
+  border-style: dashed;
+  background: transparent;
+}
+.map-prov[data-stale] .map-prov-age {
+  font-weight: var(--fw-title);
+}
+
+.map-replay-flag {
+  position: absolute;
+  inset-block-start: 0;
+  inset-inline-start: 0;
+  z-index: 5;
+  margin: 0;
+  padding: var(--s-1) var(--s-3);
+  background: var(--ink);
+  color: var(--on-ink);
+  text-transform: uppercase;
+}
+
+/* ---------- Controls: 80 px, over the map, in the top corner (never under the SOS slot) ---------- */
+.map-controls {
+  position: absolute;
+  inset-block-start: var(--s-3);
+  inset-inline-end: var(--s-3);
+  z-index: 6;
+  display: flex;
+  gap: var(--s-2);
+}
+.map-ctl {
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  box-sizing: border-box;
+  min-height: var(--hit);
+  min-width: var(--hit);
+  padding: var(--s-2) var(--s-3);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--ff-body);
+  font-size: var(--t-meta);
+  font-weight: var(--fw-label);
+  line-height: var(--lh-meta);
+  text-align: center;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-ctl:active:not(:disabled) {
+  background: var(--surface-sunk);
+  box-shadow: inset 0 0 0 var(--bw) var(--ink);
+}
+.map-ctl:disabled {
+  border-style: dashed;
+  color: var(--ink-3);
+  cursor: default;
+}
+.map-ctl[data-primary] {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.map-ctl svg {
+  width: var(--icon);
+  height: var(--icon);
+  stroke-width: var(--icon-stroke);
+  flex: none;
+}
+
+/* ---------- The time cursor ---------- */
+.map-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  flex: none;
+}
+.map-timeline-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+}
+.map-timeline-head h2 {
+  margin: 0;
+}
+.map-cursor-stamp {
+  padding: var(--s-1) var(--s-3);
+  border: var(--bw) dashed var(--ink);
+  font-size: var(--t-label);
+  font-weight: var(--fw-title);
+  background: var(--surface);
+}
+.map-cursor-stamp[data-live] {
+  border-style: solid;
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.map-scrub {
+  position: relative;
+}
+.map-range {
+  display: block;
+  width: 100%;
+  height: var(--hit);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+  -webkit-appearance: none;
+  appearance: none;
+}
+.map-range::-webkit-slider-runnable-track {
+  height: var(--bar);
+  background: var(--surface-sunk);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+}
+.map-range::-moz-range-track {
+  height: var(--bar);
+  background: var(--surface-sunk);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+}
+.map-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: var(--range-thumb-w);
+  height: var(--hit);
+  margin-top: calc((var(--bar) + 2 * var(--bw) - var(--hit)) / 2);
+  background: var(--ink);
+  border: var(--bw) solid var(--paper);
+  outline: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+}
+.map-range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--range-thumb-w);
+  height: var(--hit);
+  background: var(--ink);
+  border: var(--bw) solid var(--paper);
+  outline: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+}
+/* The ticks are inset by half a thumb, so a tick sits where the thumb's centre stops for it. */
+.map-ticks {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: calc(var(--range-thumb-w) / 2);
+  pointer-events: none;
+}
+.map-tick {
+  position: absolute;
+  inset-block-start: 50%;
+  width: var(--bw-heavy);
+  height: calc(var(--bar) + var(--s-5));
+  background: var(--ink);
+  border: var(--bw-hair) solid var(--paper);
+  transform: translate(-50%, -50%);
+}
+.map-scrub-ends {
+  display: flex;
+  justify-content: space-between;
+}
+.map-timeline-controls {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
+  gap: var(--s-1);
+}
+.map-event-line {
+  margin: 0;
+  min-height: calc(var(--lh-meta) * 1em);
+}
+
+/* ---------- Key ---------- */
+.map-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  flex: none;
+}
+.map-legend > li {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.map-key {
+  display: inline-block;
+  flex: none;
+  box-sizing: border-box;
+}
+.map-key[data-key^="ring"] {
+  width: var(--s-6);
+  height: 0;
+  border-top: var(--bw-heavy) dashed var(--ink-2);
+}
+.map-legend[data-live] .map-key[data-key="ring-danger"] {
+  border-top-color: var(--state-critical);
+}
+.map-legend[data-live] .map-key[data-key="ring-warning"] {
+  border-top-color: var(--state-warning);
+}
+.map-key[data-key="own"],
+.map-key[data-key="hazard"],
+.map-key[data-key="other"],
+.map-key[data-key="stale"] {
+  width: var(--s-4);
+  height: var(--s-4);
+  border: var(--bw) solid var(--ink);
+}
+.map-key[data-key="own"] {
+  background: var(--ink);
+  border-radius: 50%;
+}
+.map-key[data-key="hazard"] {
+  background: var(--surface);
+  border-width: var(--bw-heavy);
+}
+.map-legend[data-live] .map-key[data-key="hazard"] {
+  background: var(--state-critical);
+}
+.map-key[data-key="other"] {
+  background: var(--paper);
+}
+.map-key[data-key="stale"] {
+  background: var(--surface-sunk);
+  border-style: dashed;
+}
+
+/* ---------- Machine list ---------- */
+.map-list {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+}
+.map-list-group {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.map-list-group h3 {
+  margin: 0;
+}
+.map-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--hit);
+  padding: var(--s-3) var(--s-4);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  text-align: start;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-row[data-tier="own"] {
+  border-width: var(--bw-heavy);
+}
+.map-row[data-stale] {
+  border-style: dashed;
+}
+.map-row[aria-pressed="true"] {
+  background: var(--surface-sunk);
+  box-shadow: inset 0 0 0 var(--bw) var(--ink);
+}
+.map-row-main {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+  min-width: 0;
+}

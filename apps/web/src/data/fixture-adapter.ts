@@ -207,11 +207,32 @@ export class FixtureAdapter implements DataPort {
     await wait(this.latencyMs);
     const plan = evidenceCards.map_snapshot;
     const me = this.snapshotValue.machine?.location ?? plan.center;
+    // The fixtures carry one trail point; the demo walks the operator's machine up the bench so the
+    // trail, heading and time cursor have something to show. Positions are assumed-sensor data.
+    const approach = [
+      { lat: 21.1452, lon: 79.0873 },
+      { lat: 21.1455, lon: 79.0876 },
+      { lat: 21.1458, lon: 79.0879 },
+      { lat: 21.1461, lon: 79.0881 },
+    ];
+    /** Fixes spread evenly over `spanMs`, the last one `lastAgoMs` before the newest data. */
+    const track = (pts: Array<{ lat: number; lon: number }>, spanMs: number, lastAgoMs: number) =>
+      pts.map((p, i) => ({ ago_ms: lastAgoMs + (pts.length === 1 ? 0 : spanMs - (spanMs * i) / (pts.length - 1)), lat: p.lat, lon: p.lon }));
     return {
       center: plan.center,
       zones: plan.zones.map((z) => ({ id: z.id, name: z.name, zone_type: z.zone_type, polygon: z.polygon })),
-      trail: [...plan.trail.map((p) => ({ lat: p.lat, lon: p.lon })), me],
-      machines: [{ id: IDS.anomaly, code: "EXC-014", lat: 21.1468, lon: 79.0879, moving: false, health: "fault" }],
+      trail: [...approach, ...plan.trail.map((p) => ({ lat: p.lat, lon: p.lon })), me],
+      machines: [
+        // The Guardian beat's machine: parked, faulty, reporting.
+        { id: IDS.anomaly, code: "EXC-014", lat: 21.1468, lon: 79.0879, moving: false, health: "fault", track: track([{ lat: 21.1468, lon: 79.0879 }, { lat: 21.1468, lon: 79.0879 }], 540_000, 8_000) },
+        // A dumper on its haul loop: moving, healthy, close enough to see the heading arrow.
+        {
+          id: "e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e1e1", code: "DMP-003", lat: 21.1473, lon: 79.0893, moving: true, health: "ok",
+          track: track([{ lat: 21.1480, lon: 79.0908 }, { lat: 21.1478, lon: 79.0902 }, { lat: 21.1476, lon: 79.0897 }, { lat: 21.1473, lon: 79.0893 }], 540_000, 4_000),
+        },
+        // Last heard 95 s ago: drawn stale, not as a live position.
+        { id: "e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e2e2", code: "EXC-011", lat: 21.1455, lon: 79.0894, moving: false, health: "ok", track: track([{ lat: 21.1455, lon: 79.0894 }, { lat: 21.1455, lon: 79.0894 }], 495_000, 95_000) },
+      ],
     };
   }
 

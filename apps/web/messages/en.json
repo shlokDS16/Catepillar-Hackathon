@@ -230,7 +230,60 @@
     },
     "loadFailed": "Map data did not load.",
     "retry": "Try again",
-    "machineList": "Machines on site"
+    "machineList": "Machines on site",
+    "nearby": "Nearby",
+    "noMachines": "No machines reported yet.",
+    "fitSite": "Fit site",
+    "replayFlag": "Replay, not live",
+    "you": "You · {code}",
+    "away": "{m} m away",
+    "stale": "Stale",
+    "moving": "Moving",
+    "parked": "Parked",
+    "prov": {
+      "live": "Live",
+      "replayed": "Replayed",
+      "simulated": "Simulated"
+    },
+    "age": {
+      "now": "just now",
+      "s": "{n} s ago",
+      "min": "{n} min ago"
+    },
+    "health": {
+      "ok": "OK",
+      "caution": "Caution",
+      "fault": "Fault"
+    },
+    "group": {
+      "own": "Your machine",
+      "hazard": "Hazards",
+      "other": "Other machines"
+    },
+    "timeline": {
+      "label": "Time cursor",
+      "title": "Last {min} min",
+      "scrub": "Time cursor, last 10 minutes",
+      "live": "Live",
+      "liveButton": "Live",
+      "earlier": "Earlier",
+      "later": "Later",
+      "replay": "Replay",
+      "pause": "Pause",
+      "valueText": "{m} min {s} s ago",
+      "noEvents": "No events in this window.",
+      "noneYet": "No event yet at this time.",
+      "latest": "{time} · {what}"
+    },
+    "legend": {
+      "label": "Map key",
+      "danger": "{m} m danger ring",
+      "warning": "{m} m warning ring",
+      "own": "Your machine",
+      "hazard": "Hazard",
+      "other": "Other machine",
+      "stale": "Stale: not heard for over a minute"
+    }
   },
   "replay": {
     "frame": "REPLAY · your event {time}",
@@ -496,7 +549,7 @@
     "verifiedSealed": "{v} verified · {s} sealed, chain checked",
     "notRechecked": "Not re-checked in this browser",
     "chainIncomplete": "The export does not cover the whole ledger",
-    "rangeOut":"That range is not in the ledger.",
+    "rangeOut": "That range is not in the ledger.",
     "stoppedAt": "The check stopped at #{seq}. Nothing after it was verified.",
     "hashSr": "{label}: {hash}",
     "sealedCount": "{n} sealed",
