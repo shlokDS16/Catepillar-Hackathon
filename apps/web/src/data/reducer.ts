@@ -28,6 +28,8 @@ export type AppState = {
   dispatch: Record<string, string[]>;
   /** Ledger sequence numbers per incident id, from `incident.logged`. */
   ledgerSeq: Record<string, number>;
+  /** The same sequence numbers keyed by the `incident.reported` event id (the envelope `causation_id`), which is what incident_log returns. */
+  ledgerSeqByCause: Record<string, number>;
   /** Vest and friends restored by sensor, or currently missing (from ppe.* events). */
   ppeMissing: string[];
   /** The live supervisor override from `ppe.override_granted` (15 min from the event's sim time); cleared when the vest is restored or the task completes. */
@@ -62,6 +64,7 @@ export const initialState: AppState = {
   eventTimes: {},
   dispatch: {},
   ledgerSeq: {},
+  ledgerSeqByCause: {},
   ppeMissing: [],
   ppeOverride: null,
   taskWork: {},
@@ -371,7 +374,11 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
     case "incident.logged":
       {
       const l = payload(e, "incident.logged");
-      return { ...base, ledgerSeq: { ...state.ledgerSeq, [l.incident_id]: l.seq } };
+      return {
+        ...base,
+        ledgerSeq: { ...state.ledgerSeq, [l.incident_id]: l.seq },
+        ledgerSeqByCause: e.causation_id ? { ...state.ledgerSeqByCause, [e.causation_id]: l.seq } : state.ledgerSeqByCause,
+      };
     }
     case "training.replay_ready": {
       const r = payload(e, "training.replay_ready");

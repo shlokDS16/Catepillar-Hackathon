@@ -50,6 +50,18 @@ export function DirectorPanel() {
           </Button>
         ))}
       </div>
+      <section aria-label="Incident report failure (fixtures)" className="flex flex-col gap-2">
+        <h2 className="t-label">Incident sheet</h2>
+        <Button
+          block
+          onClick={() => {
+            fixtureAdapter().failNextIncident();
+            setLog((l) => [`${new Date().toLocaleTimeString("en-IN", { hour12: false })} · next incident report fails once`, ...l].slice(0, 30));
+          }}
+        >
+          Next incident report fails once (shows the kept draft)
+        </Button>
+      </section>
       <section aria-label="Telegram checkpoint line (fixtures)" className="flex flex-col gap-2">
         <h2 className="t-label">Telegram checkpoint line for /fm/ledger (fixtures)</h2>
         <textarea readOnly rows={3} value={witnessLine} className="t-mono t-meta w-full border-2 border-ink bg-surface p-2" />

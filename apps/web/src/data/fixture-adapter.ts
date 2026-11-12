@@ -36,7 +36,10 @@ export class FixtureAdapter implements DataPort {
     // Browser only: the server render has no business listening for director beats (F06-F08 review).
     if (typeof window !== "undefined" && typeof BroadcastChannel !== "undefined") {
       this.channel = new BroadcastChannel("spotter-director");
-      this.channel.onmessage = (m: MessageEvent<{ beat: Beat }>) => void this.playBeat(m.data.beat);
+      this.channel.onmessage = (m: MessageEvent<{ beat?: Beat; failNextIncident?: boolean }>) => {
+        if (m.data.failNextIncident) this.failNextIncidentOnce = true;
+        else if (m.data.beat) void this.playBeat(m.data.beat);
+      };
     }
     // Start the demo with no open alert and the machine parked, so the beats can build the story.
     const base = MySnapshotOut.parse(mySnapshot);
@@ -44,7 +47,7 @@ export class FixtureAdapter implements DataPort {
       ...base,
       active_alerts: [],
       machine: base.machine ? { ...base.machine, moving: false, speed_kmh: 0, seatbelt_fastened: true } : null,
-      operator_state: base.operator_state ? { ...base.operator_state, motion_locked: false, call_allowed: true, ppe: { helmet: true, vest: false, boots: true, gloves: true } } : null,
+      operator_state: base.operator_state ? { ...base.operator_state, motion_locked: false, call_allowed: true, nearest: { kind: "person", id: IDS.zone, distance_m: 22, zone: "awareness" }, ppe: { helmet: true, vest: false, boots: true, gloves: true } } : null,
       tasks: [
         { ...base.tasks[0], status: "planned", progress_pct: 0 },
         { ...base.tasks[0], id: IDS.zone, task_type: "trenching", status: "planned", planned_start: "2026-09-24T11:00:00.000+05:30", progress_pct: 0 },
@@ -345,10 +348,37 @@ export class FixtureAdapter implements DataPort {
   async sosCancel() {
     await wait(this.latencyMs);
   }
-  async incidentLog() {
+  /** Request ids already answered, so a retry with the same id gets the same result and never a second entry. */
+  private incidentsDone = new Map<string, { event_id: string }>();
+  /** Set from the /director panel only: the next incident_log attempt fails once, to show the kept draft. */
+  private failNextIncidentOnce = false;
+  failNextIncident() {
+    this.failNextIncidentOnce = true;
+    this.channel?.postMessage({ failNextIncident: true });
+  }
+  async incidentLog(input: { p_request_id: string; p_incident_type: string; p_description: string | null }) {
     await wait(this.latencyMs);
-    setTimeout(() => this.push(this.event("incident.logged", { ...EVENT_PAYLOADS["incident.logged"], seq: 216 })), 1500);
-    return rpc.incidentLogOut;
+    const done = this.incidentsDone.get(input.p_request_id);
+    if (done) return done;
+    if (this.failNextIncidentOnce) {
+      this.failNextIncidentOnce = false;
+      throw new RpcError("network");
+    }
+    const out = { ...rpc.incidentLogOut };
+    this.incidentsDone.set(input.p_request_id, out);
+    setTimeout(
+      () =>
+        this.push(
+          this.event("incident.logged", {
+            ...EVENT_PAYLOADS["incident.logged"],
+            incident_id: IDS.incident,
+            incident_type: input.p_incident_type as (typeof EVENT_PAYLOADS)["incident.logged"]["incident_type"],
+            seq: 216,
+          }, { causation_id: out.event_id }),
+        ),
+      1500,
+    );
+    return out;
   }
   async ppeOverride() {
     await wait(this.latencyMs);

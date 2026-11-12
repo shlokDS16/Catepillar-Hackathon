@@ -150,6 +150,11 @@ describe("ledger, training, scenario, heartbeat", () => {
     let s = boot();
     s = reduce(s, { ...{ type: "event" as const }, event: ev("incident.logged", 390), nowMs: NOW });
     expect(s.ledgerSeq[IDS.incident]).toBe(214);
+    // The report sheet finds its entry by the event incident_log returned, which arrives as causation_id.
+    const reported = "aaaaaaaa-aaaa-4aaa-8aaa-aaaaaaaaaaaa";
+    s = reduce(s, { type: "event", event: ev("incident.logged", 391, { causation_id: reported }), nowMs: NOW });
+    expect(s.ledgerSeqByCause[reported]).toBe(214);
+    expect(s.ledgerSeqByCause[IDS.incident]).toBeUndefined();
     s = reduce(s, { type: "event", event: ev("training.replay_ready", 391), nowMs: NOW });
     expect(s.assignments[0]?.replay_id).toBe(IDS.replay);
   });
