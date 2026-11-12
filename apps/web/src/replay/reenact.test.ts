@@ -131,7 +131,20 @@ describe("buildReenactModel on the fixture (sparse data)", () => {
 
   it("clamps an event_ms past the end onto the timeline", () => {
     const s = replayScenario as ReplayScenario;
-    expect(buildReenactModel({ ...s, reenactment: { ...s.reenactment, event_ms: 999999 } }).eventMs).toBe(120000);
+    const clamped = buildReenactModel({ ...s, reenactment: { ...s.reenactment, event_ms: 999999 } });
+    expect(clamped.eventMs).toBe(120000);
+    expect(clamped.eventExact).toBe(false);
+  });
+
+  it("does not back-fill the first real belt reading to earlier times", () => {
+    const s = replayScenario as ReplayScenario;
+    const track = [
+      { t_ms: 0, lat: 21.1, lon: 79.1, speed_kmh: 1, pitch_deg: 0, seatbelt_fastened: null },
+      { t_ms: 20000, lat: 21.1, lon: 79.1, speed_kmh: 1, pitch_deg: 0, seatbelt_fastened: false },
+    ];
+    const m = buildReenactModel({ ...s, reenactment: { ...s.reenactment, machine_track: track } });
+    expect(stateAt(m, 5000).seatbelt).toBe("unknown");
+    expect(stateAt(m, 20000).seatbelt).toBe("off");
   });
 
   it("reads the belt from the track: step function, null entries hold the last reading", () => {

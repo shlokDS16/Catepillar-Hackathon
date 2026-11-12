@@ -170,7 +170,7 @@ export function buildReenactModel(scenario: ReplayScenario): ReenactModel {
   const wind = byTime(r.wind);
   const lastFix = Math.max(0, trail.at(-1)?.t_ms ?? 0, track.at(-1)?.t_ms ?? 0);
   const durationMs = Math.max(1, r.duration_ms, lastFix);
-  const eventExact = typeof r.event_ms === "number";
+  const eventExact = typeof r.event_ms === "number" && r.event_ms >= 0 && r.event_ms <= durationMs;
   const eventMs = clamp(typeof r.event_ms === "number" ? r.event_ms : lastFix, 0, durationMs);
   const trackBelt = beltFromTrack(track);
   const rawResponse = r.real_response_ms === null ? null : eventMs + Math.max(0, r.real_response_ms);
@@ -216,7 +216,7 @@ export function stateAt(m: ReenactModel, tMs: number): ReenactState {
   }
 
   const beltIdx = lastAtOrBefore(m.belt, t);
-  const seatbelt: SeatbeltState = m.belt.length === 0 ? m.beltDefault : m.belt[Math.max(0, beltIdx)].on ? "on" : "off";
+  const seatbelt: SeatbeltState = m.belt.length === 0 || beltIdx < 0 ? m.beltDefault : m.belt[beltIdx].on ? "on" : "off";
 
   let wind: ReenactState["wind"] = null;
   if (m.wind.length > 0) {
