@@ -51,3 +51,11 @@ typecheck and lint clean; `pnpm --filter web test` 570 passed (all files); `pnpm
 - The tape rounds to whole minutes (stage 4 p .45 reads 10:44, entry 4 stamped).
 - Hi screens are not captured; hi reuses the en captures.
 - Hindi copy still needs Shlok's read.
+
+## Round 3 (re-review fixes, A merged at 556b8ea)
+
+- Wordmark mounts once (createWordmarkHost in landing-engine.tsx), stays mounted, disposed only on page unmount; failure, no WebGL, phones and webglcontextlost show the still. 6 unit tests. Hand check, headed production build: footer, top, footer three times: data-wm canvas each time, identical plate pixels, no console errors.
+- S2 plate bottom left under the copy at desktop sizes (B3-s2-1280/1440/1920.png); boom clear at all three, bucket just touches the plate edge at 1280.
+- Lows: hero heading stays in the tree (only its links leave the tab order); readout asides uniquely named; labels name the angle convention (en, hi); proof caption row not clipped; foot.made reworded.
+- Audits B3-*: 1440 and 375, plain and tape-excluded, all 0. The agent-browser default flipped to headed after the first headed run, so every B3 run reports WebGL: true; the headless poster path was last audited in round 2 (0).
+- typecheck clean, lint 0 errors (1 warning in A wordmark.ts), tests 579 in 55 files, build green.
