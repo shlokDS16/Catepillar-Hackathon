@@ -8,7 +8,7 @@
 -- ── 0. fixtures ──────────────────────────────────────────────────────────────────────────────────
 create temp table t (k text primary key, v uuid not null) on commit drop;
 insert into t select k, gen_random_uuid() from unnest(array['site1','site2','op_ravi','op_other','op_cap','op_cap2',
-  'm1','m2','m3','m4','m5','m6','u_ravi','u_other','u_fm1','u_fm2','u_tr1','model','ma','mb','mc','md','zone','scenario','run']) k;
+  'm1','m2','m3','m4','m5','m6','u_m1','u_m3','u_ravi','u_other','u_fm1','u_fm2','u_tr1','model','ma','mb','mc','md','zone','scenario','run']) k;
 create or replace function pg_temp.id(text) returns uuid language sql as $$ select v from t where k = $1 $$;
 grant select on t to authenticated;
 grant execute on function pg_temp.id(text) to authenticated;
@@ -40,7 +40,7 @@ end $$;
 
 insert into auth.users (id, instance_id, aud, role, email, encrypted_password, email_confirmed_at, raw_app_meta_data, raw_user_meta_data, created_at, updated_at)
 select pg_temp.id(k), '00000000-0000-0000-0000-000000000000', 'authenticated', 'authenticated', k || '@b12.local', '', now(), '{}', '{}', now(), now()
-  from unnest(array['u_ravi','u_other','u_fm1','u_fm2','u_tr1']) k;
+  from unnest(array['u_ravi','u_other','u_fm1','u_fm2','u_tr1','u_m1','u_m3']) k;
 insert into public.sites (id, code, name, site_type, location) values
   (pg_temp.id('site1'), 'SQLB121', 'b12 site 1', 'quarry', extensions.ST_SetSRID(extensions.ST_MakePoint(79.0882, 21.1463), 4326)::extensions.geography),
   (pg_temp.id('site2'), 'SQLB122', 'b12 site 2', 'quarry', extensions.ST_SetSRID(extensions.ST_MakePoint(73.8, 18.5), 4326)::extensions.geography);
@@ -55,7 +55,9 @@ insert into public.profiles (user_id, role, operator_id, site_id, display_name) 
   (pg_temp.id('u_other'), 'operator', pg_temp.id('op_other'), pg_temp.id('site1'), 'Other'),
   (pg_temp.id('u_fm1'), 'fleet_manager', null, pg_temp.id('site1'), 'FM1'),
   (pg_temp.id('u_fm2'), 'fleet_manager', null, pg_temp.id('site2'), 'FM2'),
-  (pg_temp.id('u_tr1'), 'trainer', null, pg_temp.id('site1'), 'TR1');
+  (pg_temp.id('u_tr1'), 'trainer', null, pg_temp.id('site1'), 'TR1'),
+  (pg_temp.id('u_m1'), 'operator', pg_temp.id('m1'), pg_temp.id('site1'), 'M1'),
+  (pg_temp.id('u_m3'), 'operator', pg_temp.id('m3'), pg_temp.id('site1'), 'M3');
 insert into public.machine_models (id, code, name, machine_type, idle_fuel_lph, baseline_idle_pct) values
   (pg_temp.id('model'), 'SQLTEST-B12', 'b12 model', 'excavator', 28, 25);
 insert into public.machines (id, code, model_id, home_site_id) values
@@ -89,7 +91,8 @@ insert into public.operator_state (run_id, operator_id, ts, on_foot, in_cab_mach
   (pg_temp.id('run'), pg_temp.id('m2'), now(), false, pg_temp.id('mc'), now()),
   (pg_temp.id('run'), pg_temp.id('m3'), now(), false, pg_temp.id('md'), now()),
   (pg_temp.id('run'), pg_temp.id('m5'), now(), true, null, now() - interval '1 minute'),
-  (pg_temp.id('run'), pg_temp.id('m6'), now(), true, null, now());
+  (pg_temp.id('run'), pg_temp.id('m6'), now(), true, null, now()),
+  (pg_temp.id('run'), pg_temp.id('op_ravi'), now(), true, null, now());   -- Ravi is on foot: not motion-locked
 
 create or replace function pg_temp.apply(p_seq int) returns void language plpgsql as $$
 declare r public.scenario_runs; sc public.scenarios; f public.scenario_frames; c public.app_config;
@@ -541,4 +544,100 @@ begin
   assert pg_get_functiondef('private.escalate_step(timestamptz)'::regprocedure) !~* 'incidents|near_miss'
      and pg_get_functiondef('private.raise_alert(uuid,text,text,public.alert_tier,uuid,uuid,uuid,boolean,text)'::regprocedure) !~* 'incidents|near_miss',
     'the engine does not touch incidents or near-miss data';
+end $$;
+
+-- ── 14. review fixes (007b): the operator cannot switch off a critical; floods per site; reopen; escalated ──
+create temp table rv (k text primary key, v uuid not null) on commit drop;
+grant select on rv to authenticated;
+insert into rv values
+  ('crit_m1', pg_temp.raise('seatbelt_off_moving', 'seatbelt:rv:CRIT1', 'critical', 'm1')),
+  ('warn_m1', pg_temp.raise('seatbelt_off_moving', 'seatbelt:rv:WARN1', 'warning', 'm1')),
+  ('warn_m3', pg_temp.raise('seatbelt_off_moving', 'seatbelt:rv:WARN3', 'warning', 'm3')),
+  ('crit_m3', pg_temp.raise('seatbelt_off_moving', 'seatbelt:rv:CRIT3', 'critical', 'm3'));
+create or replace function pg_temp.rv(text) returns uuid language sql as $$ select v from rv where k = $1 $$;
+grant execute on function pg_temp.rv(text) to authenticated;
+set local role authenticated;
+select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_m3'), 'role', 'authenticated')::text, true);
+do $$
+begin
+  -- m3 sits in a moving cab: default deny, whatever the tier
+  perform pg_temp.expect_err(format('select public.alert_ack(%L, %L)', pg_temp.rv('warn_m3'), gen_random_uuid()), 'forbidden');
+  perform pg_temp.expect_err(format('select public.alert_ack(%L, %L)', pg_temp.rv('crit_m3'), gen_random_uuid()), 'forbidden');
+end $$;
+select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_m1'), 'role', 'authenticated')::text, true);
+do $$
+declare r jsonb;
+begin
+  r := public.alert_ack(pg_temp.rv('crit_m1'), gen_random_uuid());
+  assert r ->> 'status' = 'open', 'an unlocked operator ack of a critical leaves it open: ' || r::text;
+  r := public.alert_ack(pg_temp.rv('warn_m1'), gen_random_uuid());
+  assert r ->> 'status' = 'acknowledged', 'an unlocked operator ack of a warning still stops its timer (A09)';
+end $$;
+reset role;
+do $$
+declare declare_fresh uuid;
+begin
+  assert (select status from public.alerts where id = pg_temp.rv('crit_m3')) = 'open', 'the refused ack changed nothing';
+  assert (select operator_ack_at is not null and status = 'open' and escalate_at is not null from public.alerts where id = pg_temp.rv('crit_m1')),
+    'critical: sighting recorded, status and timer untouched';
+  assert pg_temp.evn('alert.acknowledged', pg_temp.rv('crit_m1')) = 1;
+  perform private.escalate_step(now());
+  assert (select count(*) from public.dispatches where alert_id = pg_temp.rv('crit_m1') and channel = 'telegram' and escalation_level = 0 and status = 'dry_run') = 1,
+    'the supervisor dispatch is still planned (dry run) after the operator ack';
+  perform private.escalate_step(now() + interval '21 seconds');
+  assert (select status from public.alerts where id = pg_temp.rv('crit_m1')) = 'escalating'
+     and (select count(*) from public.dispatches where alert_id = pg_temp.rv('crit_m1') and escalation_level = 1) = 1, 'and it still escalates at its timeout';
+  -- a supervisor ack before the job ever ran still plans the tier's dispatch first
+  declare_fresh := pg_temp.raise('seatbelt_off_moving', 'seatbelt:rv:CRIT9', 'critical', 'm1');
+  perform private.ack_alert(declare_fresh, 'telegram', null, 'fleet_manager');
+  assert (select count(*) from public.dispatches where alert_id = declare_fresh) = 1, 'ack_alert plans the pending dispatch before the status change';
+end $$;
+-- an operator ack never withdraws a supervisor row; a supervisor ack does
+do $$
+declare a uuid;
+begin
+  a := pg_temp.raise('guardian_hazard', 'guardian:rv:WD1', 'warning', 'm1');
+  alter table public.dispatches disable trigger dispatches_kick_insert;
+  insert into public.dispatches (alert_id, site_id, purpose, channel, recipient_ref, recipient_role, escalation_level, status) values
+    (a, pg_temp.id('site1'), 'escalation', 'telegram', 'TELEGRAM_SUPERVISOR_CHAT_ID', 'fleet_manager', 7, 'queued'),
+    (a, pg_temp.id('site1'), 'escalation', 'twilio_voice', 'DEMO_OPERATOR_PHONE', 'operator', 8, 'queued');
+  alter table public.dispatches enable trigger dispatches_kick_insert;
+  perform private.ack_alert(a, 'app', null, 'operator');
+  assert (select status from public.dispatches where alert_id = a and escalation_level = 7) = 'queued', 'an operator ack leaves the supervisor message queued';
+  assert (select status from public.dispatches where alert_id = a and escalation_level = 8) = 'suppressed', 'but withdraws the call to the operator';
+  update public.dispatches set status = 'suppressed' where alert_id = a and status = 'queued';   -- keep section 12's invariant simple
+end $$;
+
+-- floods without an operator are per site
+do $$
+declare n int;
+begin
+  for n in 1..7 loop
+    perform private.raise_alert(pg_temp.id('run'), 'ppe_missing', 'ppe:-:F1-' || n, 'caution', pg_temp.id('site1'), null, pg_temp.id('mc'), false);
+    perform private.raise_alert(pg_temp.id('run'), 'ppe_missing', 'ppe:-:F2-' || n, 'caution', pg_temp.id('site2'), null, pg_temp.id('mc'), false);
+  end loop;
+  assert (select count(*) from public.alerts where kind = 'alert_flood' and hazard_key like 'flood:site-%' and site_id in (pg_temp.id('site1'), pg_temp.id('site2'))) = 2,
+    'two sites flooding at once get two summaries';
+  assert (select count(distinct site_id) from public.alerts where kind = 'alert_flood' and hazard_key like 'flood:site-%' and site_id in (pg_temp.id('site1'), pg_temp.id('site2'))) = 2;
+  assert (select count(*) from public.alerts where hazard_key like 'ppe:-:F1-%' and status = 'open') = 6
+     and (select count(*) from public.alerts where hazard_key like 'ppe:-:F2-%' and status = 'open') = 6, 'each site capped on its own count';
+end $$;
+
+-- a reopened critical dispatches at once; an escalated alert still dedupes
+do $$
+declare a uuid; b uuid;
+begin
+  a := pg_temp.raise('seatbelt_off_moving', 'seatbelt:rv:FLAP', 'critical', 'm1');
+  perform private.escalate_step(now());
+  assert (select count(*) from public.dispatches where alert_id = a) = 1;
+  assert private.resolve_alert(a);
+  assert pg_temp.raise('seatbelt_off_moving', 'seatbelt:rv:FLAP', 'critical', 'm1') = a, 'same alert reopened';
+  perform private.escalate_step(now());
+  assert (select count(*) from public.dispatches where alert_id = a) = 2, 'the reopened critical dispatched at once, no 20 s gap';
+  b := pg_temp.raise('seatbelt_off_moving', 'seatbelt:rv:ESC', 'warning', 'm1');
+  update public.alerts set status = 'escalated' where id = b;
+  assert pg_temp.raise('seatbelt_off_moving', 'seatbelt:rv:ESC', 'critical', 'm1') = b, 'an escalated alert is upgraded, not duplicated';
+  assert (select tier from public.alerts where id = b) = 'critical';
+  assert not exists (select 1 from public.dispatches d join public.alerts x on x.id = d.alert_id
+                      where x.run_id = pg_temp.id('run') and d.status not in ('dry_run', 'suppressed')), 'still dry run only';
 end $$;

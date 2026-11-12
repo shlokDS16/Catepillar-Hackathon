@@ -8,6 +8,7 @@ import { readFileSync, readdirSync } from "node:fs";
 import { join } from "node:path";
 import { connect } from "../lib/db.ts";
 import { repoRoot } from "../lib/env.ts";
+import { transactionControl } from "../lib/sql-guard.ts";
 
 class Rollback extends Error {}
 const mig = process.argv[2];
@@ -17,11 +18,19 @@ const root = repoRoot();
 const sql = connect({ quiet: true, warnings: true });
 const tests = readdirSync(join(root, "supabase", "tests")).filter((f) => f.endsWith(".sql") && f.includes(filter)).sort();
 let failed = 0;
+const migText = readFileSync(join(root, "supabase", "migrations", mig), "utf8");
+const migControl = transactionControl(migText);
+if (migControl) { console.log(`FAIL ${mig}
+  refused: top-level "${migControl}" would escape the rollback`); process.exit(1); }
 for (const f of tests) {
+  const testText = readFileSync(join(root, "supabase", "tests", f), "utf8");
+  const control = transactionControl(testText);
+  if (control) { failed++; console.log(`FAIL ${f}
+  refused: top-level "${control}" would escape the rollback`); continue; }
   try {
     await sql.begin(async (tx) => {
-      await tx.unsafe(readFileSync(join(root, "supabase", "migrations", mig), "utf8"));
-      await tx.unsafe(readFileSync(join(root, "supabase", "tests", f), "utf8"));
+      await tx.unsafe(migText);
+      await tx.unsafe(testText);
       throw new Rollback();
     });
   } catch (e) {
