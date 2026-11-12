@@ -158,14 +158,24 @@ export async function runCompare(
 /** ledger_export refuses ranges over 5000 rows. */
 export const EXPORT_PAGE = 5000;
 
+export class ExportCancelled extends Error {
+  constructor() {
+    super("export_cancelled");
+    this.name = "ExportCancelled";
+  }
+}
+
 /** Export 1..head in pages of at most EXPORT_PAGE rows and join them. Each page retries once on ledger_busy. */
 export async function exportAll(
   port: Pick<DataPort, "ledgerExport">,
   head: number,
   sleep?: (ms: number) => Promise<void>,
+  /** Checked before each page; false stops the export (Stop, unmount, a newer run) with ExportCancelled. */
+  isCurrent: () => boolean = () => true,
 ): Promise<ExportRow[]> {
   const all: ExportRow[] = [];
   for (let first = 1; first <= head; first += EXPORT_PAGE) {
+    if (!isCurrent()) throw new ExportCancelled();
     const last = Math.min(head, first + EXPORT_PAGE - 1);
     const page = (await withBusyRetry(() => port.ledgerExport({ p_first_seq: first, p_last_seq: last }), sleep)) as ExportRow[];
     all.push(...page);

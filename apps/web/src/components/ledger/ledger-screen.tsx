@@ -8,7 +8,7 @@ import { Plate } from "@/components/ui/plate";
 import { verifyLedger, type LedgerVerifyResult } from "@cat/shared/ledger";
 import { useDataPort } from "@/data/store";
 import {
-  LedgerBusyError, checkRange, countSealed, diffAt, exportAll, groupsOf4, isCleanMatch, isPartialMatch, judgeInternal, parsePaste, rowView, runCompare, tableWindow,
+  ExportCancelled, LedgerBusyError, checkRange, countSealed, diffAt, exportAll, groupsOf4, isCleanMatch, isPartialMatch, judgeInternal, parsePaste, rowView, runCompare, tableWindow,
   verifiedCount, withBusyRetry,
   type CompareOutcome, type ExportRow,
 } from "@/ledger/witness";
@@ -92,6 +92,8 @@ export function LedgerScreen() {
   // Each run takes a number; a result is used only while its number is still current, so Stop (or a newer run) discards it.
   const runId = useRef(0);
   const autoRan = useRef(false);
+  // The last finished check, restored if a later re-check is stopped.
+  const lastDone = useRef<Extract<VerifyState, { s: "done" }> | null>(null);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -114,28 +116,35 @@ export function LedgerScreen() {
     if (verify.s === "loading") return;
     const run = ++runId.current;
     const current = () => alive.current && run === runId.current;
+    if (verify.s === "done") lastDone.current = verify;
     setVerify({ s: "loading" });
     try {
       const out = await withBusyRetry(() => port.ledgerVerify({ p_from: 1, p_to: null }));
+      if (!current()) return;
       // A failed re-check never clears the entries already on screen.
       let rows: ExportRow[] = verify.s === "done" ? verify.rows : [];
       let local: LedgerVerifyResult | null = null;
       if (out.head_seq > 0) {
         try {
           // The browser re-checks the whole chain itself (in export pages); the server's verdict is not taken on trust.
-          const all = await exportAll(port, out.head_seq);
+          const all = await exportAll(port, out.head_seq, undefined, current);
           if (!current()) return;
           local = await verifyLedger(all);
           const w = tableWindow(out.head_seq, out.first_bad_seq ?? local.first_bad_seq, TABLE_ROWS);
           rows = all.filter((r) => Number(r.seq) >= w.first && Number(r.seq) <= w.last);
-        } catch {
+        } catch (e) {
+          if (e instanceof ExportCancelled) return;
           local = null;
         }
       } else {
         local = await verifyLedger([]);
         rows = [];
       }
-      if (current()) setVerify({ s: "done", out, rows, local });
+      if (current()) {
+        const next = { s: "done" as const, out, rows, local };
+        lastDone.current = next;
+        setVerify(next);
+      }
     } catch (e) {
       if (current()) setVerify({ s: e instanceof LedgerBusyError ? "busy" : "network" });
     }
@@ -143,7 +152,8 @@ export function LedgerScreen() {
 
   function cancelVerify() {
     runId.current++;
-    setVerify({ s: "cancelled" });
+    // Stop keeps the earlier result on screen; with none, say the check was stopped.
+    setVerify(lastDone.current ?? { s: "cancelled" });
   }
 
   // Auto-verify on open: one run, started once (the ref also holds across the dev double-mount).

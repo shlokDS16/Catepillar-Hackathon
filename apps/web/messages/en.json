@@ -544,8 +544,7 @@
     "cancel": "Stop checking",
     "cancelled": "Check stopped. Nothing was changed.",
     "checkNow": "Check now",
-    "checkAgain": "Check again",
-    "stepWitness": "Then compare with the copy outside our system"
+    "checkAgain": "Check again"
   },
   "inbox": {
     "title": "Inbox",
@@ -603,8 +602,6 @@
     "acknowledge": "Acknowledge",
     "grantOverride": "Grant override",
     "showOnMap": "Show on map",
-    "details": "Details",
-    "hideDetails": "Hide details",
     "notSent": "Not sent. Try again.",
     "override": {
       "title": "Let {name} start without: {items}",
@@ -641,7 +638,34 @@
     "normalLevel": "Normal {v}",
     "nowLevel": "Now {v}",
     "queueLabel": "Then {n} more",
-    "promote": "Open {kind}"
+    "listKicker": "Needs action · {n} · tier, then age",
+    "newAlert": "{n, plural, one {# new {tier} alert} other {# new alerts, highest {tier}}}",
+    "viewNew": "View it",
+    "acknowledged": "Acknowledged",
+    "open": "Open",
+    "ofN": "{i} of {n}",
+    "factWho": "Who",
+    "factMachine": "Machine",
+    "factWhen": "When",
+    "factSent": "Message",
+    "none": "None",
+    "ageShort": {
+      "now": "now",
+      "min": "{m}m",
+      "today": "today"
+    },
+    "kindExplain": {
+      "seatbelt_off_moving": "The machine is moving and the seatbelt is not fastened.",
+      "guardian_hazard": "A machine fault was found while a person is close by.",
+      "proximity_zone": "A person and a machine are closer than the safe distance.",
+      "ppe_missing": "Required safety gear is missing, so the task cannot start.",
+      "anomaly_machine": "A machine reading is outside its normal range.",
+      "idle_excess": "The engine has been idling longer than allowed.",
+      "sos": "An operator asked for help.",
+      "ledger_tamper": "An entry in the sealed incident record no longer matches its hash. Open the Ledger to compare.",
+      "alert_flood": "Many alerts arrived at once, so they are grouped.",
+      "near_miss": "A close call was reported. It is recorded without a name."
+    }
   },
   "task": {
     "noTask": "No task assigned right now.",

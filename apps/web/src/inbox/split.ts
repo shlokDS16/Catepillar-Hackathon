@@ -1,11 +1,11 @@
-import { parseDispatch, type InboxAnomaly, type InboxGroups, type InboxItem } from "@/inbox/inbox";
+import { parseDispatch, type InboxGroups, type InboxItem } from "@/inbox/inbox";
 
 /**
  * Phase 4: split view (desktop) and triage (mobile) rules for the Inbox. Pure, so selection, the
  * keyboard and the triage order are unit-tested; the screen only renders what these return.
  */
 
-const flat = (g: InboxGroups): InboxItem[] => [...g.needsAction, ...g.handled, ...g.resolved, ...g.suppressed];
+export const flat = (g: InboxGroups): InboxItem[] => [...g.needsAction, ...g.handled, ...g.resolved, ...g.suppressed];
 
 /** Every selectable id in reading order: needs action, handled, resolved, suppressed. */
 export function selectableIds(groups: InboxGroups): string[] {
@@ -41,49 +41,6 @@ export function triage(groups: InboxGroups, promotedId: string | null): { lead: 
   return { lead, queued: groups.needsAction.filter((i) => i.id !== lead?.id) };
 }
 
-export type SparkPoint = { x: number; y: number };
-
-/** FNV-1a, so the same anomaly always draws the same line. */
-function seed(text: string): number {
-  let h = 2166136261;
-  for (let i = 0; i < text.length; i++) h = Math.imul(h ^ text.charCodeAt(i), 16777619);
-  return h >>> 0;
-}
-
-/**
- * The signal around the event. The fixture stores no telemetry series, so this is a SIMULATED shape
- * (flat noise around the normal value, then a ramp to the detected value) and the screen says so.
- * null when the anomaly carries no value and normal pair.
- */
-export function sparkSeries(anomaly: InboxAnomaly, n = 24): { values: number[]; normal: number; value: number } | null {
-  const value = anomaly.features.value;
-  const normal = anomaly.features.mean;
-  if (typeof value !== "number" || typeof normal !== "number") return null;
-  let s = seed(anomaly.anomaly_id);
-  const rand = () => {
-    s = (Math.imul(s, 1664525) + 1013904223) >>> 0;
-    return s / 4294967296 - 0.5;
-  };
-  const span = Math.max(Math.abs(value - normal), Math.abs(normal) * 0.05, 1);
-  const rampFrom = Math.floor(n * 0.6);
-  const values = Array.from({ length: n }, (_, i) => {
-    if (i === n - 1) return value;
-    const ramp = i < rampFrom ? 0 : ((i - rampFrom + 1) / (n - rampFrom)) ** 1.6;
-    return normal + (value - normal) * ramp + rand() * span * 0.06;
-  });
-  return { values, normal, value };
-}
-
-/** Map values into a w by h box (y grows downward), with the normal line inside the range. */
-export function sparkPoints(values: readonly number[], normal: number, w: number, h: number, pad = 6): { points: SparkPoint[]; normalY: number } {
-  const lo = Math.min(normal, ...values);
-  const hi = Math.max(normal, ...values);
-  const range = hi - lo || 1;
-  const y = (v: number) => pad + (h - 2 * pad) * (1 - (v - lo) / range);
-  const step = values.length > 1 ? w / (values.length - 1) : 0;
-  return { points: values.map((v, i) => ({ x: i * step, y: y(v) })), normalY: y(normal) };
-}
-
 export type TimelineStep =
   | { kind: "raised"; ageMin: number | null }
   | { kind: "dispatch"; channel: string; status: string; dryRun: boolean };
@@ -98,4 +55,9 @@ export function timelineSteps(item: InboxItem, lines: readonly string[], ageMin:
     if (p) steps.push({ kind: "dispatch", channel: p.channel, status: p.status, dryRun: p.status === "dry_run" });
   }
   return steps;
+}
+
+/** Open alerts the manager has not been shown yet (highest tier first, as ordered). They never replace what is on screen; the screen announces them. */
+export function unseenOpen(groups: InboxGroups, seen: ReadonlySet<string>): InboxItem[] {
+  return groups.needsAction.filter((i) => !seen.has(i.id));
 }

@@ -1,8 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { AnomalyDetected } from "@cat/shared";
-import { EVENT_PAYLOADS } from "@cat/shared/fixtures";
 import { groupInbox, type InboxItem } from "./inbox";
-import { moveSelection, resolveSelection, selectableIds, sparkPoints, sparkSeries, timelineSteps, triage } from "./split";
+import { moveSelection, resolveSelection, selectableIds, timelineSteps, triage, unseenOpen } from "./split";
 
 const base: InboxItem = {
   id: "a", kind: "seatbelt_off_moving", tier: "warning", status: "open", needsAck: true, occurrences: 1,
@@ -65,34 +63,28 @@ describe("mobile triage", () => {
   });
 });
 
-describe("sparkline and timeline", () => {
-  const anomaly = AnomalyDetected.parse({ ...EVENT_PAYLOADS["anomaly.detected"], features: { value: 86, mean: 71 } });
-  it("is deterministic, ends at the detected value and starts near normal", () => {
-    const a = sparkSeries(anomaly)!;
-    expect(a.values).toEqual(sparkSeries(anomaly)!.values);
-    expect(a.values.at(-1)).toBe(86);
-    expect(Math.abs(a.values[0]! - 71)).toBeLessThan(3);
-  });
-  it("is null without a value and normal pair", () => {
-    expect(sparkSeries({ ...anomaly, features: { other: 1 } })).toBeNull();
-  });
-  it("maps into the box with the normal line below the detected point", () => {
-    const s = sparkSeries(anomaly)!;
-    const { points, normalY } = sparkPoints(s.values, s.normal, 100, 50);
-    expect(points[0]!.x).toBe(0);
-    expect(points.at(-1)!.x).toBe(100);
-    for (const p of points) expect(p.y >= 0 && p.y <= 50).toBe(true);
-    expect(normalY).toBeGreaterThan(points.at(-1)!.y);
-  });
-  it("timeline: raised, then each dispatch line, dry run flagged", () => {
+describe("timeline", () => {
+  it("raised, then each dispatch line, dry run flagged", () => {
     expect(timelineSteps(item({}), ["telegram:sent", "twilio_voice:dry_run"], 5)).toEqual([
       { kind: "raised", ageMin: 5 },
       { kind: "dispatch", channel: "telegram", status: "sent", dryRun: false },
       { kind: "dispatch", channel: "twilio_voice", status: "dry_run", dryRun: true },
     ]);
   });
-  it("timeline falls back to the row's own line; a near-miss shows no age and no dispatch", () => {
+  it("falls back to the row's own line; a near-miss shows no age and no dispatch", () => {
     expect(timelineSteps(item({ dispatch: "telegram:delivered" }), [], null)).toHaveLength(2);
     expect(timelineSteps(item({ nonPunitive: true, dispatch: "telegram:sent" }), ["telegram:sent"], 4)).toEqual([{ kind: "raised", ageMin: null }]);
+  });
+});
+
+describe("new alerts never take the screen", () => {
+  it("lists open alerts not yet seen, in tier order, and ignores handled ones", () => {
+    const g = groupInbox([
+      item({ id: "old", tier: "caution" }),
+      item({ id: "fresh-crit", tier: "critical" }),
+      item({ id: "done", status: "acknowledged" }),
+    ]);
+    expect(unseenOpen(g, new Set(["old"])).map((i) => i.id)).toEqual(["fresh-crit"]);
+    expect(unseenOpen(g, new Set(["old", "fresh-crit"]))).toEqual([]);
   });
 });
