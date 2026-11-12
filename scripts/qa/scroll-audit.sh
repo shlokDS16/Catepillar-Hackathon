@@ -3,6 +3,8 @@
 # visitor can actually read in each frame, and fails if any frame is "dead" (nothing readable).
 #
 #   bash scripts/qa/scroll-audit.sh <url> <outdir> [width] [height] [step-px]
+#   HEADED=1 runs a visible browser so WebGL is real (headless Chromium usually has none, which
+#   means only the no-WebGL fallback gets audited). The report states which path was audited.
 #
 # Writes <outdir>/f-NN.png per frame, <outdir>/frames.jsonl (one line per frame), and, via
 # contact-sheet.py, <outdir>/contact.png plus <outdir>/report.md. Exit 1 when a dead frame exists.
@@ -15,12 +17,15 @@ S="scroll-audit-$$"
 # Fixed chrome that is on screen in every frame and so says nothing about the frame itself.
 CHROME="${CHROME:-[data-chrome],[aria-hidden=true],.l-sr,noscript,script,style,.l-nav,.l-caption,.l-hint,.l-rail,.l-foot-note}"
 # The daemon occasionally drops a reply (os error 10060); retry each call up to three times.
-ab() { local n; for n in 1 2 3; do agent-browser --session "$S" "$@" && return 0; sleep 2; done; return 1; }
+FLAGS=(); [ "${HEADED:-0}" = 1 ] && FLAGS+=(--headed)
+ab() { local n; for n in 1 2 3; do agent-browser "${FLAGS[@]}" --session "$S" "$@" && return 0; sleep 2; done; return 1; }
 trap 'ab close >/dev/null 2>&1 || true' EXIT
 
 ab set viewport "$W" "$H" >/dev/null
 ab open "$URL" >/dev/null
 ab wait 2500 >/dev/null
+GL=$(ab eval '(() => { const c = document.createElement("canvas"); return !!(c.getContext("webgl2") || c.getContext("webgl")); })()' | tr -dc "a-z")
+echo "$GL" > "$OUT/webgl.txt"
 
 PROBE='(() => {
   const CHROME = "'"$CHROME"'";
