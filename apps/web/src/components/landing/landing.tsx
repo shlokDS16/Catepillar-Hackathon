@@ -235,8 +235,8 @@ export async function Landing() {
         <section className="stage" id="stage-5" data-stage="5" style={{ "--h": 200 } as Style}>
           <div className="pin">
             <Poster n={5} />
-            <div className="l-ink rv" style={{ "--a": 0.8, "--b": 1 } as Style} aria-hidden="true" />
-            <div className="l-card rv rv-io" style={{ "--a": 0.45, "--b": 0.6, "--c": 0.97, "--d": 1 } as Style}>
+            <div className="l-ink rv" style={{ "--a": 0.85, "--b": 1 } as Style} aria-hidden="true" />
+            <div className="l-card rv rv-io" style={{ "--a": 0.08, "--b": 0.18, "--c": 0.85, "--d": 0.95 } as Style}>
               <Kicker n={5} />
               <h2 className="l-h2">
                 <Lines text={t("s5.title")} />

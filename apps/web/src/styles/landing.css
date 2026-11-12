@@ -520,8 +520,10 @@
 .l-card {
   position: absolute;
   right: var(--gutter);
-  top: var(--s-8);
-  bottom: var(--s-8);
+  top: 0;
+  bottom: 0;
+  height: fit-content;
+  margin-block: auto;
   display: flex;
   flex-direction: column;
   justify-content: center;
@@ -534,6 +536,8 @@
   .l-card {
     left: var(--gutter);
     top: auto;
+    bottom: var(--s-8);
+    margin-block: 0;
     justify-content: flex-end;
     width: auto;
   }
@@ -831,6 +835,13 @@
   .lrow-prev {
     display: none;
   }
+}
+
+/* An ink plate keeps the title and scrubber readable over bright terrain. */
+.l-card {
+  padding: var(--s-5);
+  background: color-mix(in srgb, var(--frame) 90%, transparent);
+  border: var(--bw-hair) solid var(--frame-rule);
 }
 
 .l-card .chip {
