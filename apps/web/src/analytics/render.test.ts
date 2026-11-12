@@ -10,7 +10,7 @@ const html = (source: "demo" | "live") =>
   renderToStaticMarkup(
     createElement(
       NextIntlClientProvider,
-      { locale: "en", messages: en },
+      { locale: "en", messages: en } as unknown as Parameters<typeof NextIntlClientProvider>[0],
       createElement(AnalyticsScreen, { rows: DEMO_ROWS, evidence: DEMO_EVIDENCE, source }),
     ),
   );
