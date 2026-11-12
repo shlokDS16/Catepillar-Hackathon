@@ -1,0 +1,62 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B · Ink Frame · Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F2F0EA;--surface:#FBFAF6;--ink:#16150F;--ink-2:#2A2820;--on-ink:#F2F0EA;--on-ink-2:#B9B5AA;--ink2:#4B483F;--ink3:#6B675D;--rule:#CFCBC0;--clear:#0B6B37;--critical:#B3102A;
+--fb:"Barlow",system-ui,sans-serif;--fd:"Barlow Condensed","Barlow",system-ui,sans-serif;--fm:ui-monospace,"Cascadia Mono",Consolas,monospace}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font:500 18px/1.45 var(--fb);padding-bottom:112px}
+.mono{font:500 15px/1.3 var(--fm);letter-spacing:.04em;text-transform:uppercase}
+.frame{background:var(--ink);color:var(--on-ink);display:flex;align-items:center;gap:12px;padding:12px 16px}
+.state{background:var(--clear);color:#fff;border:2px solid var(--on-ink);font:800 26px/1 var(--fd);text-transform:uppercase;padding:12px 16px;letter-spacing:.02em}
+.frame .mono{color:var(--on-ink-2);flex:1}
+.fbtn{border:2px solid var(--on-ink-2);min-width:64px;height:56px;display:grid;place-items:center;font:600 16px var(--fb);padding:0 10px}
+main{padding:20px 16px;display:grid;gap:28px}
+.lbl{display:flex;justify-content:space-between;border-bottom:1px solid var(--ink);padding-bottom:6px;margin-bottom:12px;color:var(--ink2)}
+.hero h2{font:800 clamp(64px,17vw,112px)/.9 var(--fd);letter-spacing:-.03em;text-transform:uppercase}
+.hero .t{font:700 26px/1.2 var(--fb);margin-top:8px}
+.figs{display:grid;grid-template-columns:1fr 1fr;border-top:3px solid var(--ink);margin-top:16px}
+.figs div{padding:12px 0}.figs div+div{border-left:1px solid var(--rule);padding-left:16px}
+.fig{font:700 52px/1 var(--fd);font-feature-settings:"tnum";letter-spacing:-.02em}
+.bar{height:12px;background:var(--rule);margin-top:12px;position:relative}.bar i{position:absolute;inset:0 65% 0 0;background:var(--ink)}
+.bar::after{content:"";position:absolute;inset:0;background:repeating-linear-gradient(90deg,transparent 0 calc(25% - 2px),var(--paper) calc(25% - 2px) 25%)}
+.why{display:flex;justify-content:space-between;padding:14px 0;border-top:1px solid var(--rule);font-weight:600}
+.loop{background:var(--surface);border:2px solid var(--ink);display:grid;grid-template-columns:1fr;gap:12px;padding:16px}
+.loop h3{font:700 26px/1.15 var(--fb);letter-spacing:-.01em}
+.btn{min-height:80px;display:flex;align-items:center;justify-content:space-between;gap:10px;border:2px solid var(--ink);font:700 20px var(--fb);padding:0 20px}
+.btn.p{background:var(--ink);color:var(--on-ink)}
+.cond{display:grid;grid-template-columns:repeat(3,1fr)}
+.cond div{padding-right:8px}.cond b{font:700 32px/1 var(--fd);display:block}
+.task{display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:center;min-height:80px;border-bottom:1px solid var(--rule)}
+.task.cur{border-bottom:3px solid var(--ink)}
+.dock{position:fixed;left:0;right:0;bottom:0;height:96px;background:var(--ink);color:var(--on-ink);display:grid;grid-template-columns:repeat(4,1fr) 108px}
+.dock a{display:grid;place-items:center;align-content:center;gap:2px;font:600 15px var(--fb);color:var(--on-ink-2)}
+.dock a.on{color:var(--on-ink);box-shadow:inset 0 4px 0 var(--on-ink)}
+.dock .sos{background:var(--critical);color:#fff;font:800 28px/1 var(--fd);outline:2px solid var(--on-ink);outline-offset:-6px}
+@media(min-width:1024px){
+ body{padding:0 0 0 120px}
+ .dock{top:0;right:auto;width:120px;height:auto;grid-template-columns:1fr;grid-template-rows:repeat(4,96px) 1fr 140px}
+ .dock a.on{box-shadow:inset 4px 0 0 var(--on-ink)}
+ .frame{padding:12px 32px}
+ main{grid-template-columns:minmax(0,1.1fr) minmax(0,1fr);gap:40px 56px;padding:40px 56px;max-width:1320px}
+ .hero{grid-row:span 3}
+}
+</style></head><body>
+<header class="frame"><span class="state">✓ Clear</span><span class="mono" style="white-space:nowrap">Sim 09:40 ×10</span><span class="fbtn">हि</span><span class="fbtn">Ask</span></header>
+<main>
+<section class="hero"><p class="lbl mono"><span>01 — Now</span><span>EXC-007 · Excavator</span></p>
+ <h2>Working</h2><p class="t">Excavation · Bench 3</p>
+ <div class="figs"><div><p class="mono" style="color:var(--ink2)">Progress</p><p class="fig">35 %</p></div><div><p class="mono" style="color:var(--ink2)">ETA · up to 92</p><p class="fig">77 min</p></div></div>
+ <div class="bar"><i></i></div>
+ <div class="why" style="margin-top:16px"><span>Why: heat +22 % · novice +15 %</span><span class="mono">assumed ›</span></div></section>
+<section><p class="lbl mono"><span>02 — Practise</span><span>from today</span></p>
+ <div class="loop"><p class="mono" style="color:var(--ink2)">Because of 09:40</p><h3>Seatbelt off on a 17° slope</h3><a class="btn p">Practise <span class="mono" style="color:var(--on-ink-2)">≈ 3 min →</span></a><a class="btn">Lesson <span class="mono">3 cards</span></a></div></section>
+<section><p class="lbl mono"><span>03 — Conditions</span><span>scenario forecast</span></p>
+ <div class="cond"><div><span class="mono">WBGT</span><b>31 °C</b></div><div><span class="mono">Peak 14:00</span><b>44 °C</b></div><div><span class="mono">ETA effect</span><b>+22 %</b></div></div></section>
+<section><p class="lbl mono"><span>04 — Today</span><span>2 tasks</span></p>
+ <div class="task cur"><b class="mono">09:00</b><span>Excavation</span><b style="font:700 18px var(--fd);text-transform:uppercase">Working</b></div>
+ <div class="task"><b class="mono">11:00</b><span>Trenching</span><span style="font:700 18px var(--fd);text-transform:uppercase;color:var(--ink2)">Planned</span></div></section>
+</main>
+<nav class="dock"><a class="on">⌂<span>Home</span></a><a>▤<span>Task</span></a><a>⛨<span>Safety</span></a><a>✎<span>Train</span></a><a class="sos">SOS<span style="font:600 14px var(--fb)">Hold</span></a></nav>
+</body></html>

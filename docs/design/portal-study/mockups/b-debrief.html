@@ -1,0 +1,67 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B · Ink Frame · Debrief</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F2F0EA;--surface:#FBFAF6;--ink:#16150F;--ink-2:#2A2820;--on-ink:#F2F0EA;--on-ink-2:#B9B5AA;--ink2:#4B483F;--ink3:#6B675D;--rule:#CFCBC0;--critical:#B3102A;
+--fb:"Barlow",system-ui,sans-serif;--fd:"Barlow Condensed","Barlow",system-ui,sans-serif;--fm:ui-monospace,"Cascadia Mono",Consolas,monospace}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font:500 18px/1.45 var(--fb);padding-bottom:120px}
+.mono{font:500 15px/1.3 var(--fm);letter-spacing:.04em;text-transform:uppercase}
+.stage{background:var(--ink);color:var(--on-ink);padding:12px 16px 20px}
+.bar1{display:flex;justify-content:space-between;color:var(--on-ink-2)}
+.rail{display:flex;gap:6px;margin:14px 0 18px}.rail span{flex:1;height:6px;background:var(--on-ink)}.rail span.c{background:var(--on-ink);outline:2px solid var(--on-ink);outline-offset:3px}
+.stage h1{font:800 clamp(40px,10vw,76px)/.95 var(--fd);letter-spacing:-.04em;text-transform:uppercase}
+.stage svg{display:block;width:100%;height:auto;margin-top:16px;border:1px solid var(--ink3)}
+.ctrl{display:grid;grid-template-columns:80px 1fr;gap:14px;align-items:center;margin-top:14px}
+.pb{height:80px;border:2px solid var(--on-ink);display:grid;place-items:center;font:800 28px var(--fd)}
+.scrub{height:6px;background:#3a382f;position:relative}.scrub i{position:absolute;inset:0 40% 0 0;background:var(--on-ink)}
+.scrub b{position:absolute;top:-30px;font:500 14px var(--fm);color:var(--on-ink)}
+.cap{color:var(--on-ink-2);margin-top:10px;font-size:15px}
+main{padding:24px 16px;display:grid;gap:32px}
+.lbl{display:flex;justify-content:space-between;border-bottom:1px solid var(--ink);padding-bottom:6px;margin-bottom:14px;color:var(--ink2)}
+.scores{display:grid;grid-template-columns:repeat(3,1fr)}
+.scores div{border-left:1px solid var(--rule);padding-left:12px}.scores div:first-child{border:0;padding:0}
+.n{font:700 64px/1 var(--fd);letter-spacing:-.03em;font-feature-settings:"tnum"}
+.trace{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+.cell{min-height:80px;border:2px solid var(--ink);padding:10px;display:grid;align-content:space-between;font-weight:600;font-size:16px}
+.cell.y{background:var(--ink);color:var(--on-ink)}.cell.m{border-style:dashed;color:var(--ink2)}.cell.e{border-color:transparent;background:repeating-linear-gradient(135deg,transparent 0 6px,var(--rule) 6px 7px)}
+.row{display:grid;grid-template-columns:72px 1fr;gap:10px;align-items:center;margin-bottom:8px}
+.dec{display:grid;gap:4px;padding:14px 0;border-bottom:1px solid var(--rule)}
+.rule{background:var(--surface);border:3px solid var(--ink);padding:20px;display:grid;gap:14px}
+.rule q{font:700 28px/1.2 var(--fb);letter-spacing:-.01em}
+.btn{min-height:80px;display:flex;align-items:center;justify-content:space-between;padding:0 20px;border:2px solid var(--ink);font:700 20px var(--fb)}
+.dock{position:fixed;left:0;right:0;bottom:0;background:var(--ink);padding:12px 16px;display:grid;grid-template-columns:1fr 96px;gap:12px}
+.dock .btn{background:var(--on-ink);color:var(--ink);border-color:var(--on-ink)}
+.sos{background:var(--critical);color:#fff;display:grid;place-items:center;font:800 26px var(--fd);outline:2px solid var(--on-ink);outline-offset:-6px}
+@media(min-width:1024px){
+ .stage{display:grid;grid-template-columns:1fr 1.3fr;gap:16px 56px;padding:24px 56px 40px;align-items:end}
+ .bar1,.rail{grid-column:1/-1}.stage svg{margin:0;grid-row:3 / span 2;grid-column:2}
+ main{grid-template-columns:1fr 1fr 1fr;padding:40px 56px;gap:48px;max-width:1440px}
+ .rl{grid-column:1/-1}.dock{position:static;background:none;padding:0 56px 40px;grid-template-columns:420px 96px}
+ .dock .btn{background:var(--ink);color:var(--on-ink)}
+ body{padding-bottom:0}
+}
+</style></head><body>
+<section class="stage">
+ <div class="bar1 mono"><span>Replay · your event 09:40</span><span>Simulated</span></div>
+ <div class="rail" aria-label="Phase 4 of 4"><span></span><span></span><span></span><span class="c"></span></div>
+ <div><p class="mono" style="color:var(--on-ink-2)">Debrief · 01 What happened</p><h1>Seatbelt off on a 17° slope</h1>
+ <div class="ctrl"><span class="pb">❚❚</span><div class="scrub"><i></i><b style="left:56%">⚑ 09:40</b><b style="left:70%;top:14px">⏱ 8.4 s</b></div></div>
+ <p class="cap">6.2 km/h · pitch 17.4° · belt off · 10× · re-enactment from your recorded data</p></div>
+ <svg viewBox="0 0 360 200" role="img" aria-label="Site plan re-enactment"><g stroke="#F2F0EA" fill="none"><polygon points="30,30 310,22 330,170 50,186" stroke-width="1.5" stroke-dasharray="6 4"/><path d="M60 160 C110 140 150 120 196 102" stroke-width="4"/><path d="M196 102 S250 74 284 62" stroke-width="2" stroke-dasharray="3 5"/><circle cx="312" cy="44" r="14" stroke-width="1.5"/><path d="M304 48 L320 40 M320 40 L314 38 M320 40 L317 46" stroke-width="2"/></g><rect x="186" y="92" width="22" height="16" fill="#F2F0EA" transform="rotate(-25 197 100)"/><text x="44" y="50" fill="#B9B5AA" font-size="12" font-family="Consolas">BENCH 3 · 17°</text><text x="210" y="128" fill="#F2F0EA" font-size="14" font-family="Barlow Condensed" font-weight="700">⚑ 09:40</text></svg>
+</section>
+<main>
+<section><p class="lbl mono"><span>02 — Score</span><span>for learning</span></p>
+ <div class="scores"><div><p class="mono">Safety</p><p class="n">80</p></div><div><p class="mono">Procedure</p><p class="n">67</p></div><div><p class="mono">Speed</p><p class="n">100</p></div></div></section>
+<section><p class="lbl mono"><span>03 — Your path</span><span>vs safest</span></p>
+ <div class="row"><span class="mono">You</span><div class="trace"><span class="cell y">1<br>Speed and pitch</span><span class="cell y">2<br>Protocol card</span><span class="cell e"></span></div></div>
+ <div class="row"><span class="mono">Safest</span><div class="trace"><span class="cell">1<br>Speed and pitch</span><span class="cell m">2<br>Site map · missed</span><span class="cell">3<br>Protocol card</span></div></div>
+ <p style="font-size:15px;color:var(--ink2)">Site map: the slope is on Bench 3. Pitch crossed 15°.</p></section>
+<section><p class="lbl mono"><span>04 — Decisions</span><span>1 of 2 right</span></p>
+ <div class="dec"><b>First action?</b><span>✓ You: Stop the machine</span></div>
+ <div class="dec"><b>Then?</b><span>✕ No answer · Safer: Fasten the seatbelt</span><span style="font-size:15px;color:var(--ink2)">Rollovers throw you out of an unbelted seat.</span></div></section>
+<section class="rl"><div class="rule"><p class="mono" style="color:var(--ink2)">05 — The rule · Protocol card: Seatbelt on slopes</p><q>Seatbelt on before the machine moves; never on a slope without it.</q><span class="btn" style="justify-self:start;gap:16px">🔊 Listen</span></div></section>
+</main>
+<div class="dock"><span class="btn">Lesson · Seatbelt on slopes <span>→</span></span><span class="sos">SOS</span></div>
+</body></html>
