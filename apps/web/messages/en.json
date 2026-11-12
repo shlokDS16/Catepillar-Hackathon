@@ -171,14 +171,12 @@
       "waiting": "Waiting",
       "break": "Break",
       "planned": "Planned",
-      "breach": "Seatbelt off while moving, {time}",
-      "breachOpen": "Seatbelt off while moving, {time}. Open the replay.",
       "heat": "Heat peak {time} (scenario forecast)",
+      "event": "Safety event",
+      "openReplay": "Open the replay.",
       "marksTitle": "Marks on your shift",
-      "pinBreach": "Seatbelt {time}",
       "pinHeat": "Heat peak {time}",
-      "range": "{from} to {to}",
-      "empty": "No tasks planned today."
+      "range": "{from} to {to}"
     },
     "conditions": "Conditions",
     "wbgt": "WBGT {c} °C",

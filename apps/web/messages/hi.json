@@ -171,14 +171,12 @@
       "waiting": "इंतज़ार",
       "break": "ब्रेक",
       "planned": "योजना",
-      "breach": "चलते समय सीटबेल्ट खुली, {time}",
-      "breachOpen": "चलते समय सीटबेल्ट खुली, {time}। रीप्ले खोलें।",
       "heat": "गर्मी का शिखर {time} (परिदृश्य पूर्वानुमान)",
+      "event": "सुरक्षा घटना",
+      "openReplay": "रीप्ले खोलें।",
       "marksTitle": "आपकी शिफ़्ट के निशान",
-      "pinBreach": "सीटबेल्ट {time}",
       "pinHeat": "गर्मी शिखर {time}",
-      "range": "{from} से {to}",
-      "empty": "आज कोई काम तय नहीं है।"
+      "range": "{from} से {to}"
     },
     "conditions": "हालात",
     "wbgt": "WBGT {c} °C",

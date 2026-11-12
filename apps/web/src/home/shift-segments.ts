@@ -19,6 +19,8 @@ export type ShiftMark = {
   atMs: number;
   /** Route that opens the real Replay for a breach with an assignment; null otherwise. */
   href: string | null;
+  /** The assignment's own lesson code, so the label names its event; null for an alert with no assignment. */
+  lessonCode: string | null;
 };
 export type ShiftTape = {
   startMs: number;
@@ -47,6 +49,9 @@ const ms = (iso: string) => Date.parse(iso);
  *    its worked time as Working from its planned start, then Waiting up to now.
  *  - Planned: a future task from its planned start for its p50 estimate; the unfinished part of a task
  *    running now continues as Planned for its remaining p50.
+ *  - A task paused, blocked or late keeps its remaining p50 as Planned after now, so no false Break follows it.
+ *  - A completed task is an estimate, not a measurement: the reducer drops its worked time on completion,
+ *    so it is drawn as Working from its planned start for its p50.
  *  - Break: a gap of 20 min or more between the end of one task and the start of the next.
  * Marks: one breach mark per replay assignment (linked to Replay), and one heat-peak mark from
  * `weather.forecast_peak_at` (a scenario forecast).
@@ -91,28 +96,31 @@ export function buildShiftSegments(input: ShiftInput, nowIso: string): ShiftTape
       const worked = Math.min(work?.workedMs ?? 0, Math.max(0, nowMs - planned));
       if (worked > 0) push("working", planned, planned + worked, task.id);
       push("waiting", planned + worked, nowMs, task.id);
-      end = nowMs;
+      const left = Math.max(0, p50 * (1 - Math.min(100, task.progress_pct) / 100));
+      push("planned", nowMs, nowMs + left, task.id);
+      end = nowMs + left;
     } else if (task.status === "completed") {
       end = Math.min(nowMs, planned + p50);
       push("working", planned, end, task.id);
     } else {
       // planned but already late: it is waiting
       push("waiting", planned, nowMs, task.id);
-      end = nowMs;
+      push("planned", nowMs, nowMs + p50, task.id);
+      end = nowMs + p50;
     }
     cursor = Math.max(cursor ?? 0, end);
   });
 
   const marks: ShiftMark[] = [];
   const breachAlert = input.alerts.find((a) => a.kind === "seatbelt_off_moving");
+  // Only an assignment whose event has a known time is marked, with its own lesson code; the rest are skipped.
   for (const a of input.assignments) {
-    if (!a.replay_id) continue;
-    const at = (a.because_event_id ? input.eventTimes[a.because_event_id] : undefined) ?? breachAlert?.first_seen;
-    if (!at) continue;
-    marks.push({ id: `breach:${a.id}`, kind: "breach", atMs: ms(at), href: `/op/training/replay/${a.replay_id}` });
+    const at = a.replay_id && a.because_event_id ? input.eventTimes[a.because_event_id] : undefined;
+    if (!a.replay_id || !at) continue;
+    marks.push({ id: `breach:${a.id}`, kind: "breach", atMs: ms(at), href: `/op/training/replay/${a.replay_id}`, lessonCode: a.lesson_code });
   }
-  if (marks.length === 0 && breachAlert) marks.push({ id: `breach:${breachAlert.alert_id}`, kind: "breach", atMs: ms(breachAlert.first_seen), href: null });
-  if (heatMs != null) marks.push({ id: "heat", kind: "heat", atMs: heatMs, href: null });
+  if (marks.length === 0 && breachAlert) marks.push({ id: `breach:${breachAlert.alert_id}`, kind: "breach", atMs: ms(breachAlert.first_seen), href: null, lessonCode: null });
+  if (heatMs != null && heatMs >= startMs) marks.push({ id: "heat", kind: "heat", atMs: heatMs, href: null, lessonCode: null });
   marks.sort((a, b) => a.atMs - b.atMs);
 
   const hours: number[] = [];

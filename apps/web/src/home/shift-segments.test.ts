@@ -33,15 +33,25 @@ describe("buildShiftSegments", () => {
   it("shows a paused task as Working for the worked time, then Waiting", () => {
     const t = task({ status: "paused" });
     const tape = buildShiftSegments(input({ tasks: [t], taskWork: { [t.id]: { workedMs: 20 * 60_000, runningSince: null } } }), T0);
-    expect(tape.segments.map((s) => [s.kind, (s.endMs - s.startMs) / 60_000])).toEqual([
+    expect(tape.segments.map((s) => [s.kind, Math.round((s.endMs - s.startMs) / 60_000)])).toEqual([
       ["working", 20],
       ["waiting", 20],
+      ["planned", 50], // 35 % done of a 77 min estimate: the rest stays Planned after now
     ]);
   });
 
   it("treats a blocked-PPE task with no work as Waiting from its planned start", () => {
     const tape = buildShiftSegments(input({ tasks: [task({ status: "blocked_ppe" })] }), T0);
-    expect(tape.segments.map((s) => s.kind)).toEqual(["waiting"]);
+    expect(tape.segments.map((s) => s.kind)).toEqual(["waiting", "planned"]);
+  });
+
+  it("keeps the remaining work of a late or paused task up to the next task, so no false Break appears", () => {
+    const late = task({ id: "late", status: "planned", planned_start: at("09:00"), eta_p50_min: 77, progress_pct: 0 });
+    const next = task({ id: "next", status: "planned", planned_start: at("11:00"), eta_p50_min: 60, progress_pct: 0 });
+    for (const first of [late, task({ id: "late", status: "paused", progress_pct: 0, eta_p50_min: 77 }), task({ id: "late", status: "blocked_ppe", progress_pct: 0, eta_p50_min: 77 })]) {
+      const tape = buildShiftSegments(input({ tasks: [first, next], assignments: [] }), T0);
+      expect(tape.segments.some((s) => s.kind === "break")).toBe(false);
+    }
   });
 
   it("draws a future task as Planned and a long gap before it as Break", () => {
@@ -76,11 +86,18 @@ describe("buildShiftSegments", () => {
     expect(tape.marks.map((m) => m.kind)).toEqual(["breach", "heat"]);
   });
 
-  it("falls back to the alert time when the event time is unknown, and to an unlinked mark with no assignment", () => {
+  it("marks an assignment with its own lesson code, skips one with an unknown event time, and falls back to the alert with no assignment", () => {
+    const t0 = buildShiftSegments(input({ eventTimes: { [IDS.event]: T0 } }), T0);
+    expect(t0.marks.find((m) => m.kind === "breach")!.lessonCode).toBe(snap.assignments[0]!.lesson_code);
     const t1 = buildShiftSegments(input(), T0);
-    expect(t1.marks.find((m) => m.kind === "breach")!.atMs).toBe(ms(snap.active_alerts[0]!.first_seen));
+    expect(t1.marks.filter((m) => m.href !== null)).toEqual([]);
     const t2 = buildShiftSegments(input({ assignments: [] }), T0);
     expect(t2.marks.find((m) => m.kind === "breach")!.href).toBeNull();
+  });
+
+  it("drops a heat peak that is before the tape starts", () => {
+    const w = { ...snap.weather!, forecast_peak_at: "2026-09-24T05:00:00.000+05:30" };
+    expect(buildShiftSegments(input({ weather: w }), T0).marks.some((m) => m.kind === "heat")).toBe(false);
   });
 
   it("has no heat mark without a forecast, and the tape covers the peak", () => {

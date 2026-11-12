@@ -35,7 +35,8 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
 
   const connText = dataLabel({ connectivity, clock, t, formatTime: (ms) => format.dateTime(new Date(ms), "time") });
   const sync = syncState(connectivity);
-  const syncText = sync.kind === "saved" ? t("chrome.syncSaved") : sync.kind === "queued" ? t("chrome.syncQueued", { n: sync.n }) : t("chrome.syncOffline", { n: sync.n });
+  // No outbox exists yet, so "Saved" or "n queued" would claim something nothing measured: the cell shows only when offline.
+  const syncText = sync.kind === "offline" ? t("chrome.syncOffline", { n: sync.n }) : null;
 
   return (
     <header className="strip" inert={lockShown || undefined}>
@@ -56,9 +57,12 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
         <span className="strip-cap t-caption" data-conn={connectivity.kind}>
           {connText}
         </span>
-        <span className="strip-sync t-caption" data-state={sync.kind} aria-label={`${t("chrome.syncLabel")}: ${syncText}`}>
-          {syncText}
-        </span>
+        {syncText ? (
+          <span className="strip-sync t-caption" data-state={sync.kind}>
+            <span className="tape-sr">{t("chrome.syncLabel")}: </span>
+            {syncText}
+          </span>
+        ) : null}
       </div>
       <div className="strip-actions">{actions}</div>
     </header>
