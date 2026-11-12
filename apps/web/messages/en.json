@@ -378,14 +378,21 @@
       "rule": "The rule to remember",
       "ruleSource": "From protocol card: {source}",
       "outOf": "/ 100",
+      "scoresNote": "Scores are for learning, not punishment.",
+      "forLearning": "For learning",
+      "vsSafest": "You vs safest",
+      "rightCount": "{n} of {total} right",
+      "simulated": "Simulated",
+      "right": "Right",
+      "notQuite": "Not this time",
       "scoreSpoken": "{label}: {v} out of 100",
       "score": {
         "safety": "Safety",
-        "procedure": "Procedure",
-        "efficiency": "Efficiency"
+        "procedure": "Right steps",
+        "efficiency": "Speed"
       },
       "you": "You",
-      "ideal": "Ideal",
+      "ideal": "Safest",
       "missed": "missed",
       "openedNone": "You opened no cards.",
       "traceHint": "Tap a card to see why it mattered, or did not.",
@@ -393,7 +400,7 @@
         "relevant": "opened, it mattered",
         "irrelevant": "opened, it did not matter",
         "missed": "missed, it mattered",
-        "ideal": "on the ideal path"
+        "ideal": "on the safest path"
       },
       "stepOf": "Step {n}",
       "youSaid": "You:",

@@ -602,8 +602,14 @@ export const EXPLANATION_TEMPLATES = {
   committed **by the integrator on `main`** (Track F does not edit that folder by hand).
 - Phrase ids: `alert.{kind}.{tier}`, `guardian.{card_id}.step{n}`, `sos.{state}`,
   `lesson.{code}.{card_id}`, `lesson.{code}.quiz.{q_id}`, `replay.{event_type}.brief`,
-  `replay.{event_type}.step{n}`, `replay.{event_type}.rule`. Dynamic numbers are **not** spoken from
-  clips (the UI shows them); clips carry fixed phrases only.
+  `replay.{event_type}.step{n}`, `replay.{event_type}.rule`, and (D14, Debrief [Listen] per section, generic
+  for every event, B23 to generate; the UI hides each [Listen] until its clip is `ok`) `replay.debrief.what`,
+  `replay.debrief.scores`, `replay.debrief.path`, `replay.debrief.decisions`. Scripts (en / hi):
+  what "Here is what happened, rebuilt from your recorded event." / "यह देखें कि क्या हुआ, आपके रिकॉर्ड किए डेटा से दोबारा बनाया गया।";
+  scores "These are your scores for safety, right steps and speed. They are for learning, not punishment." / "ये आपके स्कोर हैं: सुरक्षा, सही कदम और तेज़ी। ये सीखने के लिए हैं, सज़ा के लिए नहीं।";
+  path "This is how you investigated, and the safest way to do it." / "आपने कैसे जाँच की, और सबसे सुरक्षित तरीका क्या था।";
+  decisions "These are your decisions, each with the safer answer." / "ये आपके निर्णय हैं, हर एक के साथ सुरक्षित जवाब।".
+  Dynamic numbers are **not** spoken from clips (the UI shows them); clips carry fixed phrases only.
 ```ts
 export const Phrase = z.object({ id: z.string().regex(/^[a-z0-9_.]+$/), group: z.enum(["alert", "guardian",
   "sos", "lesson", "replay"]), text: I18nText.extend({ hi: z.string() }) });

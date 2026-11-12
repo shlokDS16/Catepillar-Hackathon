@@ -378,14 +378,21 @@
       "rule": "याद रखने का नियम",
       "ruleSource": "प्रोटोकॉल कार्ड से: {source}",
       "outOf": "/ 100",
+      "scoresNote": "स्कोर सीखने के लिए हैं, सज़ा के लिए नहीं।",
+      "forLearning": "सीखने के लिए",
+      "vsSafest": "आप बनाम सबसे सुरक्षित",
+      "rightCount": "{total} में से {n} सही",
+      "simulated": "नकली",
+      "right": "सही",
+      "notQuite": "इस बार नहीं",
       "scoreSpoken": "{label}: 100 में से {v}",
       "score": {
         "safety": "सुरक्षा",
-        "procedure": "प्रक्रिया",
-        "efficiency": "कुशलता"
+        "procedure": "सही कदम",
+        "efficiency": "तेज़ी"
       },
       "you": "आप",
-      "ideal": "आदर्श",
+      "ideal": "सबसे सुरक्षित",
       "missed": "छूटा",
       "openedNone": "आपने कोई कार्ड नहीं खोला।",
       "traceHint": "कार्ड दबाएँ और देखें कि वह क्यों ज़रूरी था या नहीं।",
@@ -393,7 +400,7 @@
         "relevant": "खोला, ज़रूरी था",
         "irrelevant": "खोला, ज़रूरी नहीं था",
         "missed": "छूटा, ज़रूरी था",
-        "ideal": "आदर्श क्रम में"
+        "ideal": "सबसे सुरक्षित क्रम में"
       },
       "stepOf": "कदम {n}",
       "youSaid": "आप:",

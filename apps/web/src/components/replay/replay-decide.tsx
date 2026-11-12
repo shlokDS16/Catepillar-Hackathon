@@ -189,12 +189,16 @@ export function ReplayDecide({
               const label = localText(choice.label, lang);
               const n = isOrder ? orderNumber(sequence, choice.id) : null;
               const chosen = isOrder ? n !== null : picked === choice.id;
+              // D14: a selected plate is outlined, never an ink fill, so it cannot be mistaken for
+              // the one primary action. Only the order step shows a number badge (tap order); a
+              // single choice shows the outline alone, so no number can be misread as an order.
+              const badge = isOrder ? n : null;
               return (
                 <li key={choice.id}>
                   <Plate
                     as="button"
                     type="button"
-                    tone={chosen ? "ink" : "surface"}
+                    tone="surface"
                     className="dc-plate"
                     aria-pressed={chosen}
                     aria-disabled={(locked && !chosen) || undefined}
@@ -206,15 +210,13 @@ export function ReplayDecide({
                     >
                       {label.value}
                     </span>
+                    {badge !== null ? (
+                      <span className="dc-number tnum" aria-hidden="true">
+                        {badge}
+                      </span>
+                    ) : null}
                     {n !== null ? (
-                      <>
-                        <span className="dc-number tnum" aria-hidden="true">
-                          {n}
-                        </span>
-                        <span className="sr-only">
-                          {t("orderNumber", { n })}
-                        </span>
-                      </>
+                      <span className="sr-only">{t("orderNumber", { n })}</span>
                     ) : chosen ? (
                       <span className="sr-only">{t("chosen")}</span>
                     ) : null}
@@ -225,7 +227,7 @@ export function ReplayDecide({
           </ul>
 
           {isOrder ? (
-            <div className="replay-actions">
+            <div className="replay-actions" data-dock-safe="true">
               <Button
                 variant="primary"
                 disabled={!ready || locked}
