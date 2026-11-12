@@ -3,7 +3,7 @@ import { WITNESS_LINE } from "@cat/shared";
 import { RpcError } from "@/data/port";
 import { BREAK_SEQ, LEDGER_ROWS, SEALED_SEQ, ledgerRows, ledgerVerdict, witnessLineFor, type LedgerScenario } from "@/ledger/fixtures";
 import {
-  BUSY_RETRY_MS, LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, isCleanMatch, isSealed, parsePaste, rowView,
+  BUSY_RETRY_MS, LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, isCleanMatch, isPartialMatch, isSealed, parsePaste, rowView,
   runCompare, tableWindow, verifiedCount, withBusyRetry,
 } from "@/ledger/witness";
 
@@ -113,7 +113,7 @@ describe("runCompare on the fixtures", () => {
     const line = await witnessLineFor();
     const out = await runCompare(portFor("rewrite"), { from: "1", to: "214", paste: parsePaste(line) }, sleep);
     if (out.kind !== "done") throw new Error("expected done");
-    expect(out.local.ok).toBe(true);
+    expect(out.local.status).not.toBe("failed");
     expect(out.comparison?.match).toBe(false);
     expect(out.comparison?.root_diff_at).toBeGreaterThanOrEqual(0);
   });
@@ -194,6 +194,26 @@ describe("review fixes", () => {
     const bad = await runCompare(portFor("rewrite"), { from: "1", to: "214", paste: parsePaste(line) }, async () => {});
     const broken = await runCompare(portFor("chain_break"), { from: "1", to: "214", paste: parsePaste(line) }, async () => {});
     if (good.kind !== "done" || bad.kind !== "done" || broken.kind !== "done") throw new Error("expected done");
-    expect([isCleanMatch(good), isCleanMatch(bad), isCleanMatch(broken)]).toEqual([true, false, false]);
+    // Range 1..214 holds the sealed row #7: chain and witness agree, but that is never a tick.
+    expect([isCleanMatch(good), isCleanMatch(bad), isCleanMatch(broken)]).toEqual([false, false, false]);
+    expect(good.local.status).toBe("verified_with_sealed");
+    expect(good.comparison?.partial).toBe(true);
+    expect(isPartialMatch(good)).toBe(true);
+    expect([isPartialMatch(bad), isPartialMatch(broken)]).toEqual([false, false]);
+    // A range with no sealed row is the one clean match.
+    const clean = await runCompare(portFor("intact"), { from: "8", to: "214", paste: parsePaste(await witnessLineFor(8, 214)) }, async () => {});
+    if (clean.kind !== "done") throw new Error("expected done");
+    expect(clean.local.status).toBe("verified");
+    expect(isCleanMatch(clean)).toBe(true);
+  });
+  it("a line without np= cannot confirm sealed rows, and sealed fixture rows have exactly 5 keys", async () => {
+    const line = (await witnessLineFor()).replace(/ np=[0-9a-f]{64}$/, "");
+    const out = await runCompare(portFor("intact"), { from: "1", to: "214", paste: parsePaste(line) }, async () => {});
+    if (out.kind !== "done") throw new Error("expected done");
+    expect(out.comparison?.match).toBe(false);
+    const sealedRow = (await ledgerRows("intact"))[SEALED_SEQ - 1]!;
+    expect(Object.keys(sealedRow.canonical_fields).sort()).toEqual(["non_punitive", "prev_hash", "sealed", "seq", "v"]);
+    const p = parsePaste(await witnessLineFor());
+    expect(p.state === "ok" && p.witness.np_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 });

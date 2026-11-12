@@ -103,7 +103,7 @@ export type ExportRow = LedgerExportRow & { sealed?: boolean };
  * `non_punitive` and the near_miss type too, so a row that arrives with its content still never shows it.
  */
 export const isSealed = (row: ExportRow): boolean =>
-  row.sealed === true || row.canonical_fields?.non_punitive === true || row.canonical_fields?.incident_type === "near_miss";
+  row.sealed === true || row.canonical_fields?.sealed === true || row.canonical_fields?.non_punitive === true || row.canonical_fields?.incident_type === "near_miss";
 export const countSealed = (rows: readonly ExportRow[]): number => rows.filter(isSealed).length;
 
 export type CompareOutcome =
@@ -147,7 +147,7 @@ export async function runCompare(
     } catch {
       server = null; // secondary line only; the verdict never depends on it
     }
-    return { kind: "done", first: range.first, last: range.last, local, sealed: countSealed(rows), witness, comparison, server };
+    return { kind: "done", first: range.first, last: range.last, local, sealed: local.sealed, witness, comparison, server };
   } catch (e) {
     if (e instanceof LedgerBusyError) return { kind: "busy" };
     if (e instanceof RpcError && e.code === "validation") return { kind: "validation", field: "range" };
@@ -165,9 +165,17 @@ export function tableWindow(head: number, badSeq: number | null, size = 25): { f
 /** Rows whose content this browser actually checked. Sealed rows are chain-linked only, never "verified". */
 export const verifiedCount = (checked: number, sealed: number): number => Math.max(0, checked - sealed);
 
-/** A clean full match: the chain verified in the browser AND the witness comparison matched. Nothing else reads as verified. */
+/**
+ * A clean full match: every row recomputed in the browser (status "verified", no sealed rows) AND the witness
+ * matched. The only state that gets a tick. A match over a range with sealed rows is `isPartialMatch`.
+ */
 export function isCleanMatch(out: Extract<CompareOutcome, { kind: "done" }>): boolean {
-  return out.local.ok && out.comparison?.match === true;
+  return out.local.status === "verified" && out.comparison?.match === true && out.comparison.partial === false;
+}
+
+/** Chain and witness agree, but sealed rows were not checked byte for byte: never a tick. */
+export function isPartialMatch(out: Extract<CompareOutcome, { kind: "done" }>): boolean {
+  return out.local.status === "verified_with_sealed" && out.comparison?.match === true;
 }
 
 /** Entries-table cells. Sealed and near-miss rows expose no operator, machine, place or text. */

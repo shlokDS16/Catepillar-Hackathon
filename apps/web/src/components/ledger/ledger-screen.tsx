@@ -5,9 +5,10 @@ import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
+import { verifyLedger, type LedgerVerifyResult } from "@cat/shared/ledger";
 import { useDataPort } from "@/data/store";
 import {
-  LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, isCleanMatch, parsePaste, rowView, runCompare, tableWindow,
+  LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, isCleanMatch, isPartialMatch, parsePaste, rowView, runCompare, tableWindow,
   verifiedCount, withBusyRetry,
   type CompareOutcome, type ExportRow,
 } from "@/ledger/witness";
@@ -18,7 +19,7 @@ type VerifyState =
   | { s: "loading" }
   | { s: "busy" }
   | { s: "network" }
-  | { s: "done"; out: VerifyOut; rows: ExportRow[] };
+  | { s: "done"; out: VerifyOut; rows: ExportRow[]; local: LedgerVerifyResult | null };
 type CompareState = { s: "idle" } | { s: "loading" } | { s: "done"; out: CompareOutcome };
 
 const TABLE_ROWS = 25;
@@ -68,10 +69,11 @@ function HashPair({
   );
 }
 
-function Verdict({ ok, children }: { ok: boolean; children: React.ReactNode }) {
+/** `partial` (sealed rows present) is never a tick: an info mark on a neutral plate. */
+function Verdict({ ok, partial = false, children }: { ok: boolean; partial?: boolean; children: React.ReactNode }) {
   return (
     <p className="ledger-plate-verdict">
-      <Mark kind={ok ? "check" : "cross"} />
+      <Mark kind={partial ? "info" : ok ? "check" : "cross"} />
       <span>{children}</span>
     </p>
   );
@@ -110,15 +112,19 @@ export function LedgerScreen() {
     try {
       const out = await withBusyRetry(() => port.ledgerVerify({ p_from: 1, p_to: null }));
       let rows: ExportRow[] = [];
+      let local: LedgerVerifyResult | null = null;
       if (out.head_seq > 0) {
         try {
-          const w = tableWindow(out.head_seq, out.first_bad_seq, TABLE_ROWS);
-          rows = (await port.ledgerExport({ p_first_seq: w.first, p_last_seq: w.last })) as ExportRow[];
+          // The browser re-checks the whole chain itself; the server's verdict is not taken on trust.
+          const all = (await withBusyRetry(() => port.ledgerExport({ p_first_seq: 1, p_last_seq: out.head_seq }))) as ExportRow[];
+          local = await verifyLedger(all);
+          const w = tableWindow(out.head_seq, out.first_bad_seq ?? local.first_bad_seq, TABLE_ROWS);
+          rows = all.filter((r) => Number(r.seq) >= w.first && Number(r.seq) <= w.last);
         } catch {
           rows = [];
         }
       }
-      if (alive.current) setVerify({ s: "done", out, rows });
+      if (alive.current) setVerify({ s: "done", out, rows, local });
     } catch (e) {
       if (alive.current) setVerify({ s: e instanceof LedgerBusyError ? "busy" : "network" });
     }
@@ -249,17 +255,25 @@ function InternalPlate({ state }: { state: VerifyState }) {
     );
   }
   const o = state.out;
-  const queueOnly = !o.ok && o.first_bad_seq === null;
+  const local = state.local;
+  const failed = !o.ok || local?.status === "failed";
+  const badSeq = o.first_bad_seq ?? local?.first_bad_seq ?? null;
+  const queueOnly = failed && badSeq === null;
+  // A tick only when this browser recomputed every row. Sealed rows (or no local check) never get one.
+  const clean = !failed && local?.status === "verified";
+  const partial = !failed && !clean;
   return (
-    <Plate as="section" className="ledger-plate" tone={o.ok ? "clear" : "critical"} stamp aria-label={t("internalLabel")} key={o.ok ? "ok" : "bad"}>
+    <Plate as="section" className="ledger-plate" tone={failed ? "critical" : clean ? "clear" : "surface"} stamp aria-label={t("internalLabel")} key={failed ? "bad" : clean ? "ok" : "partial"}>
       {base}
-      <Verdict ok={o.ok}>
-        {o.ok
-          ? t("intact", { n: o.checked })
-          : queueOnly ? t("queueIncomplete") : t("breaks", { seq: o.first_bad_seq ?? 0 })}
+      <Verdict ok={!failed} partial={partial}>
+        {failed
+          ? queueOnly ? t("queueIncomplete") : t("breaks", { seq: badSeq ?? 0 })
+          : local?.status === "verified_with_sealed"
+            ? t("verifiedSealed", { v: local.verified_in_full, s: local.sealed })
+            : t("intact", { n: o.checked })}
       </Verdict>
-      {!o.ok && o.reason ? <p className="t-meta">{t(`reason_${o.reason}`)}</p> : null}
-      {!o.ok && o.expected && o.stored ? (
+      {failed && o.reason ? <p className="t-meta">{t(`reason_${o.reason}`)}</p> : null}
+      {failed && o.expected && o.stored ? (
         <HashPair topLabel={t("expectedHash")} bottomLabel={t("storedHash")} top={o.expected} bottom={o.stored} ariaLabel={t("breaks", { seq: o.first_bad_seq ?? 0 })} />
       ) : null}
     </Plate>
@@ -283,15 +297,17 @@ function WitnessPlate({ state }: { state: CompareState }) {
       </Plate>
     );
   }
-  // Only a clean full match reads as verified; any other status is "Does not match".
+  // A tick only for a clean full match. Chain and witness agreeing over a range with sealed rows is a
+  // neutral "matches, N verified · M sealed" with no tick; anything else is "Does not match".
   const ok = isCleanMatch(out);
+  const partial = isPartialMatch(out);
   const verified = verifiedCount(out.local.checked, out.sealed);
   return (
-    <Plate as="section" className="ledger-plate" tone={ok ? "clear" : "critical"} stamp aria-label={t("witnessLabel")} key={ok ? "ok" : "bad"}>
+    <Plate as="section" className="ledger-plate" tone={ok ? "clear" : partial ? "surface" : "critical"} stamp aria-label={t("witnessLabel")} key={ok ? "ok" : partial ? "partial" : "bad"}>
       {base}
-      <Verdict ok={ok}>{ok ? t("matches", { n: verified }) : t("noMatch")}</Verdict>
-      {ok && out.sealed > 0 ? <p className="t-meta">{t("verifiedSealed", { v: verified, s: out.sealed })}</p> : null}
-      {!ok && !out.local.ok && out.local.first_bad_seq !== null ? (
+      <Verdict ok={ok || partial} partial={partial}>{ok || partial ? t("matches", { n: verified }) : t("noMatch")}</Verdict>
+      {partial ? <p className="t-meta">{t("verifiedSealed", { v: verified, s: out.sealed })}</p> : null}
+      {!ok && !partial && out.local.status === "failed" && out.local.first_bad_seq !== null ? (
         <p className="t-meta">{t("witnessBroken", { seq: out.local.first_bad_seq })}</p>
       ) : null}
     </Plate>
@@ -305,7 +321,7 @@ function CompareDetail({ out }: { out: Extract<CompareOutcome, { kind: "done" }>
   const serverState = server ? (server.root_hex === local.root_hex ? t("serverAgrees") : t("serverDiffers")) : null;
   return (
     <div className="hash-pair" data-testid="ledger-compare-detail">
-      {!local.ok && local.first_bad_seq !== null ? (
+      {local.status === "failed" && local.first_bad_seq !== null ? (
         <p className="t-body">{t("stoppedAt", { seq: local.first_bad_seq })}</p>
       ) : witness ? (
         <>
