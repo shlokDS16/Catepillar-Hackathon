@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>A · Signage Re-gridded · FM Inbox</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F2F0EA;--surface:#FBFAF6;--sunk:#E6E3DA;--ink:#16150F;--ink2:#4B483F;--ink3:#6B675D;--rule:#CFCBC0;--caution:#FFC700;--warning:#FF6A00;--critical:#B3102A;
+--fb:"Barlow",system-ui,sans-serif;--fd:"Barlow Condensed","Barlow",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font:500 16px/1.4 var(--fb);padding-bottom:88px}
+.top{display:flex;gap:12px;align-items:center;padding:12px 16px;border-bottom:3px solid var(--ink)}
+.top h1{flex:1;font:700 24px var(--fb)}
+.prov{font:600 14px var(--fd);letter-spacing:.04em;border:2px solid var(--ink);padding:6px 8px;text-transform:uppercase}
+.sum{display:grid;grid-template-columns:repeat(3,1fr);border-bottom:2px solid var(--ink)}
+.sum div{padding:12px 16px;border-right:1px solid var(--rule)}.sum b{font:700 36px/1 var(--fd);display:block}
+main{padding:16px;display:grid;gap:12px}
+.k{font:700 14px var(--fd);letter-spacing:.06em;text-transform:uppercase;color:var(--ink2)}
+.row{background:var(--surface);border:2px solid var(--ink);display:grid;gap:8px;padding:12px}
+.row.crit{border-width:3px}
+.tier{font:800 18px/1 var(--fd);text-transform:uppercase;border:2px solid var(--ink);padding:8px 10px;display:inline-flex;gap:6px;align-items:center;justify-self:start;white-space:nowrap}
+.t-c{background:var(--critical);color:#fff}.t-w{background:var(--warning)}.t-y{background:var(--caution)}
+.ttl{font:700 19px var(--fb)}.who{color:var(--ink2);font-size:15px}.ex{font-size:15px}
+.disp{font:500 13px var(--fb);color:var(--ink3)}
+.acts{display:flex;gap:8px;flex-wrap:wrap}
+.btn{min-height:56px;padding:0 16px;display:flex;align-items:center;border:2px solid var(--ink);font:700 16px var(--fb);background:var(--surface)}
+.btn.p{background:var(--ink);color:#fff}
+.fold{padding:14px 0;border-top:1px solid var(--rule);font-weight:600}
+.nav{position:fixed;bottom:0;left:0;right:0;height:80px;display:grid;grid-template-columns:repeat(4,1fr);border-top:3px solid var(--ink);background:var(--surface)}
+.nav a{display:grid;place-items:center;font:600 15px var(--fb)}.nav .on{background:var(--ink);color:#fff}
+@media(min-width:1024px){
+ body{padding:0 0 0 112px}
+ .nav{top:0;right:auto;width:112px;height:auto;grid-template-columns:1fr;grid-template-rows:repeat(4,80px);border:0;border-right:3px solid var(--ink)}
+ main,.sum,.top{max-width:1320px}
+ main{padding:24px 32px}
+ .row{grid-template-columns:150px 1fr 220px auto;align-items:center;gap:16px;padding:10px 16px}
+ .row .body{display:grid;gap:2px}
+ .btn{min-height:48px}
+}
+</style></head><body>
+<header class="top"><h1>Inbox</h1><span class="prov">Sim 09:40 ×10</span><span class="btn">EN / हि</span></header>
+<div class="sum"><div><span class="k">Needs action</span><b>6</b></div><div><span class="k">Oldest open</span><b>20 min</b></div><div><span class="k">Ledger</span><b>Changed</b></div></div>
+<main>
+<p class="k">Needs action · by tier, then age</p>
+<article class="row crit"><span class="tier t-c">▲ Critical</span><div class="body"><p class="ttl">Ledger changed</p><p class="who">Entry #214 does not match its hash · just now</p></div><p class="disp">Telegram: sent</p><div class="acts"><span class="btn p">Acknowledge</span><span class="btn">Open ledger</span></div></article>
+<article class="row"><span class="tier t-w">▲ Warning</span><div class="body"><p class="ttl">Faulty machine near a person</p><p class="who">Ravi · EXC-014 · just now</p><p class="ex">Hydraulic oil 86 °C, rising above its normal 71 °C.</p></div><p class="disp">Telegram: sent</p><div class="acts"><span class="btn p">Acknowledge</span><span class="btn">Map</span></div></article>
+<article class="row"><span class="tier t-y">▲ Caution</span><div class="body"><p class="ttl">PPE missing</p><p class="who">Ravi · EXC-007 · just now · Missing: vest</p></div><p class="disp">Telegram: delivered</p><div class="acts"><span class="btn p">Acknowledge</span><span class="btn">Grant override</span></div></article>
+<article class="row"><span class="tier t-y">▲ Caution ×3</span><div class="body"><p class="ttl">Idling too long</p><p class="who">EXC-007 · 20 min ago</p><p class="ex">Idled 58 % of the last hour, 2.3× its normal. About 14 L of diesel (≈ ₹1,290).</p></div><p class="disp">Not sent (caution)</p><div class="acts"><span class="btn">Details</span></div></article>
+<article class="row"><span class="tier t-y">▲ Caution ×12</span><div class="body"><p class="ttl">Too many alerts</p><p class="who">12 in 10 min · grouped</p></div><p class="disp">—</p><div class="acts"><span class="btn p">Acknowledge</span></div></article>
+<article class="row"><span class="tier t-y">▲ Caution</span><div class="body"><p class="ttl">Near-miss</p><p class="who">Non-punitive: no operator is named · Today</p></div><p class="disp">—</p><div class="acts"><span class="btn">Review</span></div></article>
+<p class="fold">▸ Acknowledged or escalated (1)</p><p class="fold">▸ Resolved (1) · Suppressed (1)</p>
+</main>
+<nav class="nav"><a class="on">Inbox</a><a>Map</a><a>Analytics</a><a>Ledger</a></nav>
+</body></html>

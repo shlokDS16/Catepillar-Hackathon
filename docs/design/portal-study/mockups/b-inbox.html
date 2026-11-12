@@ -1,0 +1,69 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>B · Ink Frame · FM Inbox</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F2F0EA;--surface:#FBFAF6;--sunk:#E6E3DA;--ink:#16150F;--on-ink:#F2F0EA;--on-ink-2:#B9B5AA;--ink2:#4B483F;--ink3:#6B675D;--rule:#CFCBC0;--caution:#FFC700;--warning:#FF6A00;--critical:#B3102A;
+--fb:"Barlow",system-ui,sans-serif;--fd:"Barlow Condensed","Barlow",system-ui,sans-serif;--fm:ui-monospace,"Cascadia Mono",Consolas,monospace}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font:500 16px/1.4 var(--fb);padding-bottom:80px}
+.mono{font:500 13px/1.3 var(--fm);letter-spacing:.04em;text-transform:uppercase}
+.frame{background:var(--ink);color:var(--on-ink);display:flex;align-items:center;gap:16px;padding:12px 16px}
+.frame h1{font:800 30px/1 var(--fd);letter-spacing:-.02em;text-transform:uppercase;flex:1}
+.frame .mono{color:var(--on-ink-2)}
+.counts{display:flex;gap:6px}.counts span{font:800 16px var(--fd);padding:6px 8px;border:2px solid var(--on-ink)}
+.c{background:var(--critical);color:#fff}.w{background:var(--warning);color:var(--ink)}.y{background:var(--caution);color:var(--ink)}
+.q{display:grid}
+.item{display:grid;grid-template-columns:10px 1fr auto;gap:12px;padding:12px 16px 12px 0;border-bottom:1px solid var(--rule);align-items:center;min-height:72px}
+.item .s{align-self:stretch;border-right:2px solid var(--ink)}
+.item.sel{background:var(--surface);box-shadow:inset 0 0 0 2px var(--ink)}
+.tier{font:800 14px/1 var(--fd);text-transform:uppercase;border:2px solid var(--ink);padding:4px 6px;margin-right:6px}
+.ttl{font:700 17px var(--fb)}.who{color:var(--ink2);font-size:14px}
+.age{font:500 13px var(--fm);color:var(--ink2);text-align:right}
+.detail{background:var(--surface);border-top:3px solid var(--ink);padding:16px;display:grid;gap:16px}
+.detail h2{font:800 34px/1 var(--fd);letter-spacing:-.02em;text-transform:uppercase}
+.explain{font:600 20px/1.35 var(--fb)}
+.spark{display:block;width:100%;height:auto;border:1px solid var(--rule)}
+.tl{display:grid;gap:6px;border-left:2px solid var(--ink);padding-left:12px}
+.acts{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+.btn{min-height:56px;display:flex;align-items:center;justify-content:center;border:2px solid var(--ink);font:700 16px var(--fb);background:var(--surface);padding:0 12px}
+.btn.p{background:var(--ink);color:var(--on-ink)}
+.nav{position:fixed;bottom:0;left:0;right:0;height:80px;background:var(--ink);display:grid;grid-template-columns:repeat(4,1fr)}
+.nav a{display:grid;place-items:center;color:var(--on-ink-2);font:600 15px var(--fb)}.nav .on{color:var(--on-ink);box-shadow:inset 0 4px 0 var(--on-ink)}
+.hd{padding:10px 16px;color:var(--ink2);border-bottom:1px solid var(--ink)}
+@media(max-width:1023px){.d-only{display:none}}
+@media(min-width:1024px){
+ body{padding:0 0 0 112px}
+ .nav{top:0;right:auto;width:112px;height:auto;grid-template-columns:1fr;grid-template-rows:repeat(4,80px)}.nav .on{box-shadow:inset 4px 0 0 var(--on-ink)}
+ .wrap{display:grid;grid-template-columns:440px 1fr;min-height:calc(100vh - 62px)}
+ .q{border-right:3px solid var(--ink)}
+ .detail{border-top:0;padding:32px 48px;align-content:start;grid-template-columns:1fr 340px;gap:20px 40px}
+ .detail>.full{grid-column:1/-1}
+ .acts{grid-template-columns:repeat(4,auto);justify-content:start}
+ .btn{min-height:48px}
+ .m-only{display:none}
+}
+</style></head><body>
+<header class="frame"><h1>Inbox</h1><span class="mono">Sim 09:40 ×10</span><span class="counts"><span class="c">1</span><span class="w">1</span><span class="y">4</span></span></header>
+<div class="wrap">
+<div class="q"><p class="hd mono">Needs action · 6 · tier, then age</p>
+ <div class="item"><span class="s c"></span><div><p class="ttl"><span class="tier c">Critical</span>Ledger changed</p><p class="who">Entry #214 hash mismatch</p></div><span class="age">now</span></div>
+ <div class="item sel"><span class="s w"></span><div><p class="ttl"><span class="tier w">Warning</span>Faulty machine near a person</p><p class="who">Ravi · EXC-014</p></div><span class="age">now</span></div>
+ <div class="detail m-only"><p class="explain">EXC-014 hydraulic oil is at 86 °C, rising above its normal 71 °C..</p><div class="acts"><span class="btn p">Acknowledge</span><span class="btn">Show on map</span></div></div>
+ <div class="item"><span class="s y"></span><div><p class="ttl"><span class="tier y">Caution</span>PPE missing</p><p class="who">Ravi · EXC-007 · vest</p></div><span class="age">now</span></div>
+ <div class="item"><span class="s y"></span><div><p class="ttl"><span class="tier y">×3</span>Idling too long</p><p class="who">EXC-007 · ≈ ₹1,290 diesel</p></div><span class="age">20m</span></div>
+ <div class="item"><span class="s y"></span><div><p class="ttl"><span class="tier y">×12</span>Too many alerts</p><p class="who">grouped</p></div><span class="age">10m</span></div>
+ <div class="item"><span class="s y"></span><div><p class="ttl"><span class="tier y">Caution</span>Near-miss</p><p class="who">non-punitive · no name</p></div><span class="age">today</span></div>
+ <p class="hd mono" style="border:0">▸ Acknowledged 1 · Resolved 1 · Suppressed 1</p>
+</div>
+<section class="detail d-only">
+ <div class="full"><p class="mono" style="color:var(--ink2)">Warning · anomaly · EXC-014 · Ravi · just now</p><h2>Faulty machine near a person</h2></div>
+ <div style="display:grid;gap:16px"><p class="explain">EXC-014 hydraulic oil is at 86 °C, rising above its normal 71 °C..</p>
+ <svg class="spark" viewBox="0 0 400 120" role="img" aria-label="Hydraulic oil temperature, last 30 min"><line x1="0" y1="70" x2="400" y2="70" stroke="#6B675D" stroke-dasharray="4 4"/><text x="4" y="64" font-size="12" font-family="Consolas" fill="#4B483F">NORMAL 71 °C</text><path d="M0 74 L80 72 L160 71 L220 66 L280 52 L340 34 L400 22" fill="none" stroke="#16150F" stroke-width="3"/><circle cx="400" cy="22" r="5" fill="#16150F"/><text x="330" y="16" font-size="13" font-family="Consolas" fill="#16150F">86 °C</text></svg>
+ <div class="acts"><span class="btn p">Acknowledge</span><span class="btn">Show on map</span><span class="btn">Message Ravi</span><span class="btn">Assign</span></div></div>
+ <div style="display:grid;gap:12px"><p class="mono" style="color:var(--ink2)">Dispatch</p><div class="tl"><span>09:40:02 raised</span><span>09:40:03 Telegram: sent</span><span style="color:var(--ink3)">Escalates if not acknowledged (dispatch rule)</span></div>
+ <p class="mono" style="color:var(--ink2)">Evidence</p><p style="font-size:15px">Baseline: EXC-014 normal range. Explanation is generated from the numbers above · <i>detail</i></p></div>
+</section>
+</div>
+<nav class="nav"><a class="on">Inbox</a><a>Map</a><a>Analytics</a><a>Ledger</a></nav>
+</body></html>

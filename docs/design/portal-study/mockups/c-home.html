@@ -1,0 +1,55 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>C · One Card · Home</title>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--paper:#F2F0EA;--surface:#FBFAF6;--sunk:#E6E3DA;--ink:#16150F;--ink2:#4B483F;--ink3:#6B675D;--rule:#CFCBC0;--clear:#0B6B37;--critical:#B3102A;
+--fb:"Barlow",system-ui,sans-serif;--fd:"Barlow Condensed","Barlow",system-ui,sans-serif}
+*{box-sizing:border-box;margin:0}
+body{background:var(--paper);color:var(--ink);font:500 20px/1.45 var(--fb);padding-bottom:132px}
+.top{display:grid;grid-template-columns:1fr 80px 80px;gap:8px;padding:8px}
+.state{background:var(--clear);color:#fff;border:3px solid var(--ink);display:flex;align-items:center;gap:10px;padding:0 16px;font:800 34px/1 var(--fd);text-transform:uppercase;min-height:80px}
+.sq{border:2px solid var(--ink);background:var(--surface);display:grid;place-items:center;align-content:center;font:700 15px var(--fb);min-height:80px}
+.sq big{font-size:26px;line-height:1}
+.deck{padding:8px;display:grid;gap:12px}
+.card{background:var(--surface);border:3px solid var(--ink);padding:20px;display:grid;gap:14px;position:relative}
+.kind{display:flex;justify-content:space-between;align-items:center;font:700 17px var(--fd);letter-spacing:.08em;text-transform:uppercase;color:var(--ink2)}
+.listen{width:80px;height:80px;border:2px solid var(--ink);display:grid;place-items:center;font-size:30px;background:var(--paper)}
+.pict{width:96px;height:96px}
+.big{font:800 clamp(72px,22vw,128px)/.88 var(--fd);text-transform:uppercase;letter-spacing:-.02em}
+.sub{font:700 28px/1.2 var(--fb)}
+.track{display:flex;gap:6px}.track i{flex:1;height:28px;border:2px solid var(--ink)}.track i.f{background:var(--ink)}
+.two{display:grid;grid-template-columns:1fr 1fr;gap:12px;font:700 24px var(--fb)}
+.two small{display:block;font:500 16px var(--fb);color:var(--ink2)}
+.two b{font:700 56px/1 var(--fd)}
+.go{min-height:96px;background:var(--ink);color:#fff;display:flex;align-items:center;justify-content:space-between;padding:0 24px;font:700 26px var(--fb)}
+.ghost{min-height:80px;border:2px solid var(--ink);display:flex;align-items:center;justify-content:space-between;padding:0 20px;font:700 22px var(--fb)}
+.dots{display:flex;gap:8px;justify-content:center;padding:8px}.dots i{width:12px;height:12px;border:2px solid var(--ink)}.dots i.on{background:var(--ink)}
+.dock{position:fixed;left:0;right:0;bottom:0;display:grid;grid-template-columns:1fr 1fr 124px;gap:8px;padding:8px;background:var(--paper);border-top:3px solid var(--ink)}
+.dock a{min-height:104px;border:2px solid var(--ink);display:grid;place-items:center;align-content:center;font:700 18px var(--fb);background:var(--surface)}
+.dock a big{font-size:30px;line-height:1}
+.dock .sos{background:var(--critical);color:#fff;font:800 34px/1 var(--fd)}
+@media(min-width:1024px){
+ body{max-width:1280px;margin:0 auto;padding:16px 32px 150px}
+ .top{grid-template-columns:1fr 96px 96px;padding:0}
+ .deck{grid-template-columns:1.2fr 1fr;padding:16px 0;gap:24px;align-items:start}
+ .dots{display:none}
+ .dock{left:50%;transform:translateX(-50%);width:min(1280px,100%);padding:12px 32px;grid-template-columns:1fr 1fr 160px}
+}
+</style></head><body>
+<header class="top"><div class="state">✓ Clear</div><div class="sq"><big>अ</big>हिन्दी</div><div class="sq"><big>?</big>Ask</div></header>
+<div class="deck">
+<section class="card"><div class="kind"><span>Now · EXC-007</span><span class="listen" aria-label="Listen">🔊</span></div>
+ <p class="big">Working</p><p class="sub">Digging · Bench 3</p>
+ <div class="track" aria-label="35 percent"><i class="f"></i><i class="f"></i><i style="background:linear-gradient(90deg,var(--ink) 40%,transparent 40%)"></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+ <div class="two"><div><small>Done</small><b>35 %</b></div><div><small>Time left · up to 92</small><b>77 min</b></div></div>
+ <p style="font-size:17px;color:var(--ink2)">Slower today: heat, new operator · <i>assumed</i></p></section>
+<section class="card"><div class="kind"><span>Next for you · 1 of 2</span><span class="listen">🔊</span></div>
+ <svg class="pict" viewBox="0 0 96 96" aria-hidden="true"><polygon points="48,6 92,88 4,88" fill="none" stroke="#16150F" stroke-width="5"/><path d="M30 70 L66 46 M36 52 L60 74" stroke="#16150F" stroke-width="6"/></svg>
+ <p class="sub">This morning 09:40: seatbelt off on a slope.</p>
+ <a class="go">▶ Practise it <span style="font:500 18px var(--fb)">3 min</span></a>
+ <a class="ghost">Learn the rule <span style="font:500 18px var(--fb)">3 cards</span></a></section>
+</div>
+<div class="dots"><i class="on"></i><i></i><i></i></div>
+<nav class="dock"><a><big>☰</big>Today · 2</a><a><big>🎤</big>Speak</a><a class="sos">SOS<span style="font:600 15px var(--fb)">Hold</span></a></nav>
+</body></html>
