@@ -27,6 +27,8 @@ export type ReplayState = {
   debrief: ReplayDebriefResult | null;
   /** Frozen by a live alert. It clears only on an explicit Resume, so an alert costs no training time. */
   paused: boolean;
+  /** Why it froze: a live alert, or the page was hidden. Both clear only on an explicit Resume. */
+  pauseReason: "alert" | "hidden" | null;
   /** Where a held navigation was heading; non-null means the leave confirmation is open. */
   leavingTo: string | null;
   /** The submit failed: the answers are kept and the same request_id is reused. */
@@ -50,7 +52,7 @@ export type ReplayAction =
   | { type: "submitted"; debrief: ReplayDebriefResult }
   | { type: "submit_failed" }
   | { type: "retry_submit" }
-  | { type: "pause" }
+  | { type: "pause"; reason?: "alert" | "hidden" }
   | { type: "resume" }
   | { type: "ask_leave"; href: string }
   | { type: "cancel_leave" }
@@ -65,6 +67,7 @@ export function initialReplayState(): ReplayState {
     choices: [],
     debrief: null,
     paused: false,
+    pauseReason: null,
     leavingTo: null,
     submitFailed: false,
     loads: 0,
@@ -152,9 +155,11 @@ export function replayReduce(s: ReplayState, a: ReplayAction): ReplayState {
       return s.phase === "submitting" && s.submitFailed ? { ...s, submitFailed: false } : s;
 
     case "pause":
-      return s.paused ? s : { ...s, paused: true };
+      // A hidden page only matters while a clock is running; the Brief and Debrief are untimed.
+      if (a.reason === "hidden" && s.phase !== "investigate" && s.phase !== "decide") return s;
+      return s.paused ? s : { ...s, paused: true, pauseReason: a.reason ?? "alert" };
     case "resume":
-      return s.paused ? { ...s, paused: false } : s;
+      return s.paused ? { ...s, paused: false, pauseReason: null } : s;
 
     case "ask_leave":
       return needsLeaveConfirm(s.phase) ? { ...s, leavingTo: a.href } : s;

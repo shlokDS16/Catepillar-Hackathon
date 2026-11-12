@@ -260,6 +260,7 @@
     "paused": {
       "title": "Practice paused",
       "body": "A safety alert is open. The clock is stopped and costs you nothing.",
+      "hiddenBody": "You left this page. The clock is stopped and costs you nothing.",
       "resume": "Resume practice"
     },
     "leave": {
@@ -284,6 +285,23 @@
       "timesUpBody": "Moving on with the cards you opened.",
       "cardTitle": "Evidence",
       "cardNote": "From your recorded event · simulated"
+    },
+    "decide": {
+      "stepOf": "Step {n} of {total}",
+      "choicesLabel": "Your choices",
+      "orderHint": "Tap the actions in the order you would do them. Tap the last number to take it back.",
+      "orderNumber": "Number {n}",
+      "chosen": "Chosen",
+      "confirm": "Confirm order",
+      "numberAll": "Number every action first",
+      "timesUp": "Time's up",
+      "timesUpBody": "This step is skipped. Moving on.",
+      "scoring": "Scoring…",
+      "notSaved": "Score not saved. Try again.",
+      "waiting": "Waiting for signal",
+      "waitingBody": "Your answers are kept. Trying again every 5 seconds.",
+      "debriefStub": "Debrief opens here",
+      "debriefStubNote": "Your score was saved. Your debrief is on its way."
     },
     "evidence": {
       "trend": {
@@ -453,5 +471,87 @@
     "verifyToList": "Verify the ledger to list entries.",
     "showing": "Latest {n} entries",
     "footer": "Tamper-evident, not tamper-proof: any change after a checkpoint shows up here. Externally witnessed: the Telegram side is only what you pasted."
+  },
+  "inbox": {
+    "title": "Inbox",
+    "empty": "Nothing needs you right now.",
+    "loadFailed": "Could not load the Inbox.",
+    "retry": "Try again",
+    "needsAction": "Needs action",
+    "handled": "Acknowledged or escalated ({n})",
+    "resolved": "Resolved ({n})",
+    "suppressed": "Suppressed ({n})",
+    "kind": {
+      "seatbelt_off_moving": "Seatbelt off while moving",
+      "guardian_hazard": "Faulty machine near a person",
+      "proximity_zone": "Person or machine close",
+      "ppe_missing": "PPE missing",
+      "anomaly_machine": "Machine anomaly",
+      "idle_excess": "Idling too long",
+      "sos": "SOS",
+      "ledger_tamper": "Ledger changed",
+      "alert_flood": "Too many alerts",
+      "near_miss": "Near-miss"
+    },
+    "tier": {
+      "info": "Info",
+      "caution": "Caution",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "missing": "Missing: {items}",
+    "ppe": {
+      "helmet": "helmet",
+      "vest": "vest",
+      "boots": "boots",
+      "gloves": "gloves"
+    },
+    "noOperator": "Non-punitive: no operator is named",
+    "age": "{m} min ago",
+    "ageNow": "just now",
+    "dispatch": "{channel}: {status}",
+    "channel": {
+      "telegram": "Telegram",
+      "twilio_voice": "Call"
+    },
+    "dispatchStatus": {
+      "queued": "queued",
+      "sending": "sending",
+      "sent": "sent",
+      "delivered": "delivered",
+      "answered": "answered",
+      "no_answer": "no answer",
+      "failed": "failed",
+      "suppressed": "suppressed",
+      "dry_run": "test run (not sent)"
+    },
+    "acknowledge": "Acknowledge",
+    "grantOverride": "Grant override",
+    "showOnMap": "Show on map",
+    "details": "Details",
+    "hideDetails": "Hide details",
+    "notSent": "Not sent. Try again.",
+    "override": {
+      "title": "Let {name} start without: {items}",
+      "reasonLabel": "Reason (recorded permanently)",
+      "quick1": "{items} is on its way to the operator",
+      "quick2": "Short task under supervision",
+      "counter": "{n} / 500",
+      "hint": "10 to 500 characters.",
+      "tooShort": "Write at least 10 characters.",
+      "tooLong": "Keep it to 500 characters.",
+      "control": "Use plain text, no line breaks.",
+      "grant": "Grant 15-minute override",
+      "back": "Back",
+      "permanent": "Recorded permanently. Expires in 15 minutes.",
+      "done": "Recorded in ledger · valid until {time}",
+      "forbidden": "Only the fleet manager can grant this.",
+      "invalidState": "This task is no longer blocked.",
+      "validation": "The reason was not accepted.",
+      "network": "Not sent. Try again.",
+      "anyone": "this operator"
+    },
+    "today": "Today",
+    "overrideGranted": "Override granted"
   }
 }

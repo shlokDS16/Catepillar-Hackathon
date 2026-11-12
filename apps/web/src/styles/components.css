@@ -1382,3 +1382,114 @@
   white-space: nowrap;
   border: 0;
 }
+
+/* ---------- S5b Replay phase 3: Decide (R3) ---------- */
+.replay-decide,
+.replay-scoring {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  align-items: flex-start;
+}
+.replay-decide > *,
+.replay-scoring > * {
+  margin: 0;
+}
+.replay-decide > .replay-timer,
+.replay-decide > .dc-grid {
+  align-self: stretch;
+}
+.dc-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: var(--hit-gap);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 640px) {
+  .dc-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.dc-plate {
+  position: relative;
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--hit-sos);
+  padding: var(--s-3);
+  padding-inline-end: var(--s-7);
+  font-family: var(--ff-body);
+  text-align: start;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.dc-plate[aria-pressed="true"] {
+  border-width: var(--bw-heavy);
+}
+.dc-plate[aria-disabled="true"] {
+  cursor: default;
+}
+.dc-mark {
+  display: grid;
+  place-items: center;
+  flex: none;
+  width: var(--icon);
+  height: var(--icon);
+  border: var(--bw) solid currentColor;
+  font-weight: 700;
+}
+.dc-label {
+  overflow-wrap: anywhere;
+}
+.dc-number {
+  position: absolute;
+  inset-block-start: var(--s-2);
+  inset-inline-end: var(--s-3);
+  font-size: var(--t-title);
+  font-weight: 700;
+}
+/* ---------- Inbox (S7): rows are plates; the tier chip carries the colour, the rest stays ink ---------- */
+.inbox-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.inbox-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.inbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+.inbox-fold > summary {
+  min-height: var(--hit-dense);
+  display: list-item;
+  list-style-position: inside;
+  line-height: var(--hit-dense);
+  cursor: pointer;
+}
+.inbox-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(var(--hit) * 1.5);
+  padding: var(--s-3);
+  border: var(--bw) solid var(--ink);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.inbox-textarea[aria-invalid="true"] {
+  border-style: dashed;
+  border-width: var(--bw-heavy);
+}

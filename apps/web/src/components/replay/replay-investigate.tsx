@@ -37,7 +37,15 @@ type Props = {
  * At 0 the "Time's up" plate holds for 800 ms and the run moves to Decide with whatever was
  * opened, even nothing.
  */
-export function ReplayInvestigate({ scenario, openOrder, paused, attempt, onOpen, onDecideNow, onTimeout }: Props) {
+export function ReplayInvestigate({
+  scenario,
+  openOrder,
+  paused,
+  attempt,
+  onOpen,
+  onDecideNow,
+  onTimeout,
+}: Props) {
   const t = useTranslations("replay.investigate");
   const phase = useTranslations("replay.phase");
   const format = useFormatter();
@@ -49,7 +57,8 @@ export function ReplayInvestigate({ scenario, openOrder, paused, attempt, onOpen
   const { over, expire } = useTimesUp(onTimeout, TIMES_UP_MS, paused);
   const timer = useReplayTimer({
     budgetS: scenario.brief.time_budget_s,
-    running: timerRuns({ phase: "investigate", paused, hidden: false }) && !over,
+    running:
+      timerRuns({ phase: "investigate", paused, hidden: false }) && !over,
     resetKey: attempt,
     onExpire: expire,
   });
@@ -62,7 +71,11 @@ export function ReplayInvestigate({ scenario, openOrder, paused, attempt, onOpen
   const open = (card: EvidenceCard) => {
     // The sheet follows what the machine accepted, never the tap: if the run is frozen or the
     // open limit is spent, the card stays shut rather than being readable but unrecorded.
-    if (paused || (!openOrder.includes(card.id) && limitReached(openOrder, maxOpen))) return;
+    if (
+      paused ||
+      (!openOrder.includes(card.id) && limitReached(openOrder, maxOpen))
+    )
+      return;
     onOpen(card.id);
     setViewing(card);
   };
@@ -76,52 +89,64 @@ export function ReplayInvestigate({ scenario, openOrder, paused, attempt, onOpen
     </p>
   );
 
-  if (over) {
-    return (
-      <>
-        {announce}
+  return (
+    <>
+      {/* One stable region for the whole phase, so "Time's up" arrives as a change, not a mount. */}
+      {announce}
+      {over ? (
         <Plate as="section" rule="heavy" className="replay-timesup">
           <p className="t-title">{t("timesUp")}</p>
           <p className="t-body">{t("timesUpBody")}</p>
         </Plate>
-      </>
-    );
-  }
-
-  return (
-    // The phase name, not "Evidence cards": the grid inside already carries that label.
-    <section className="replay-investigate" aria-label={phase("investigate")}>
-      {announce}
-      <ReplayTimerBar timer={timer}>
-        <p className="t-body replay-timer-lead">{t("lead")}</p>
-      </ReplayTimerBar>
-
-      <p className="t-label tnum replay-count">
-        {maxOpen === null ? t("opened", { n: openOrder.length }) : t("openedOf", { n: openOrder.length, max: maxOpen })}
-      </p>
-
-      <EvidenceGrid cards={cards} openOrder={openOrder} maxOpen={maxOpen} onOpen={open} />
-
-      {/* Left-aligned and kept clear of the floating SOS plate in the bottom-right corner. */}
-      <div className="replay-actions">
-        <Button
-          variant="primary"
-          onClick={onDecideNow}
-          disabled={!canDecideNow(openOrder)}
-          note={canDecideNow(openOrder) ? undefined : t("openOneFirst")}
+      ) : (
+        // The phase name, not "Evidence cards": the grid inside already carries that label.
+        <section
+          className="replay-investigate"
+          aria-label={phase("investigate")}
         >
-          {t("decideNow")}
-        </Button>
-      </div>
+          <ReplayTimerBar timer={timer}>
+            <p className="t-body replay-timer-lead">{t("lead")}</p>
+          </ReplayTimerBar>
 
-      <Sheet open={viewing !== null} onClose={() => setViewing(null)} title={title?.value ?? t("cardTitle")}>
-        {viewing ? (
-          <div className="ev-sheet">
-            <EvidenceCardBody card={viewing} eventTime={eventTime} />
-            <p className="t-meta text-ink-3">{t("cardNote")}</p>
+          <p className="t-label tnum replay-count">
+            {maxOpen === null
+              ? t("opened", { n: openOrder.length })
+              : t("openedOf", { n: openOrder.length, max: maxOpen })}
+          </p>
+
+          <EvidenceGrid
+            cards={cards}
+            openOrder={openOrder}
+            maxOpen={maxOpen}
+            onOpen={open}
+          />
+
+          {/* Left-aligned and kept clear of the floating SOS plate in the bottom-right corner. */}
+          <div className="replay-actions">
+            <Button
+              variant="primary"
+              onClick={onDecideNow}
+              disabled={!canDecideNow(openOrder)}
+              note={canDecideNow(openOrder) ? undefined : t("openOneFirst")}
+            >
+              {t("decideNow")}
+            </Button>
           </div>
-        ) : null}
-      </Sheet>
-    </section>
+
+          <Sheet
+            open={viewing !== null}
+            onClose={() => setViewing(null)}
+            title={title?.value ?? t("cardTitle")}
+          >
+            {viewing ? (
+              <div className="ev-sheet">
+                <EvidenceCardBody card={viewing} eventTime={eventTime} />
+                <p className="t-meta text-ink-3">{t("cardNote")}</p>
+              </div>
+            ) : null}
+          </Sheet>
+        </section>
+      )}
+    </>
   );
 }
