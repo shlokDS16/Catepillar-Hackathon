@@ -565,8 +565,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     applied.bucket = lerp(pose.bucket, TRAVEL_POSE.bucket, k);
     exc.setPose(applied);
 
-    // Trail draw. In stage 5 the trail rewinds with the machine.
-    // It dims to a ghost under the rings, comes back for the rewind, and is a ghost again while it redraws.
+    // Trail draw: fully drawn once stage 3 ends; it dims to a ghost under the rings and stays one in stage 5
+    // (the machine is parked there, the replay rewinds the truck).
     const fade = win(ps[3], 0, 0.2);
     trailMat.opacity = lerp(0.95, 0.3, fade);
     const count = Math.floor(t * TUBE_SEG) * RADIAL * 6;
