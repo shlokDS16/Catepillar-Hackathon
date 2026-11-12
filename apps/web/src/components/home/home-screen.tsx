@@ -5,14 +5,16 @@ import { useSafetyState } from "@/alerts/use-safety-state";
 import { HeroCard } from "@/components/hero/hero-card";
 import { LoopCard } from "@/components/home/loop-card";
 import { ShiftTape } from "@/components/home/shift-tape";
-import { MachineBay } from "@/components/machine/machine-bay";
+import { BayParts, BayStage } from "@/components/machine/machine-bay";
+import { Button } from "@/components/ui/button";
+import { useAudio } from "@/audio/use-audio";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import { ProvenanceChip, ProvenanceLine } from "@/components/ui/provenance";
 import { useMode } from "@/data/mode";
 import { useAppState } from "@/data/store";
-import { currentTask } from "@/hero/work-state";
+import { currentTask, workState } from "@/hero/work-state";
 import { mergeWeatherHeat } from "@/task/task-state";
 
 /**
@@ -30,10 +32,11 @@ export function HomeScreen() {
   const weather = snapshot?.weather ?? null;
   const detailed = mode === "detailed";
   const current = currentTask(tasks);
+  const audio = useAudio(topAlert ? `alert.${topAlert.kind}.${topAlert.tier}` : null);
 
   if (!snapshot) {
     return (
-      <div className="home">
+      <div className="bayhome">
         <Plate loading className="hero-slot" />
         <Plate loading className="min-h-hit" />
         <Plate loading className="min-h-hit" />
@@ -43,38 +46,56 @@ export function HomeScreen() {
 
   const etaImpact = mergeWeatherHeat(current?.eta_factors).find((f) => (f.key.startsWith("weather_heat:") || f.key.startsWith("heat:") || f.key.startsWith("weather:")) && f.multiplier > 1);
 
+  const word = workState(machine, current);
+
   return (
-    <div className="home">
-      <div className="hero-slot">
-        <HeroCard machine={machine} tasks={tasks} safety={safety} topAlert={topAlert} />
-      </div>
+    <div className="bayhome">
+      <BayStage>
+        <div className="bay-head">
+          <p className="t-state bay-word" aria-label={t("home.stageLabel")}>
+            {t(`enums.work.${word}`)}
+          </p>
+          {audio.available ? (
+            <Button variant="secondary" onClick={audio.play} note={audio.blocked ? t("alerts.soundBlocked") : undefined}>
+              {t("alerts.listen")}
+            </Button>
+          ) : null}
+        </div>
+      </BayStage>
 
-      <div className="home-rest">
-        {weather ? (
-          <Plate as="section" className="flex flex-wrap items-center gap-4" aria-label={t("home.conditions")}>
-            <Pictogram name="heat" />
-            {weather.wbgt_c != null ? (
-              <span className="t-label tnum">{t("home.wbgt", { c: format.number(weather.wbgt_c, { maximumFractionDigits: 0 }) })}</span>
-            ) : (
-              <span className="t-label tnum">{t("home.temp", { c: format.number(weather.temperature_c, { maximumFractionDigits: 0 }) })}</span>
-            )}
-            {detailed && weather.forecast_peak_c != null && weather.forecast_peak_at ? (
-              <span className="t-meta text-ink-2 tnum">
-                {t("home.forecast", { c: format.number(weather.forecast_peak_c, { maximumFractionDigits: 0 }), time: format.dateTime(new Date(weather.forecast_peak_at), "time") })}
-              </span>
-            ) : null}
-            {detailed && etaImpact && etaImpact.multiplier > 1 ? (
-              <span className="t-meta text-ink-2 tnum">{t("home.etaImpact", { pct: Math.round((etaImpact.multiplier - 1) * 100) })}</span>
-            ) : null}
-            {detailed ? <span className="t-meta text-ink-3">{weather.source_label}</span> : null}
-          </Plate>
-        ) : null}
+      <div className="bay-rail">
+        <section className="bay-now" aria-label={t("home.nowLabel")}>
+          <HeroCard machine={machine} tasks={tasks} safety={safety} topAlert={topAlert} />
+        </section>
 
-        <MachineBay />
+        <div className="bay-loop">
+          <LoopCard />
+        </div>
 
-        <LoopCard />
+        <div className="bay-partslist">
+          <BayParts />
+        </div>
 
-        <ShiftTape />
+        <div className="bay-extras">
+          {weather ? (
+            <Plate as="section" className="flex flex-wrap items-center gap-4" aria-label={t("home.conditions")}>
+              <Pictogram name="heat" />
+              {weather.wbgt_c != null ? (
+                <span className="t-label tnum">{t("home.wbgt", { c: format.number(weather.wbgt_c, { maximumFractionDigits: 0 }) })}</span>
+              ) : (
+                <span className="t-label tnum">{t("home.temp", { c: format.number(weather.temperature_c, { maximumFractionDigits: 0 }) })}</span>
+              )}
+              {detailed && weather.forecast_peak_c != null && weather.forecast_peak_at ? (
+                <span className="t-meta text-ink-2 tnum">
+                  {t("home.forecast", { c: format.number(weather.forecast_peak_c, { maximumFractionDigits: 0 }), time: format.dateTime(new Date(weather.forecast_peak_at), "time") })}
+                </span>
+              ) : null}
+              {detailed && etaImpact && etaImpact.multiplier > 1 ? (
+                <span className="t-meta text-ink-2 tnum">{t("home.etaImpact", { pct: Math.round((etaImpact.multiplier - 1) * 100) })}</span>
+              ) : null}
+              {detailed ? <span className="t-meta text-ink-3">{weather.source_label}</span> : null}
+            </Plate>
+          ) : null}
 
         <section aria-label={t("home.todaysTasks")} className="flex flex-col gap-2">
           <h2 className="t-title">{t("home.todaysTasks")}</h2>
@@ -114,6 +135,11 @@ export function HomeScreen() {
           </Chip>
           {persistFailed ? <span className="t-meta text-ink-3">{t("home.modeNotSaved")}</span> : null}
         </div>
+        </div>
+      </div>
+
+      <div className="bay-tape">
+        <ShiftTape />
       </div>
     </div>
   );

@@ -213,6 +213,8 @@
       "range": "{from} से {to}"
     },
     "conditions": "हालात",
+    "nowLabel": "अभी",
+    "stageLabel": "काम की स्थिति",
     "wbgt": "WBGT {c} °C",
     "temp": "{c} °C",
     "forecast": "{time} तक {c} °C का अनुमान (परिदृश्य पूर्वानुमान)",

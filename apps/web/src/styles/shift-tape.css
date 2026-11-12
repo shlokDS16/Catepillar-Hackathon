@@ -178,3 +178,9 @@ a.tape-row:active {
     min-height: 48px;
   }
 }
+
+/* Phones: a pin is its pictogram only; the target rows under the tape carry the name and time. */
+@media (max-width: 767px) {
+  .tape-pin { padding: 0 var(--s-2); }
+  .tape-pin-name { display: none; }
+}

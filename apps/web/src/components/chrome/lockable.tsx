@@ -1,6 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
+import { shellInert } from "@/components/chrome/inert";
 import { useAppState } from "@/data/store";
 import { useMotionLock } from "@/hero/use-motion-lock";
 
@@ -13,8 +14,9 @@ import { useMotionLock } from "@/hero/use-motion-lock";
 export function LockableBody({ children }: { children: ReactNode }) {
   const serverLocked = useAppState((s) => s.operator?.motion_locked ?? false);
   const shown = useMotionLock(serverLocked);
+  const alerts = useAppState((s) => s.alerts);
   return (
-    <div className="shell-body" inert={shown || undefined}>
+    <div className="shell-body" inert={shellInert(shown, alerts) || undefined}>
       {children}
     </div>
   );

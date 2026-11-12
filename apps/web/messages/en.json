@@ -213,6 +213,8 @@
       "range": "{from} to {to}"
     },
     "conditions": "Conditions",
+    "nowLabel": "Now",
+    "stageLabel": "Work state",
     "wbgt": "WBGT {c} °C",
     "temp": "{c} °C",
     "forecast": "peak {c} °C forecast by {time} (scenario forecast)",
