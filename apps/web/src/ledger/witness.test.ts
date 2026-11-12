@@ -4,7 +4,7 @@ import { verifyLedger } from "@cat/shared/ledger";
 import { RpcError } from "@/data/port";
 import { BREAK_SEQ, LEDGER_ROWS, SEALED_SEQ, ledgerRows, ledgerVerdict, witnessLineFor, type LedgerScenario } from "@/ledger/fixtures";
 import {
-  BUSY_RETRY_MS, LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, exportAll, isCleanMatch, isPartialMatch, isSealed, judgeInternal, parsePaste, rowView,
+  BUSY_RETRY_MS, ExportCancelled, LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, exportAll, isCleanMatch, isPartialMatch, isSealed, judgeInternal, parsePaste, rowView,
   runCompare, tableWindow, verifiedCount, withBusyRetry,
 } from "@/ledger/witness";
 
@@ -254,5 +254,14 @@ describe("review fixes", () => {
     expect(Object.keys(sealedRow.canonical_fields).sort()).toEqual(["non_punitive", "prev_hash", "sealed", "seq", "v"]);
     const p = parsePaste(await witnessLineFor());
     expect(p.state === "ok" && p.witness.np_hash).toMatch(/^[0-9a-f]{64}$/);
+  });
+});
+
+describe("exportAll cancellation", () => {
+  it("stops between pages once it is no longer current", async () => {
+    let calls = 0;
+    const port = { ledgerExport: vi.fn(async () => { calls++; return []; }) } as never;
+    await expect(exportAll(port, 12000, undefined, () => calls < 1)).rejects.toBeInstanceOf(ExportCancelled);
+    expect(calls).toBe(1);
   });
 });

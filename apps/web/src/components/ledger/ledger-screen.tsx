@@ -8,7 +8,7 @@ import { Plate } from "@/components/ui/plate";
 import { verifyLedger, type LedgerVerifyResult } from "@cat/shared/ledger";
 import { useDataPort } from "@/data/store";
 import {
-  LedgerBusyError, checkRange, countSealed, diffAt, exportAll, groupsOf4, isCleanMatch, isPartialMatch, judgeInternal, parsePaste, rowView, runCompare, tableWindow,
+  ExportCancelled, LedgerBusyError, checkRange, countSealed, diffAt, exportAll, groupsOf4, isCleanMatch, isPartialMatch, judgeInternal, parsePaste, rowView, runCompare, tableWindow,
   verifiedCount, withBusyRetry,
   type CompareOutcome, type ExportRow,
 } from "@/ledger/witness";
@@ -19,6 +19,7 @@ type VerifyState =
   | { s: "loading" }
   | { s: "busy" }
   | { s: "network" }
+  | { s: "cancelled" }
   | { s: "done"; out: VerifyOut; rows: ExportRow[]; local: LedgerVerifyResult | null };
 type CompareState = { s: "idle" } | { s: "loading" } | { s: "done"; out: CompareOutcome };
 
@@ -88,6 +89,11 @@ export function LedgerScreen() {
   const [to, setTo] = useState("");
   const [compare, setCompare] = useState<CompareState>({ s: "idle" });
   const alive = useRef(true);
+  // Each run takes a number; a result is used only while its number is still current, so Stop (or a newer run) discards it.
+  const runId = useRef(0);
+  const autoRan = useRef(false);
+  // The last finished check, restored if a later re-check is stopped.
+  const lastDone = useRef<Extract<VerifyState, { s: "done" }> | null>(null);
   useEffect(() => {
     alive.current = true;
     return () => {
@@ -108,31 +114,55 @@ export function LedgerScreen() {
 
   async function runVerify() {
     if (verify.s === "loading") return;
+    const run = ++runId.current;
+    const current = () => alive.current && run === runId.current;
+    if (verify.s === "done") lastDone.current = verify;
     setVerify({ s: "loading" });
     try {
       const out = await withBusyRetry(() => port.ledgerVerify({ p_from: 1, p_to: null }));
+      if (!current()) return;
       // A failed re-check never clears the entries already on screen.
       let rows: ExportRow[] = verify.s === "done" ? verify.rows : [];
       let local: LedgerVerifyResult | null = null;
       if (out.head_seq > 0) {
         try {
           // The browser re-checks the whole chain itself (in export pages); the server's verdict is not taken on trust.
-          const all = await exportAll(port, out.head_seq);
+          const all = await exportAll(port, out.head_seq, undefined, current);
+          if (!current()) return;
           local = await verifyLedger(all);
           const w = tableWindow(out.head_seq, out.first_bad_seq ?? local.first_bad_seq, TABLE_ROWS);
           rows = all.filter((r) => Number(r.seq) >= w.first && Number(r.seq) <= w.last);
-        } catch {
+        } catch (e) {
+          if (e instanceof ExportCancelled) return;
           local = null;
         }
       } else {
         local = await verifyLedger([]);
         rows = [];
       }
-      if (alive.current) setVerify({ s: "done", out, rows, local });
+      if (current()) {
+        const next = { s: "done" as const, out, rows, local };
+        lastDone.current = next;
+        setVerify(next);
+      }
     } catch (e) {
-      if (alive.current) setVerify({ s: e instanceof LedgerBusyError ? "busy" : "network" });
+      if (current()) setVerify({ s: e instanceof LedgerBusyError ? "busy" : "network" });
     }
   }
+
+  function cancelVerify() {
+    runId.current++;
+    // Stop keeps the earlier result on screen; with none, say the check was stopped.
+    setVerify(lastDone.current ?? { s: "cancelled" });
+  }
+
+  // Auto-verify on open: one run, started once (the ref also holds across the dev double-mount).
+  useEffect(() => {
+    if (autoRan.current) return;
+    autoRan.current = true;
+    void runVerify();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   async function runWitness() {
     if (compare.s === "loading") return;
@@ -156,24 +186,23 @@ export function LedgerScreen() {
         </h1>
       </header>
 
-      <div className="ledger-plates">
-        <InternalPlate state={verify} />
-        <WitnessPlate state={compare} />
-      </div>
+      <InternalPlate state={verify} onCancel={cancelVerify} />
 
-      <div>
+      <div className="ledger-recheck">
         <Button
-          variant="primary"
+          variant={verify.s === "done" ? "secondary" : "primary"}
           status={verify.s === "loading" ? "loading" : "idle"}
           onClick={() => void runVerify()}
         >
-          {t("verify")}
+          {verify.s === "done" ? t("checkAgain") : t("checkNow")}
         </Button>
         {verify.s === "busy" ? <p className="t-body" role="status">{t("busy")}</p> : null}
         {verify.s === "network" ? (
           <p className="t-body" role="status">{t("network")} <button type="button" className="btn" data-variant="secondary" data-size="dense" onClick={() => void runVerify()}>{t("tryAgain")}</button></p>
         ) : null}
       </div>
+
+      <WitnessPlate state={compare} />
 
       <Plate as="section" className="ledger-compare" aria-labelledby="ledger-compare-title">
         <h2 id="ledger-compare-title" className="t-title">{t("compareTitle")}</h2>
@@ -242,7 +271,7 @@ export function LedgerScreen() {
   );
 }
 
-function InternalPlate({ state }: { state: VerifyState }) {
+function InternalPlate({ state, onCancel }: { state: VerifyState; onCancel: () => void }) {
   const t = useTranslations("ledger");
   const base = (
     <>
@@ -254,7 +283,16 @@ function InternalPlate({ state }: { state: VerifyState }) {
     return (
       <Plate as="section" className="ledger-plate" loading={state.s === "loading"} aria-label={t("internalLabel")}>
         {base}
-        <p className="t-body">{t("notChecked")}</p>
+        {state.s === "loading" ? (
+          <>
+            <p className="t-body" role="status">{t("verifying")}</p>
+            <div>
+              <Button variant="secondary" onClick={onCancel}>{t("cancel")}</Button>
+            </div>
+          </>
+        ) : (
+          <p className="t-body" role="status">{state.s === "cancelled" ? t("cancelled") : t("notChecked")}</p>
+        )}
       </Plate>
     );
   }
@@ -268,7 +306,7 @@ function InternalPlate({ state }: { state: VerifyState }) {
   const partial = !failed && !clean;
   const badSeq = o.first_bad_seq ?? local?.first_bad_seq ?? null;
   return (
-    <Plate as="section" className="ledger-plate" tone={failed ? "critical" : clean ? "clear" : "surface"} stamp aria-label={t("internalLabel")} key={verdict}>
+    <Plate as="section" className="ledger-plate ledger-result" tone={failed ? "critical" : clean ? "clear" : "surface"} stamp aria-label={t("internalLabel")} key={verdict}>
       {base}
       <Verdict ok={!failed} partial={partial}>
         {failed

@@ -1,0 +1,330 @@
+/* Phase 4 (D14 Ink Frame): FM Inbox split view and triage, Ledger result plate.
+   Safety colour only on a live row's tier stripe and chip; resolved and handled rows stay ink and outline.
+   No motion beyond the one-shot border stamp the Plate already has, so nothing needs a reduced-motion branch. */
+
+/* ---------- Inbox: desktop split (1024 px and up) ---------- */
+.inbox-split {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  border: var(--bw-heavy) solid var(--ink);
+  background: var(--surface);
+  min-height: 60dvh;
+}
+.inbox-list-col {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-sunk);
+  border-inline-end: var(--bw-heavy) solid var(--ink);
+  min-width: 0;
+}
+.inbox-keys {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-block-start: var(--bw) solid var(--ink);
+  color: var(--ink-2);
+}
+.inbox-tiers {
+  display: flex;
+  gap: var(--s-2);
+  padding: var(--s-3) var(--s-4);
+  border-block-end: var(--bw) solid var(--ink);
+}
+.inbox-tier-count {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-width: 48px;
+  min-height: 48px;
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+  font-family: var(--ff-display);
+  font-size: var(--t-title);
+  font-weight: var(--fw-title);
+}
+.inbox-tier-count[data-tier="caution"] { background: var(--state-caution); color: var(--on-signal); }
+.inbox-tier-count[data-tier="warning"] { background: var(--state-warning); color: var(--on-signal); }
+.inbox-tier-count[data-tier="critical"] { background: var(--state-critical); color: var(--on-ink); }
+.inbox-new {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  flex-wrap: wrap;
+}
+.inbox-new:not(:empty) {
+  padding: var(--s-3) var(--s-4);
+  margin-block-end: var(--s-3);
+  border: var(--bw-heavy) solid var(--ink);
+  background: var(--surface);
+}
+.inbox-list {
+  flex: 1;
+}
+.inbox-list:focus-visible {
+  outline-offset: -4px;
+}
+.inbox-group-head {
+  margin: 0;
+  font-family: var(--ff-mono);
+  letter-spacing: var(--ls-caption);
+  text-transform: uppercase;
+  padding: var(--s-3) var(--s-4);
+  border-block-end: var(--bw-hair) solid var(--ink);
+  background: var(--paper);
+}
+.inbox-empty {
+  padding: var(--s-4);
+}
+.inbox-pane {
+  padding: var(--s-5);
+  min-width: 0;
+}
+
+/* One compact row (desktop option and mobile queue button): 80 px high, tier stripe on the leading edge. */
+.inbox-row-compact {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: center;
+  gap: var(--s-3);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--hit);
+  padding: var(--s-3) var(--s-4);
+  border: 0;
+  border-block-end: var(--bw-hair) solid var(--ink);
+  border-inline-start: 10px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.inbox-row-main {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.inbox-row-top {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  flex-wrap: wrap;
+}
+.inbox-row-age {
+  font-family: var(--ff-mono);
+  color: var(--ink-2);
+  white-space: nowrap;
+}
+.inbox-row-compact[data-live][data-tier="caution"] { border-inline-start-color: var(--state-caution); }
+.inbox-row-compact[data-live][data-tier="warning"] { border-inline-start-color: var(--state-warning); }
+.inbox-row-compact[data-live][data-tier="critical"] { border-inline-start-color: var(--state-critical); }
+.inbox-row-compact:not([data-live]) { border-inline-start-color: var(--rule-soft); }
+.inbox-row-compact[data-selected] {
+  background: var(--surface);
+  outline: var(--bw-heavy) solid var(--ink);
+  outline-offset: -3px;
+}
+.inbox-row-compact:hover { text-decoration: underline; }
+.inbox-row-title {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Inbox: the alert in full (pane and lead card) ---------- */
+.inbox-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.inbox-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.inbox-detail-meta {
+  margin: 0;
+  color: var(--ink-2);
+}
+.inbox-detail-title {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-size: clamp(28px, 7vw, 32px);
+  font-weight: var(--fw-state);
+  line-height: 1;
+  letter-spacing: var(--ls-display);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+:lang(hi) .inbox-detail-title,
+:lang(ta) .inbox-detail-title {
+  letter-spacing: 0;
+  text-transform: none;
+}
+.inbox-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+}
+.inbox-section h3,
+.inbox-section figcaption {
+  margin: 0;
+}
+.inbox-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--s-4);
+  border-inline-start: var(--bw-heavy) solid var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--t-body);
+}
+.inbox-timeline li[data-dry] {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+/* Mobile lead card: a plate with the tier on its top rule (tier colour only while live). */
+.inbox-detail[data-variant="lead"] {
+  padding: 0 var(--s-4) var(--s-4);
+  border: var(--bw-heavy) solid var(--ink);
+  background: var(--surface);
+}
+.inbox-band {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-inline: calc(-1 * var(--s-4));
+  padding: var(--s-3) var(--s-4);
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.inbox-band[data-tier="caution"] { background: var(--state-caution); color: var(--on-signal); }
+.inbox-band[data-tier="warning"] { background: var(--state-warning); color: var(--on-signal); }
+.inbox-band[data-tier="critical"] { background: var(--state-critical); color: var(--on-ink); }
+.inbox-band-tier {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  font-family: var(--ff-display);
+  font-size: var(--t-title);
+  font-weight: var(--fw-state);
+  text-transform: uppercase;
+}
+.inbox-kicker {
+  display: flex;
+  align-items: center;
+  gap: var(--s-2);
+  margin: 0;
+  font-family: var(--ff-mono);
+  letter-spacing: var(--ls-caption);
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.inbox-swatch {
+  width: 14px;
+  height: 14px;
+  background: var(--ink);
+  flex: none;
+}
+.inbox-swatch[data-tier="caution"] { background: var(--state-caution); }
+.inbox-swatch[data-tier="warning"] { background: var(--state-warning); }
+.inbox-swatch[data-tier="critical"] { background: var(--state-critical); }
+.inbox-sentence {
+  margin: 0;
+  font-size: var(--t-label);
+  font-weight: var(--fw-label);
+  line-height: var(--lh-body);
+}
+.inbox-main,
+.inbox-side {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  min-width: 0;
+}
+.inbox-facts {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  margin: 0;
+  border: var(--bw-hair) solid var(--ink);
+}
+.inbox-facts > div {
+  padding: var(--s-2) var(--s-3);
+  border: var(--bw-hair) solid var(--ink);
+}
+.inbox-facts dt {
+  font-family: var(--ff-mono);
+  letter-spacing: var(--ls-caption);
+  text-transform: uppercase;
+  color: var(--ink-2);
+}
+.inbox-facts dd {
+  margin: 0;
+  font-size: var(--t-body);
+  font-weight: var(--fw-label);
+  overflow-wrap: anywhere;
+}
+@media (min-width: 1024px) {
+  .inbox-detail[data-variant="pane"] {
+    display: grid;
+    grid-template-columns: minmax(0, 1.2fr) minmax(0, 1fr);
+    column-gap: var(--s-6);
+    row-gap: var(--s-3);
+    align-items: start;
+  }
+  .inbox-detail[data-variant="pane"] > .inbox-kicker,
+  .inbox-detail[data-variant="pane"] > .inbox-detail-title,
+  .inbox-detail[data-variant="pane"] > [role="status"] {
+    grid-column: 1 / -1;
+  }
+}
+.inbox-detail[data-variant="lead"] .inbox-actions > * {
+  flex: 1 1 100%;
+}
+.inbox-detail[data-variant="lead"] .inbox-detail-title {
+  margin-block-start: var(--s-3);
+}
+
+/* ---------- Inbox: mobile triage ---------- */
+.inbox-triage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.inbox-count {
+  margin: 0;
+}
+.inbox-queue {
+  display: flex;
+  flex-direction: column;
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+}
+.inbox-queue > h2 {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-block-end: var(--bw) solid var(--ink);
+  background: var(--paper);
+}
+.inbox-queue > .inbox-row-compact:last-child {
+  border-block-end: 0;
+}
+
+/* ---------- Ledger: result plate first, then the witness compare ---------- */
+.ledger-result {
+  padding-block: var(--s-5);
+}
+.ledger-result .ledger-plate-verdict {
+  font-size: clamp(32px, 6vw, 48px);
+}
+.ledger-recheck {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.ledger-recheck > p {
+  margin: 0;
+}

@@ -20,13 +20,17 @@ type Props = {
   live?: boolean;
   detectedAt?: string;
   onShowOnMap?: () => void;
+  /** The caller already shows the sentence (the Inbox pane puts it beside the actions). */
+  hideSentence?: boolean;
+  /** The caller already shows the tier word once. */
+  hideTier?: boolean;
 };
 
 /**
  * S4a AnomalyExplain: the fixed-template sentence (rendered in SQL, never by an LLM), the cost row,
  * the severity, and in full mode the method, inputs with provenance, and Show on map.
  */
-export function AnomalyExplain({ anomaly, variant, live = true, detectedAt, onShowOnMap }: Props) {
+export function AnomalyExplain({ anomaly, variant, live = true, detectedAt, onShowOnMap, hideSentence = false, hideTier = false }: Props) {
   const t = useTranslations("map");
   const format = useFormatter();
   const lang = useLocale() as Lang;
@@ -38,10 +42,12 @@ export function AnomalyExplain({ anomaly, variant, live = true, detectedAt, onSh
 
   return (
     <div className="flex flex-col gap-3">
-      <p className="t-body" lang={english ? "en" : undefined}>
-        {sentence}
-        {lang === "ta" ? <span className="t-meta text-ink-3"> ({t("english")})</span> : null}
-      </p>
+      {hideSentence ? null : (
+        <p className="t-body" lang={english ? "en" : undefined}>
+          {sentence}
+          {lang === "ta" ? <span className="t-meta text-ink-3"> ({t("english")})</span> : null}
+        </p>
+      )}
 
       {anomaly.fuel_l !== null && anomaly.cost_inr !== null ? (
         <div className="flex flex-wrap items-baseline gap-3">
@@ -57,9 +63,11 @@ export function AnomalyExplain({ anomaly, variant, live = true, detectedAt, onSh
           <div className="bar flex-1 min-w-hit" aria-hidden="true">
             <div className="bar-fill" style={{ width: `${anomaly.severity_score}%` }} />
           </div>
-          <Chip tone={live ? safetyTone(anomaly.severity_tier) : "outline"} word>
-            {tierWord}
-          </Chip>
+          {hideTier ? null : (
+            <Chip tone={live ? safetyTone(anomaly.severity_tier) : "outline"} word>
+              {tierWord}
+            </Chip>
+          )}
         </div>
       ) : null}
 

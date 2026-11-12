@@ -601,7 +601,12 @@
     "noEntries": "No entries yet",
     "verifyToList": "Verify the ledger to list entries.",
     "showing": "Latest {n} entries",
-    "footer": "Tamper-evident, not tamper-proof: any change after a checkpoint shows up here. Externally witnessed: the Telegram side is only what you pasted."
+    "footer": "Tamper-evident, not tamper-proof: any change after a checkpoint shows up here. Externally witnessed: the Telegram side is only what you pasted.",
+    "verifying": "Checking the whole ledger now",
+    "cancel": "Stop checking",
+    "cancelled": "Check stopped. Nothing was changed.",
+    "checkNow": "Check now",
+    "checkAgain": "Check again"
   },
   "inbox": {
     "title": "Inbox",
@@ -654,13 +659,11 @@
       "no_answer": "no answer",
       "failed": "failed",
       "suppressed": "suppressed",
-      "dry_run": "test run (not sent)"
+      "dry_run": "dry run (not sent)"
     },
     "acknowledge": "Acknowledge",
     "grantOverride": "Grant override",
     "showOnMap": "Show on map",
-    "details": "Details",
-    "hideDetails": "Hide details",
     "notSent": "Not sent. Try again.",
     "override": {
       "title": "Let {name} start without: {items}",
@@ -683,7 +686,48 @@
       "anyone": "this operator"
     },
     "today": "Today",
-    "overrideGranted": "Override granted"
+    "overrideGranted": "Override granted",
+    "keysHint": "Up and Down choose an alert. Enter opens its actions.",
+    "timeline": "What happened",
+    "raised": "Raised",
+    "raisedNow": "Raised just now",
+    "raisedAgo": "Raised {m} min ago",
+    "raisedToday": "Raised today",
+    "noDispatch": "No message sent yet.",
+    "signal": "Signal around the event",
+    "simulated": "Simulated",
+    "signalSr": "Simulated line: normal level {normal}, now {value}.",
+    "normalLevel": "Normal {v}",
+    "nowLevel": "Now {v}",
+    "queueLabel": "Then {n} more",
+    "listKicker": "Needs action · {n} · tier, then age",
+    "newAlert": "{n, plural, one {# new {tier} alert} other {# new alerts, highest {tier}}}",
+    "viewNew": "View it",
+    "acknowledged": "Acknowledged",
+    "open": "Open",
+    "ofN": "{i} of {n}",
+    "factWho": "Who",
+    "factMachine": "Machine",
+    "factWhen": "When",
+    "factSent": "Message",
+    "none": "None",
+    "ageShort": {
+      "now": "now",
+      "min": "{m}m",
+      "today": "today"
+    },
+    "kindExplain": {
+      "seatbelt_off_moving": "The machine is moving and the seatbelt is not fastened.",
+      "guardian_hazard": "A machine fault was found while a person is close by.",
+      "proximity_zone": "A person and a machine are closer than the safe distance.",
+      "ppe_missing": "Required safety gear is missing, so the task cannot start.",
+      "anomaly_machine": "A machine reading is outside its normal range.",
+      "idle_excess": "The engine has been idling longer than allowed.",
+      "sos": "An operator asked for help.",
+      "ledger_tamper": "An entry in the sealed incident record no longer matches its hash. Open the Ledger to compare.",
+      "alert_flood": "Many alerts arrived at once, so they are grouped.",
+      "near_miss": "A close call was reported. It is recorded without a name."
+    }
   },
   "task": {
     "noTask": "No task assigned right now.",
