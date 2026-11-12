@@ -159,6 +159,33 @@
     "asOf": "as of {time}",
     "stopMachine": "Stop the machine to use Spotter"
   },
+  "bay": {
+    "title": "Your machine",
+    "partsTitle": "Machine parts",
+    "drawingLabel": "Side view of the excavator, a drawing with six numbered parts",
+    "drawingNote": "A drawing, not a photo. Readings simulated (SIM).",
+    "sim": "SIM · simulated reading",
+    "part": {
+      "boom_ram": "Boom and ram",
+      "tracks": "Tracks",
+      "engine": "Engine",
+      "cab": "Cab",
+      "bucket": "Bucket",
+      "rear_sensor": "Rear sensor"
+    },
+    "state": {
+      "ok": "OK",
+      "caution": "Caution",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "note": {
+      "ok": "Nothing to report",
+      "boom_ram_drift": "Boom ram drifts down slowly when held. Tell the technician.",
+      "cab_belt_moving": "Seatbelt is off while the machine moves",
+      "cab_belt_off": "Seatbelt is off"
+    }
+  },
   "home": {
     "conditions": "Conditions",
     "wbgt": "WBGT {c} °C",
