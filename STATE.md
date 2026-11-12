@@ -1,5 +1,14 @@
 # STATE (source of truth; only the integrator/orchestrator edits this file)
 
+> **FINAL BUILD WINDOW 2026-11-12 (Shlok confirmed directly to the lead).** Plan:
+> docs/sessions/team-plan-2026-11-12.md; implementer rules: docs/sessions/lane-rules.md.
+> Lead L0 = "Caterpillar Hackathon Spotter resumption" (Opus) runs ALL lanes (L1 backend too: the old
+> Track B session stood down, Fable + 622k context). Budget: stop spawning at 92 % weekly, hard stop
+> 96 % (51 % at start). No Fable. Agents on branches lane/l1-*, lane/l2-*, lane/l3-*; only L0 merges.
+> Wave 1 (started): L1 ledger_export privacy migration (new 003d), L3 landing (dossier), L2 R3 Decide,
+> L2 F14 Inbox. Queue next: L1 B10 → B10b/B11 → B15; L2 R4 → F15 → F10/F11 → F17/F20/F19;
+> L3 Replay re-enactment polish → demo video. Supabase ACTIVE_HEALTHY.
+
 > **RESUMED 2026-10-11 (Shlok: "continue building").** Single-folder mode per AGENTS.md (work on
 > branch tracks in this repo; old ../spotter-track-* worktrees are read-only history). Supabase
 > restored 2026-10-11 with all 7 migrations intact; new SUPABASE_ACCESS_TOKEN in .env (project
