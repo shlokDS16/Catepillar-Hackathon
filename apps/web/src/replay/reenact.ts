@@ -30,12 +30,12 @@ export type ReenactModel = {
   belt: BeltFix[];
   beltDefault: SeatbeltState;
   /**
-   * The flag moment. ASSUMPTION (fallback): the last recorded fix; nothing in the contract says the
-   * window ends at the event. TODO(L1, additive): `reenactment.event_ms` (optional int) to say where
-   * the event sits, and `reenactment.machine_track[].seatbelt_fastened` (boolean | null, optional)
-   * for the belt. Prefer them here once the server sends them.
+   * The flag moment: `reenactment.event_ms` (contracts 2.1.0) when the server sends it, clamped to
+   * the timeline. FALLBACK (field absent): the last recorded fix, an assumption, see `eventExact`.
    */
   eventMs: number;
+  /** True when `eventMs` came from `reenactment.event_ms`; false = the last-fix fallback (caption says so). */
+  eventExact: boolean;
   /** The stopwatch moment: when the operator responded, `eventMs + real_response_ms`; null if unknown. */
   responseMs: number | null;
   /** True when `eventMs + real_response_ms` fell past the end and the marker was pulled back to it. */
@@ -147,9 +147,21 @@ function beltFromCards(cards: readonly EvidenceCard[]): BeltFix[] {
 }
 
 /**
- * Builds the model from a scenario. The flag sits at the last recorded fix and the stopwatch
- * `real_response_ms` after it (clamped to the end), so both always fall on the timeline. With no
- * seatbelt series the belt is "unknown": a reading nobody recorded is never shown.
+ * Belt samples from `machine_track[].seatbelt_fastened` (contracts 2.1.0). null/absent entries are
+ * "no reading" and are skipped, so the step function holds the last real reading. Empty when the
+ * track carries none.
+ */
+function beltFromTrack(track: readonly { t_ms: number; seatbelt_fastened?: boolean | null }[]): BeltFix[] {
+  const out: BeltFix[] = [];
+  for (const p of track) if (typeof p.seatbelt_fastened === "boolean") out.push({ t_ms: p.t_ms, on: p.seatbelt_fastened });
+  return out;
+}
+
+/**
+ * Builds the model from a scenario. The flag sits at `event_ms` when sent, else at the last
+ * recorded fix; the stopwatch is `real_response_ms` after it (clamped to the end), so both always
+ * fall on the timeline. The belt comes from the track, else a telemetry card series; with neither
+ * it is "unknown": a reading nobody recorded is never shown.
  */
 export function buildReenactModel(scenario: ReplayScenario): ReenactModel {
   const r = scenario.reenactment;
@@ -158,7 +170,9 @@ export function buildReenactModel(scenario: ReplayScenario): ReenactModel {
   const wind = byTime(r.wind);
   const lastFix = Math.max(0, trail.at(-1)?.t_ms ?? 0, track.at(-1)?.t_ms ?? 0);
   const durationMs = Math.max(1, r.duration_ms, lastFix);
-  const eventMs = clamp(lastFix, 0, durationMs);
+  const eventExact = typeof r.event_ms === "number" && r.event_ms >= 0 && r.event_ms <= durationMs;
+  const eventMs = clamp(typeof r.event_ms === "number" ? r.event_ms : lastFix, 0, durationMs);
+  const trackBelt = beltFromTrack(track);
   const rawResponse = r.real_response_ms === null ? null : eventMs + Math.max(0, r.real_response_ms);
   const responseMs = rawResponse === null ? null : clamp(rawResponse, 0, durationMs);
   return {
@@ -166,9 +180,10 @@ export function buildReenactModel(scenario: ReplayScenario): ReenactModel {
     trail,
     track,
     wind,
-    belt: beltFromCards(scenario.investigate.cards),
+    belt: trackBelt.length > 0 ? trackBelt : beltFromCards(scenario.investigate.cards),
     beltDefault: "unknown",
     eventMs,
+    eventExact,
     responseMs,
     responseClamped: rawResponse !== null && rawResponse > durationMs,
   };
@@ -201,7 +216,7 @@ export function stateAt(m: ReenactModel, tMs: number): ReenactState {
   }
 
   const beltIdx = lastAtOrBefore(m.belt, t);
-  const seatbelt: SeatbeltState = m.belt.length === 0 ? m.beltDefault : m.belt[Math.max(0, beltIdx)].on ? "on" : "off";
+  const seatbelt: SeatbeltState = m.belt.length === 0 || beltIdx < 0 ? m.beltDefault : m.belt[beltIdx].on ? "on" : "off";
 
   let wind: ReenactState["wind"] = null;
   if (m.wind.length > 0) {

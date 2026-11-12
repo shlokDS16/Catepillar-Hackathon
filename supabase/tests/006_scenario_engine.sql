@@ -373,24 +373,27 @@ begin
     'each entry has the MachineDelta fields';
 end $$;
 
--- ── 8. step_loop is a stub that keeps the queue intact (B10b fills it in) ────────────────────────
+-- ── 8. step_loop (B10b) drains a queue row: it is marked done or errored, never silently left ─────
 do $$
-declare v_event uuid;
+declare v_event uuid; v_n int;
 begin
   select e.id into v_event from public.events e where e.run_id = pg_temp.id('run') limit 1;
   insert into private.loop_queue (event_id) values (v_event) on conflict (event_id) do nothing;
-  assert private.step_loop(20) = 0, 'the B9 stub builds nothing';
-  assert (select done_at is null and error is null from private.loop_queue where event_id = v_event),
-    'and it must never mark a queue row done: that would silently discard B10b''s work';
+  v_n := private.step_loop(20);
+  assert v_n >= 1, 'step_loop handled the queue row';
+  assert (select done_at is not null or error is not null from private.loop_queue where event_id = v_event),
+    'the row is marked done or errored (the full builder tests are 010_replay.sql)';
+  assert (select count(*) from public.events where id = v_event) = 1, 'and the event is untouched';
 end $$;
 
 -- ── 9. step_requeue: the outbox, not the provider (data-model §3.3, G2-10) ───────────────────────
 do $$
 declare r jsonb;
 begin
+  -- B10: the engine now raises the real breach alert for this machine, so the fixture gets its own hazard_key
   insert into public.alerts (id, run_id, kind, hazard_key, tier, operator_id, site_id, needs_ack)
   values (pg_temp.id('alert_b'), pg_temp.id('run'), 'seatbelt_off_moving',
-          'seatbelt:' || pg_temp.id('op_ravi') || ':EXC-B91', 'warning', pg_temp.id('op_ravi'), pg_temp.id('site'), true);
+          'seatbelt:' || pg_temp.id('op_ravi') || ':EXC-B91:fixture', 'warning', pg_temp.id('op_ravi'), pg_temp.id('site'), true);
   insert into public.dispatches (alert_id, site_id, purpose, channel, recipient_ref, recipient_role,
     status, attempts, sending_at, escalation_level, provider_ref) values
     (pg_temp.id('alert_b'), pg_temp.id('site'), 'alert', 'telegram', 'TELEGRAM_SUPERVISOR_CHAT_ID', 'fleet_manager', 'sending', 0, now() - interval '60 seconds', 1, null),

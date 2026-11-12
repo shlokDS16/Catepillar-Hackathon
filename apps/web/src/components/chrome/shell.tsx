@@ -13,9 +13,13 @@ import { StatusStrip } from "@/components/chrome/status-strip";
 type ShellProps = { role: ShellRole; children: ReactNode };
 
 /**
- * Persistent chrome (interaction-map §2). Phone: strip, title row, content, bottom nav, SOS.
- * From 1024 px: one top strip, a left rail, SOS bottom-right. The fleet manager's shell is
- * Detailed mode with no SOS. Z-order: content 0 · chrome 10 · sheets 20 · lock 25 · takeover 30 · SOS 40.
+ * Persistent chrome (interaction-map §2, D14 Ink Frame). The ink band holds the state plate (or the
+ * FM page title), the connectivity caption, Language and Ask. Phone: band, content, dock (4
+ * destinations + the SOS slot). From 1024 px: the dock becomes a full-height left rail with the SOS
+ * slab under its items. SOS follows the nav in the DOM so keyboard and screen-reader users reach it
+ * early; it stays a sibling of the nav (not inside it) so it keeps z 40 and stays out of the nav's
+ * inert. The fleet manager's shell is Detailed mode with no SOS.
+ * Z-order: content 0 · chrome 10 · sheets 20 · lock 25 · takeover 30 · SOS 40.
  */
 export async function Shell({ role, children }: ShellProps) {
   const operator = role === "operator";
@@ -26,22 +30,24 @@ export async function Shell({ role, children }: ShellProps) {
       <a href="#main" className="skip-link t-label">
         {t("skipToContent")}
       </a>
-      <StatusStrip showSafety={operator} />
-      <Nav role={role} />
-      <LockableBody>
-        <div className="title-row">
-          <ActiveTitle role={role} />
-          <div className="flex items-center gap-6">
+      <StatusStrip
+        showSafety={operator}
+        title={<ActiveTitle role={role} className={operator ? "sr-only" : "strip-title"} />}
+        actions={
+          <>
             <LanguageChip />
             {operator ? <AskChip /> : null}
-          </div>
-        </div>
+          </>
+        }
+      />
+      <Nav role={role} />
+      {operator ? <SosControl /> : null}
+      <LockableBody>
         <main id="main" className="shell-main">
           {children}
         </main>
       </LockableBody>
       {operator ? <AlertLayer /> : null}
-      {operator ? <SosControl /> : null}
     </div>
     </AppProviders>
   );

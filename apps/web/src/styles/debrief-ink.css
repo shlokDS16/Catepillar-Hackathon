@@ -1,0 +1,553 @@
+/* =====================================================================================
+   Ink Frame Debrief (D14, portal-redesign-study §3 B). Loaded after debrief.css and overrides it.
+   The payoff: an ink "theatre" for the re-enactment (the one dark work surface, §5.1 carve-out),
+   then ink-on-paper sections under numbered mono rules. Motion here may be richer than the
+   portal's: a quint-out rise, nothing that loops. Reduced motion turns it all off.
+   ===================================================================================== */
+.deb {
+  --deb-quint: cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+/* Numbered mono section label: "02 — How you did", [Listen] on the right. */
+.deb-lbl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-3);
+  min-height: var(--hit-dense);
+  border-bottom: var(--bw-hair) solid var(--ink);
+  padding-bottom: var(--s-1);
+}
+.deb-lbl-text {
+  margin: 0;
+  color: var(--ink-2);
+}
+.deb-lbl-n {
+  font-weight: 700;
+  color: var(--ink);
+}
+.deb-lbl .btn {
+  flex: none;
+}
+
+/* ---- The theatre ---- */
+.deb-stage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  box-sizing: border-box;
+  min-width: 0;
+  background: var(--frame);
+  color: var(--on-frame);
+  padding: var(--s-4) var(--gutter) var(--s-5);
+  /* Bleed to the screen edges on phones: the stage is part of the frame family. */
+  margin-inline: calc(var(--gutter) * -1);
+  /* Local token override so everything drawn in ink (marks, rail, glyphs, buttons) reads on the dark stage. */
+  --ink: var(--on-frame);
+  --paper: var(--frame);
+  --surface: var(--frame);
+  --on-ink: var(--frame);
+  --ink-2: var(--on-frame);
+  --ink-3: var(--on-frame-2);
+  --rule: var(--frame-rule);
+  --surface-sunk: var(--frame-rule);
+  --mark-bg: var(--frame);
+}
+.deb-stage .deb-lbl {
+  border-bottom-color: var(--frame-rule);
+}
+.deb-stage .deb-lbl-text {
+  color: var(--on-frame-2);
+}
+.deb-stage .deb-lbl-n {
+  color: var(--on-frame);
+}
+.deb-headline {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: clamp(40px, 11vw, 76px);
+  line-height: 0.95;
+  letter-spacing: var(--ls-display);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+.deb-cap,
+.deb-legend,
+.deb-assumed {
+  color: var(--on-frame-2);
+}
+.deb-stage .site-plan-svg {
+  background: transparent;
+  border: var(--bw-hair) solid var(--on-frame-2);
+  height: clamp(240px, 42vh, 460px);
+}
+.deb-stage .plan-zone {
+  fill: var(--on-frame);
+  fill-opacity: 0.07;
+  stroke: var(--on-frame-2);
+}
+.deb-stage .plan-zone-name {
+  fill: var(--on-frame-2);
+}
+.deb-stage .plan-trail {
+  stroke: var(--on-frame-2);
+}
+.deb-stage .plan-track {
+  stroke: var(--on-frame);
+}
+.deb-stage .plan-me,
+.deb-stage .plan-machine {
+  fill: var(--on-frame);
+  stroke: var(--frame);
+}
+.deb-stage .plan-flag-pole {
+  stroke: var(--on-frame);
+}
+.deb-stage .plan-flag-cloth {
+  fill: var(--on-frame);
+}
+.deb-stage .plan-flag[data-passed="false"] .plan-flag-cloth {
+  fill: var(--frame);
+  stroke: var(--on-frame);
+}
+.deb-stage .plan-wind-ring {
+  fill: var(--frame);
+  stroke: var(--on-frame-2);
+}
+.deb-stage .plan-wind-arrow {
+  stroke: var(--on-frame);
+}
+.deb-stage .deb-readouts > div {
+  border-left-color: var(--frame-rule);
+}
+.deb-stage .deb-readouts dt {
+  color: var(--on-frame-2);
+}
+.deb-stage .deb-readouts dd {
+  color: var(--on-frame);
+  font-weight: 700;
+  font-size: var(--t-title);
+  line-height: 1.1;
+}
+.deb-stage .deb-rail {
+  background: var(--frame-rule);
+  border: 0;
+  height: var(--s-2);
+}
+.deb-stage .deb-rail-fill {
+  background: var(--on-frame);
+}
+.deb-stage .deb-thumb {
+  background: var(--on-frame);
+  border-color: var(--frame);
+}
+.deb-stage .deb-glyph {
+  stroke: var(--on-frame);
+  fill: var(--frame);
+}
+.deb-stage .deb-glyph[data-passed="true"] {
+  fill: var(--on-frame);
+}
+.deb-stage .deb-speed {
+  border-color: var(--on-frame-2);
+  color: var(--on-frame);
+}
+.deb-stage .deb-belt .picto {
+  color: var(--on-frame);
+}
+/* Buttons on the stage: the primary is the light plate, the secondary an on-frame outline. */
+.deb-stage .btn {
+  background: transparent;
+  color: var(--on-frame);
+  border-color: var(--on-frame);
+}
+.deb-stage .btn[data-variant="primary"] {
+  background: var(--on-frame);
+  color: var(--frame);
+}
+.deb-stage .btn:not(:disabled):not([aria-disabled="true"]):active {
+  background: var(--frame-rule);
+  box-shadow: inset 0 var(--bw) 0 0 var(--on-frame);
+  color: var(--on-frame);
+}
+.deb-stage .btn[data-variant="primary"]:not(:disabled):active {
+  background: var(--on-frame-2);
+  color: var(--frame);
+}
+.deb-stage :focus-visible {
+  outline-color: var(--on-frame);
+}
+.deb-controls .btn[data-variant="primary"] {
+  min-width: var(--hit);
+}
+
+/* ---- Scores: big condensed figures, five-segment bars ---- */
+.deb-score > .t-caption {
+  color: var(--ink-2);
+}
+.deb-score-figure .t-figure {
+  letter-spacing: var(--ls-display);
+}
+.deb-bar {
+  position: relative;
+}
+.deb-bar::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: repeating-linear-gradient(
+    90deg,
+    transparent 0,
+    transparent calc(20% - var(--bw)),
+    var(--paper) calc(20% - var(--bw)),
+    var(--paper) 20%
+  );
+  pointer-events: none;
+}
+@media (min-width: 640px) {
+  .deb-scores > .deb-score + .deb-score {
+    border-left: var(--bw-hair) solid var(--rule);
+    padding-left: var(--s-4);
+  }
+}
+
+/* ---- Your path: numbered cells, You vs Safest ---- */
+.deb-trace-row > h3 {
+  color: var(--ink-2);
+}
+.deb-chips {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-2);
+}
+.deb-chips > li {
+  min-width: 0;
+  display: flex;
+}
+.deb-chip {
+  flex: 1;
+  flex-direction: column;
+  align-items: stretch;
+  justify-content: space-between;
+  gap: var(--s-1);
+  min-width: 0;
+  min-height: var(--hit);
+  padding: var(--s-2);
+  text-align: start;
+  overflow-wrap: anywhere;
+  font-weight: 600;
+}
+.deb-cell-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--s-2);
+}
+.deb-cell-n {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: var(--t-title);
+  line-height: 1;
+}
+.deb-cell-title {
+  line-height: 1.15;
+}
+.deb-decision-head {
+  flex-wrap: wrap;
+}
+.deb-verdict {
+  margin-inline-start: auto;
+  color: var(--ink-2);
+}
+
+/* ---- The rule: the 3 px plate. ---- */
+.deb-rule {
+  gap: var(--s-4);
+  align-items: stretch;
+}
+.deb-rule .deb-lbl {
+  border-bottom-color: var(--rule);
+}
+.deb-rule-text {
+  font-size: clamp(24px, 6.5vw, 32px);
+  font-weight: 700;
+  line-height: 1.2;
+  letter-spacing: -0.01em;
+}
+:lang(hi) .deb-rule-text,
+:lang(ta) .deb-rule-text {
+  letter-spacing: 0;
+}
+.deb-next > .btn {
+  min-width: min(100%, 280px);
+}
+
+/* ---- Desktop: two-column stage; scores and rule span; path and decisions sit side by side ---- */
+@media (min-width: 1024px) {
+  .deb {
+    display: grid;
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: var(--s-7);
+    row-gap: var(--s-6);
+    align-items: start;
+  }
+  .deb > .deb-stage,
+  .deb > .deb-s-scores,
+  .deb > .deb-rule,
+  .deb > .deb-next {
+    grid-column: 1 / -1;
+  }
+  .deb-stage {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr);
+    column-gap: var(--s-7);
+    row-gap: var(--s-4);
+    align-content: start;
+    margin-inline: 0;
+    padding: var(--s-5) var(--s-6) var(--s-6);
+  }
+  .deb-stage > .deb-lbl {
+    grid-column: 1 / -1;
+  }
+  .deb-stage > .deb-headline,
+  .deb-stage .deb-player > :not(.site-plan) {
+    grid-column: 1;
+  }
+  .deb-stage .deb-player {
+    display: contents;
+  }
+  .deb-stage .site-plan {
+    grid-column: 2;
+    grid-row: 2 / span 8;
+  }
+  .deb-stage .site-plan-svg {
+    height: clamp(320px, 50vh, 520px);
+  }
+  .deb-readouts {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+  .deb-chips {
+    gap: var(--s-3);
+  }
+}
+
+/* =====================================================================================
+   Decide fixes (D14, study §5 phase 2; not feedback, which stays in the Debrief):
+   1. A selected choice is outlined (3 px rule plus an inner 2 px rule) with a number badge, and
+      keeps the surface fill, so it is never mistaken for the one primary action (an ink fill).
+   2. [Confirm order] sticks above the dock, never under it.
+   ===================================================================================== */
+.dc-plate[aria-pressed="true"] {
+  background: var(--surface);
+  color: var(--ink);
+  box-shadow: inset 0 0 0 var(--bw) var(--surface), inset 0 0 0 calc(var(--bw) * 2) var(--ink);
+}
+.dc-number {
+  display: grid;
+  place-items: center;
+  min-width: var(--s-6);
+  height: var(--s-6);
+  padding-inline: var(--s-1);
+  background: var(--ink);
+  color: var(--on-ink);
+  line-height: 1;
+  font-family: var(--ff-display);
+}
+.replay-actions[data-dock-safe="true"] {
+  position: sticky;
+  z-index: 5;
+  align-self: stretch;
+  inset-block-end: var(--dock-total); /* flush on the dock (incl. the home-indicator inset): no gap for plates to show through */
+  padding-block: var(--s-3);
+  background: var(--paper);
+  border-top: var(--bw-hair) solid var(--ink);
+}
+@media (min-width: 1024px) {
+  /* From 1024 px the dock is the left rail, so nothing sits under the bottom edge. */
+  .replay-actions[data-dock-safe="true"] {
+    inset-block-end: 0;
+  }
+}
+
+/* =====================================================================================
+   Mockup fit (b-debrief): compact theatre, frame label and phase segments inside the ink,
+   three-column desktop, hint in the section rule, rule and next hierarchy.
+   ===================================================================================== */
+.deb-frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.deb-frame-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: 0;
+  color: var(--on-frame-2);
+}
+.deb-segs {
+  display: flex;
+  gap: var(--s-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.deb-segs > li {
+  flex: 1;
+  height: var(--s-2);
+  background: var(--on-frame);
+}
+.deb-segs > li[data-state="current"] {
+  outline: var(--bw) solid var(--on-frame);
+  outline-offset: var(--s-1);
+}
+.deb-lbl-hint {
+  margin-inline-start: auto;
+  color: var(--ink-3);
+  text-align: end;
+}
+.deb-stage .deb-lbl-hint {
+  color: var(--on-frame-2);
+}
+.deb-stage .site-plan-svg {
+  height: clamp(200px, 30vh, 460px);
+}
+/* One compact readout block instead of five boxed tiles. */
+.deb-stage .deb-readouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+}
+.deb-stage .deb-readouts > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  border: 0;
+  padding: 0;
+}
+.deb-stage .deb-readouts dd {
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+}
+.deb-stage .deb-belt .picto {
+  width: var(--s-5);
+  height: var(--s-5);
+}
+/* The play control sits beside the scrubber. */
+.deb-transport {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-3);
+}
+.deb-transport .btn {
+  min-width: var(--hit);
+}
+.deb-controls {
+  gap: var(--s-3);
+}
+/* The track needs 3:1 against the stage (WCAG 1.4.11). */
+.deb-stage .deb-rail {
+  border: var(--bw-hair) solid var(--on-frame-2);
+}
+.deb-cell-n {
+  font-size: var(--t-meta);
+}
+.deb-chip[data-kind="empty"] {
+  border-color: transparent;
+  background: repeating-linear-gradient(135deg, transparent 0 6px, var(--rule) 6px 7px);
+}
+.deb-rule-text::before {
+  content: "“";
+}
+.deb-rule-text::after {
+  content: "”";
+}
+.deb-next {
+  align-items: center;
+}
+.deb-next > .btn[data-variant="primary"] {
+  min-width: min(100%, 420px);
+}
+.deb-next > .btn:not([data-variant="primary"]) {
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .deb {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1fr);
+    column-gap: var(--s-6);
+  }
+  .deb > .deb-stage,
+  .deb > .deb-rule,
+  .deb > .deb-next {
+    grid-column: 1 / -1;
+  }
+  .deb > .deb-s-scores {
+    grid-column: auto;
+  }
+  .deb-s-scores .deb-scores {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .deb-s-scores .deb-scores > .deb-score + .deb-score {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .deb-stage .deb-readouts {
+    grid-template-columns: none;
+  }
+  .deb-stage > .deb-frame {
+    grid-column: 1 / -1;
+  }
+  .deb-stage .site-plan {
+    grid-row: 3 / span 8;
+  }
+}
+
+/* ---- Motion: a quint-out rise as the Debrief arrives; the sections follow in order. ---- */
+@keyframes deb-rise {
+  from {
+    opacity: 0;
+    transform: translateY(var(--s-4));
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes deb-flag {
+  from {
+    transform: scaleX(0.2);
+  }
+  to {
+    transform: none;
+  }
+}
+@media (prefers-reduced-motion: no-preference) {
+  .deb-stage,
+  .deb > .deb-section,
+  .deb > .deb-rule,
+  .deb > .deb-next {
+    animation: deb-rise 480ms var(--deb-quint) both;
+  }
+  .deb > .deb-s-scores {
+    animation-delay: 160ms;
+  }
+  .deb > .deb-s-path {
+    animation-delay: 240ms;
+  }
+  .deb > .deb-s-decisions {
+    animation-delay: 320ms;
+  }
+  .deb > .deb-rule {
+    animation-delay: 400ms;
+  }
+  .deb > .deb-next {
+    animation-delay: 480ms;
+  }
+  .plan-flag[data-passed="true"] .plan-flag-cloth {
+    transform-box: fill-box;
+    transform-origin: left center;
+    animation: deb-flag 320ms var(--deb-quint) both;
+  }
+}

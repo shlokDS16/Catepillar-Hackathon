@@ -326,10 +326,6 @@
 .sheet-body {
   padding: var(--s-4) var(--gutter) var(--s-6);
 }
-/* Operator sheets keep their head clear of the SOS plate, which floats above every sheet. */
-.shell[data-role="operator"] .sheet-head {
-  padding-inline-end: calc(var(--hit-sos) + var(--s-4));
-}
 .sheet-head {
   display: flex;
   align-items: center;
@@ -382,7 +378,10 @@
   pointer-events: none;
 }
 
-/* ---------- Chrome: strip, nav, title row, SOS slot (interaction-map §2) ---------- */
+/* ---------- Chrome: ink status band, dock, SOS slot (D14, Ink Frame) ----------
+   The frame is the darkest, most stable thing on screen: band at the top, dock at the bottom
+   (a full-height rail from 1024 px). Working content stays ink on paper. The only colour in the
+   frame is the live state plate and SOS. */
 .skip-link {
   position: absolute;
   top: var(--s-2);
@@ -396,6 +395,7 @@
 }
 .skip-link:focus-visible {
   transform: none;
+  outline-color: var(--on-frame);
 }
 .shell {
   min-height: 100dvh;
@@ -408,11 +408,71 @@
   z-index: var(--z-chrome);
   display: flex;
   align-items: center;
+  gap: var(--s-3);
+  box-sizing: border-box;
+  min-height: calc(var(--strip-h) + var(--safe-t));
+  padding: calc(var(--s-3) + var(--safe-t)) var(--gutter) var(--s-3);
+  background: var(--frame);
+  color: var(--on-frame);
+  border-bottom: var(--bw-hair) solid var(--frame-rule);
+}
+.strip :focus-visible,
+.nav :focus-visible {
+  outline-color: var(--on-frame);
+}
+/* The state plate: 100 x 80, never smaller (it is a link). Word under the pictogram, paper border. */
+.strip .chip[data-size="hit"][data-tone] {
+  flex-direction: column;
+  justify-content: center;
+  gap: 0;
+  width: var(--plate-w);
+  min-height: var(--hit);
+  padding: var(--s-1);
+  border-color: var(--on-frame);
+  flex: none;
+}
+/* Language and Ask: compact outlined controls on the ink, 64 x 56 (above the 48 px minimum). */
+.strip .chip[data-size="hit"]:not([data-tone]) {
+  min-width: 64px;
+  min-height: 56px;
+  padding: 0 var(--s-2);
+  justify-content: center;
+  background: transparent;
+  color: var(--on-frame);
+  border: var(--bw) solid var(--on-frame-2);
+}
+.strip .chip[data-size="hit"]:not([data-tone]):active {
+  background: var(--frame-rule);
+  box-shadow: none;
+}
+.strip-title {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-size: 30px;
+  font-weight: var(--fw-state);
+  line-height: 1;
+  letter-spacing: var(--ls-display);
+  text-transform: uppercase;
+  color: var(--on-frame);
+}
+.strip-cap {
+  flex: 1;
+  min-width: 0;
+  color: var(--on-frame-2);
+  overflow-wrap: anywhere;
+}
+.strip-cap[data-conn="nosignal"] {
+  padding: var(--s-1) var(--s-2);
+  border: var(--bw-hair) dashed var(--on-frame-2);
+  color: var(--on-frame);
+}
+.strip-cap[data-conn="live"] {
+  color: var(--on-frame);
+}
+.strip-actions {
+  display: flex;
+  flex: none;
   gap: var(--s-2);
-  min-height: var(--strip-h);
-  padding: 0 var(--gutter);
-  background: var(--paper);
-  border-bottom: var(--bw) solid var(--ink);
 }
 .shell-body {
   display: flex;
@@ -420,27 +480,28 @@
   flex: 1;
   min-width: 0;
 }
-.title-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: var(--s-4);
-  padding: var(--s-3) var(--gutter);
-}
 .shell-main {
   flex: 1;
-  padding: 0 var(--gutter) calc(var(--nav-h) + var(--hit-sos) + var(--s-6));
+  padding: var(--s-4) var(--gutter) calc(var(--dock-total) + var(--s-5));
 }
+/* The dock: 4 destinations. The operator's SOS plate is fixed over the dock's last cell (below),
+   so the nav reserves that cell. At 360 px a cell is 63 px wide (D14 amendment, decisions.md). */
 .nav {
   position: fixed;
   inset: auto 0 0 0;
   z-index: var(--z-chrome);
   display: grid;
   grid-auto-flow: column;
-  grid-auto-columns: 1fr;
-  min-height: var(--nav-h);
-  background: var(--paper);
-  border-top: var(--bw) solid var(--ink);
+  grid-auto-columns: minmax(0, 1fr);
+  box-sizing: border-box;
+  height: var(--dock-total);
+  padding-bottom: var(--safe-b);
+  background: var(--frame);
+  color: var(--on-frame-2);
+  border-top: var(--bw-hair) solid var(--frame-rule);
+}
+.nav[data-sos="true"] {
+  padding-inline-end: var(--hit-sos);
 }
 .nav-item {
   display: flex;
@@ -448,19 +509,28 @@
   align-items: center;
   justify-content: center;
   gap: var(--s-1);
-  min-height: var(--nav-h);
-  padding: var(--s-1);
-  color: var(--ink);
+  min-width: 0;
+  min-height: var(--dock-h);
+  padding: var(--s-1) 2px;
+  color: var(--on-frame-2);
   text-decoration: none;
   text-align: center;
   -webkit-tap-highlight-color: transparent;
 }
+.nav-item > .t-label {
+  max-width: 100%;
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  overflow-wrap: anywhere;
+}
+.nav-item[aria-current] {
+  color: var(--on-frame);
+}
 .nav-item[aria-current="page"] {
-  background: var(--ink);
-  color: var(--on-ink);
+  box-shadow: inset 0 var(--s-1) 0 0 var(--on-frame);
 }
 .nav-item:not([aria-current]):active {
-  background: var(--surface-sunk);
+  background: var(--frame-rule);
 }
 .nav-icon {
   position: relative;
@@ -471,19 +541,25 @@
   top: calc(-1 * var(--s-2));
   left: 100%;
   padding: 0 var(--s-1);
-  border: var(--bw) solid var(--ink);
-  background: var(--surface);
-  color: var(--ink);
+  border: var(--bw) solid var(--on-frame);
+  background: var(--frame);
+  color: var(--on-frame);
   font-size: var(--t-meta);
   font-weight: var(--fw-label);
   line-height: var(--lh-meta);
   white-space: nowrap;
 }
+/* The SOS slot: fixed over the dock's last cell, above sheets (z 40 over 20). Sheets end above
+   the dock, so SOS never covers content. It follows the nav in the DOM (shell.tsx). */
 .sos-slot {
   position: fixed;
-  right: var(--gutter);
-  bottom: calc(var(--nav-h) + var(--s-4));
+  right: 0;
+  bottom: 0;
   z-index: var(--z-sos);
+  box-sizing: border-box;
+  width: var(--hit-sos);
+  height: var(--dock-total);
+  display: flex;
 }
 .btn.sos {
   background: var(--state-critical);
@@ -494,33 +570,97 @@
   background: var(--state-critical);
   box-shadow: inset 0 var(--bw) 0 0 var(--on-ink);
 }
+.sos-slot .btn.sos {
+  flex: 1;
+  min-height: var(--dock-total);
+  min-width: var(--hit-sos);
+  border: 0;
+  outline: var(--bw) solid var(--on-frame);
+  outline-offset: calc(-1 * var(--s-2));
+  padding: 0 0 var(--safe-b);
+}
+/* Focus: a thick paper ring on the very edge, an ink gap inside it. Distinct from the idle ring. */
+.sos-slot .btn.sos:focus-visible {
+  outline: var(--s-1) solid var(--on-frame);
+  outline-offset: calc(-1 * var(--s-1));
+  box-shadow: inset 0 0 0 var(--s-2) var(--frame);
+}
+.sos-slot .btn.sos[data-active="true"] {
+  background: var(--on-frame);
+  color: var(--state-critical);
+  outline-color: var(--state-critical);
+}
+
+/* Operator sheets end above the dock (it stays visible and SOS stays reachable); no sheet or
+   content ever sits under it. */
+.shell[data-role="operator"] .sheet {
+  inset-block-end: var(--dock-total);
+  max-height: calc(100dvh - var(--dock-total) - var(--s-6));
+}
+/* The band shows the state plate; the hero card does not repeat it (one state plate per screen). */
+.shell[data-role="operator"] .hero-safety-chip {
+  display: none;
+}
 
 @media (min-width: 1024px) {
   .shell {
     display: grid;
     grid-template-columns: var(--rail-w) minmax(0, 1fr);
     grid-template-rows: auto 1fr;
+    align-content: start;
   }
   .strip {
-    grid-column: 1 / -1;
+    grid-column: 2;
+    grid-row: 1;
+  }
+  .shell-body {
+    grid-column: 2;
+    grid-row: 2;
   }
   .nav {
     position: sticky;
     inset: auto;
-    top: var(--strip-h);
+    top: 0;
+    grid-column: 1;
+    grid-row: 1 / span 2;
     align-self: start;
     grid-auto-flow: row;
     grid-auto-columns: auto;
-    grid-auto-rows: var(--nav-h);
-    height: calc(100dvh - var(--strip-h));
+    grid-auto-rows: var(--dock-h);
+    align-content: start;
+    height: 100dvh;
+    padding-bottom: 0;
     border-top: 0;
-    border-right: var(--bw) solid var(--ink);
+    border-right: var(--bw-hair) solid var(--frame-rule);
+  }
+  .nav[data-sos="true"] {
+    padding-inline-end: 0;
+  }
+  .nav-item[aria-current="page"] {
+    box-shadow: inset var(--s-1) 0 0 0 var(--on-frame);
   }
   .shell-main {
-    padding-bottom: calc(var(--hit-sos) + var(--s-6));
+    padding-bottom: var(--s-6);
   }
+  /* The SOS slab sits directly under the four rail items (b-home mockup), not at the viewport foot. */
   .sos-slot {
-    bottom: var(--s-6);
+    top: calc(var(--dock-h) * 4);
+    bottom: auto;
+    left: 0;
+    right: auto;
+    width: var(--rail-w);
+    height: min(var(--sos-rail-h), calc(100dvh - var(--dock-h) * 4));
+  }
+  .sos-slot .btn.sos {
+    min-height: 0;
+    min-width: var(--rail-w);
+    padding: 0;
+  }
+  .shell[data-role="operator"] .sheet {
+    inset-inline-start: var(--rail-w);
+    inset-block-end: 0;
+    width: auto;
+    max-height: 90dvh;
   }
 }
 
@@ -546,7 +686,7 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-  padding: var(--s-4) var(--gutter) calc(var(--hit-sos) + var(--s-6));
+  padding: var(--s-4) var(--gutter) calc(var(--dock-total) + var(--s-5));
   overflow-y: auto;
   border-top: var(--bw-heavy) solid var(--ink);
 }
@@ -572,6 +712,7 @@
 @media (min-width: 1024px) {
   .takeover {
     inset: var(--strip-h) 0 0 var(--rail-w);
+    padding-bottom: var(--s-6);
   }
   .takeover[data-tier="critical"] {
     inset: 0 0 0 var(--rail-w);
@@ -722,7 +863,7 @@
   flex-direction: column;
   gap: var(--s-4);
   height: 100%;
-  padding: var(--s-4) var(--gutter) calc(var(--hit-sos) + var(--s-6));
+  padding: var(--s-4) var(--gutter) calc(var(--dock-total) + var(--s-5));
   background: var(--paper);
   overflow: hidden;
 }
@@ -862,7 +1003,7 @@
   gap: var(--s-2);
 }
 /* The frame's own blocks are full width; only its controls shrink to their label, so no button
-   sits under the floating SOS plate in the bottom-right corner. */
+   runs edge to edge under the dock. */
 .replay > .replay-head,
 .replay > .replay-phase,
 .replay > section {
@@ -967,10 +1108,6 @@
   gap: var(--s-4);
   margin-top: var(--s-4);
 }
-/* Like .sheet-head: keep the sheet's actions clear of the SOS plate, which floats above sheets. */
-.shell[data-role="operator"] .replay-leave-actions {
-  padding-inline-end: calc(var(--hit-sos) + var(--s-4));
-}
 
 @media (min-width: 1024px) {
   .replay {
@@ -994,14 +1131,10 @@
 .replay-investigate > .ev-grid {
   align-self: stretch;
 }
-/* The one primary action stays clear of the floating SOS plate in the bottom-right corner. */
 .replay-actions {
   display: flex;
   flex-wrap: wrap;
   gap: var(--s-4);
-}
-.shell[data-role="operator"] .replay-actions {
-  padding-inline-end: calc(var(--hit-sos) + var(--s-4));
 }
 
 /* The countdown: ink, never a safety colour. Training urgency must not look like a live alarm. */
@@ -1135,19 +1268,6 @@
   display: flex;
   flex-direction: column;
   gap: var(--s-4);
-}
-/* The SOS plate floats above every sheet (z 40 over 20) and lands in the sheet's bottom-right
-   corner, where it covered the wind figure and the fault rows at 375 px (caught in the browser).
-   A sheet is anchored to the bottom of the viewport, so reserving the whole band the SOS can
-   occupy — the nav, the plate and its gap — is what keeps every reading tappable and visible. */
-.shell[data-role="operator"] .ev-sheet {
-  padding-block-end: calc(var(--nav-h) + var(--hit-sos));
-}
-@media (min-width: 1024px) {
-  /* The nav becomes a left rail there and the SOS sits --s-6 from the bottom. */
-  .shell[data-role="operator"] .ev-sheet {
-    padding-block-end: var(--hit-sos);
-  }
 }
 .ev-figures {
   display: flex;

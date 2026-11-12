@@ -348,8 +348,12 @@ export const ReplayScenario = z.object({
     time_limit_s: z.number().int().positive(),
     kind: z.enum(["single", "order"]),                                // "order" = arrange protocol actions in sequence
     choices: z.array(z.object({ id: z.string(), label: I18nText, pictogram: z.string() })).min(2).max(5) })).min(3).max(4) }),
-  reenactment: z.object({ duration_ms: z.number().int(), trail: z.array(Pt), machine_track: z.array(Pt.extend({
-    speed_kmh: z.number(), pitch_deg: z.number() })), wind: z.array(z.object({ t_ms: z.number().int(), from_deg: z.number(), kmh: z.number() })),
+  reenactment: z.object({ duration_ms: z.number().int(),
+    event_ms: z.number().int().optional(),                            // 2.1.0 (B10b): where the event sits in [0, duration_ms]; absent = the last fix
+    trail: z.array(Pt), machine_track: z.array(Pt.extend({
+    speed_kmh: z.number(), pitch_deg: z.number(),
+    seatbelt_fastened: z.boolean().nullable().optional() })),       // 2.1.0: same name as frames.ts; null/absent = no reading
+    wind: z.array(z.object({ t_ms: z.number().int(), from_deg: z.number(), kmh: z.number() })),
     real_response_ms: z.number().int().nullable() }),                  // played in the debrief
 });
 
@@ -376,6 +380,8 @@ export const LessonContent = z.object({                               // D10: ca
 ```
 Reads: `replay_get(p_replay_id)` → `ReplayScenario` (own replays only); lessons by `select` on `lessons`;
 `assignments[].replay_id` in `my_snapshot`.
+`replay_submit` is idempotent on `p_request_id` (a repeat returns the stored debrief). Both RPCs are operator-only and own-replay-only:
+`forbidden` for any other role, `not_found` for another operator's replay or an id that does not exist; `validation` for a malformed `p_choices`.
 Scoring (server-side, `replay_submit`, data-model §2.8): safety (weighted correct safety-axis choices),
 procedure (protocol order + investigation process vs `ideal_open_order`, relevant cards opened, irrelevant
 ones penalised), efficiency (steps within countdown). Answer keys never leave the server before submit.
@@ -602,8 +608,14 @@ export const EXPLANATION_TEMPLATES = {
   committed **by the integrator on `main`** (Track F does not edit that folder by hand).
 - Phrase ids: `alert.{kind}.{tier}`, `guardian.{card_id}.step{n}`, `sos.{state}`,
   `lesson.{code}.{card_id}`, `lesson.{code}.quiz.{q_id}`, `replay.{event_type}.brief`,
-  `replay.{event_type}.step{n}`, `replay.{event_type}.rule`. Dynamic numbers are **not** spoken from
-  clips (the UI shows them); clips carry fixed phrases only.
+  `replay.{event_type}.step{n}`, `replay.{event_type}.rule`, and (D14, Debrief [Listen] per section, generic
+  for every event, B23 to generate; the UI hides each [Listen] until its clip is `ok`) `replay.debrief.what`,
+  `replay.debrief.scores`, `replay.debrief.path`, `replay.debrief.decisions`. Scripts (en / hi):
+  what "Here is what happened, rebuilt from your recorded event." / "यह देखें कि क्या हुआ, आपके रिकॉर्ड किए डेटा से दोबारा बनाया गया।";
+  scores "These are your scores for safety, right steps and speed. They are for learning, not punishment." / "ये आपके स्कोर हैं: सुरक्षा, सही कदम और तेज़ी। ये सीखने के लिए हैं, सज़ा के लिए नहीं।";
+  path "This is how you investigated, and the safest way to do it." / "आपने कैसे जाँच की, और सबसे सुरक्षित तरीका क्या था।";
+  decisions "These are your decisions, each with the safer answer." / "ये आपके निर्णय हैं, हर एक के साथ सुरक्षित जवाब।".
+  Dynamic numbers are **not** spoken from clips (the UI shows them); clips carry fixed phrases only.
 ```ts
 export const Phrase = z.object({ id: z.string().regex(/^[a-z0-9_.]+$/), group: z.enum(["alert", "guardian",
   "sos", "lesson", "replay"]), text: I18nText.extend({ hi: z.string() }) });

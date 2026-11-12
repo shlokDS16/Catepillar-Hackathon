@@ -1,14 +1,22 @@
 import { BarChart3, ClipboardList, GraduationCap, House, Inbox, Link2, Map, ShieldAlert } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 
-/** The navigation tables (interaction-map §1). Labels are message keys under `nav`. */
-export type NavItem = { key: "home" | "task" | "safety" | "map" | "training" | "inbox" | "fleetMap" | "analytics" | "ledger"; href: string; icon: LucideIcon };
+/**
+ * The navigation tables (interaction-map §1, amended by D14). Labels are message keys under `nav`.
+ * The operator dock has four destinations; Map moved inside Safety and keeps its /op/map route.
+ */
+export type NavItem = {
+  key: "home" | "task" | "safety" | "training" | "inbox" | "fleetMap" | "analytics" | "ledger";
+  href: string;
+  icon: LucideIcon;
+  /** Routes that live inside this destination but are not in the dock (the operator's Map, under Safety). */
+  also?: readonly string[];
+};
 
 export const OPERATOR_NAV: readonly NavItem[] = [
   { key: "home", href: "/op", icon: House },
   { key: "task", href: "/op/task", icon: ClipboardList },
-  { key: "safety", href: "/op/safety", icon: ShieldAlert },
-  { key: "map", href: "/op/map", icon: Map },
+  { key: "safety", href: "/op/safety", icon: ShieldAlert, also: ["/op/map"] },
   { key: "training", href: "/op/training", icon: GraduationCap },
 ];
 
@@ -28,7 +36,10 @@ export function navFor(role: ShellRole): readonly NavItem[] {
 
 /** An item is active for its own route and its sub-screens (e.g. Training for a replay). */
 export function activeItem(items: readonly NavItem[], pathname: string): NavItem | undefined {
-  return [...items]
-    .sort((a, b) => b.href.length - a.href.length)
-    .find((item) => pathname === item.href || pathname.startsWith(`${item.href}/`));
+  const within = (root: string) => pathname === root || pathname.startsWith(`${root}/`);
+  // An alias is more specific than Home's "/op" prefix, so it is checked first.
+  return (
+    items.find((item) => item.also?.some(within)) ??
+    [...items].sort((a, b) => b.href.length - a.href.length).find((item) => within(item.href))
+  );
 }

@@ -114,8 +114,6 @@ export function InboxScreen() {
 
   return (
     <div className="flex flex-col gap-5">
-      <h1 className="t-title">{t("title")}</h1>
-
       <section aria-label={t("needsAction")} className="flex flex-col gap-4">
         <h2 className="t-label">
           {t("needsAction")} <span className="tnum">({groups.needsAction.length})</span>

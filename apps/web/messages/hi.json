@@ -5,7 +5,7 @@
     "language": "भाषा",
     "ask": "पूछें",
     "sos": "SOS",
-    "help": "मदद",
+    "help": "दबाए रखें",
     "switchUser": "यूज़र बदलें",
     "needsSignal": "सिग्नल चाहिए",
     "tryAgain": "फिर कोशिश करें",
@@ -80,7 +80,7 @@
     "task": "काम",
     "safety": "सुरक्षा",
     "map": "नक्शा",
-    "training": "ट्रेनिंग",
+    "training": "अभ्यास",
     "inbox": "इनबॉक्स",
     "fleetMap": "फ़्लीट नक्शा",
     "analytics": "विश्लेषण",
@@ -163,20 +163,20 @@
     "forecast": "{time} तक {c} °C का अनुमान (परिदृश्य पूर्वानुमान)",
     "etaImpact": "बचा समय {pct, number, +#;-#} %",
     "loopTitle": "आज की वजह से",
-    "becauseToday": "आज की वजह से",
-    "practise": "अभ्यास · लगभग 3 मिनट",
-    "lessonCards": "पाठ · {n} कार्ड",
     "todaysTasks": "आज के काम",
     "noTasks": "आज कोई काम नहीं। सुपरवाइज़र से पूछें।",
     "modeLabel": "दृश्य",
     "simple": "सरल",
     "detailed": "विस्तृत",
     "modeNotSaved": "इस डिवाइस पर सेव नहीं हुआ",
-    "lessonLink": "पाठ",
     "lesson": {
       "seatbelt_slopes": "ढलान पर सीटबेल्ट खुली",
       "faulty_machine_nearby": "पास में ख़राब मशीन"
-    }
+    },
+    "recurrence": "{topic}: {days} दिन में {n} बार दोबारा",
+    "recurrenceTitle": "आपके पाठ के बाद",
+    "recurrenceSim": "नकली आँकड़ा",
+    "secLoop": "02 — अभ्यास"
   },
   "map": {
     "mapLabel": "साइट नक्शा",
@@ -256,7 +256,7 @@
     "loading": "अभ्यास आ रहा है…",
     "loadFailed": "अभ्यास लोड नहीं हुआ। फिर कोशिश करें।",
     "retry": "फिर कोशिश करें",
-    "backToTraining": "← ट्रेनिंग",
+    "backToTraining": "← अभ्यास",
     "paused": {
       "title": "अभ्यास रुका है",
       "body": "एक सुरक्षा अलर्ट खुला है। घड़ी रुकी है, इसका नुक़सान नहीं होगा।",
@@ -373,14 +373,21 @@
       "rule": "याद रखने का नियम",
       "ruleSource": "प्रोटोकॉल कार्ड से: {source}",
       "outOf": "/ 100",
+      "scoresNote": "स्कोर सीखने के लिए हैं, सज़ा के लिए नहीं।",
+      "forLearning": "सीखने के लिए",
+      "vsSafest": "आप बनाम सबसे सुरक्षित",
+      "rightCount": "{total} में से {n} सही",
+      "simulated": "नकली",
+      "right": "सही",
+      "notQuite": "इस बार नहीं",
       "scoreSpoken": "{label}: 100 में से {v}",
       "score": {
         "safety": "सुरक्षा",
-        "procedure": "प्रक्रिया",
-        "efficiency": "कुशलता"
+        "procedure": "सही कदम",
+        "efficiency": "तेज़ी"
       },
       "you": "आप",
-      "ideal": "आदर्श",
+      "ideal": "सबसे सुरक्षित",
       "missed": "छूटा",
       "openedNone": "आपने कोई कार्ड नहीं खोला।",
       "traceHint": "कार्ड दबाएँ और देखें कि वह क्यों ज़रूरी था या नहीं।",
@@ -388,7 +395,7 @@
         "relevant": "खोला, ज़रूरी था",
         "irrelevant": "खोला, ज़रूरी नहीं था",
         "missed": "छूटा, ज़रूरी था",
-        "ideal": "आदर्श क्रम में"
+        "ideal": "सबसे सुरक्षित क्रम में"
       },
       "stepOf": "कदम {n}",
       "youSaid": "आप:",
@@ -399,6 +406,7 @@
       "practiseAgain": "फिर अभ्यास करें",
       "player": {
         "caption": "आपके रिकॉर्ड किए डेटा से पुनर्मंचन · नकली · घटना आख़िरी रिकॉर्ड की जगह पर चिह्नित",
+        "captionExact": "आपके रिकॉर्ड किए डेटा से पुनर्मंचन · नकली",
         "mapLabel": "साइट प्लान पर पुनर्मंचन",
         "readoutsLabel": "इस पल के आँकड़े",
         "time": "समय",
@@ -776,5 +784,70 @@
     "wipe": {
       "band": "ऑपरेटर कॉकपिट · सिमुलेटेड शिफ्ट"
     }
+  },
+  "training": {
+    "assignedTitle": "आपके लिए",
+    "emptyTitle": "कुछ बाकी नहीं। शाबाश।",
+    "openLessonsTitle": "जब चाहें खोलें",
+    "because": "{time} की वजह से",
+    "kind": {
+      "replay": "अभ्यास",
+      "lesson": "पाठ"
+    },
+    "status": {
+      "todo": "बाकी",
+      "done": "पूरा"
+    },
+    "practise": "अभ्यास · लगभग 3 मिनट",
+    "practiseAgain": "फिर अभ्यास करें",
+    "lessonStart": "पाठ शुरू करें · {n} कार्ड",
+    "lessonStartPlain": "पाठ शुरू करें",
+    "lessonAgain": "फिर खोलें",
+    "replayTitle": "अभ्यास: {title}",
+    "lessonTitle": "पाठ: {title}",
+    "scores": "सुरक्षा {safety} · प्रक्रिया {procedure} · कुशलता {efficiency}",
+    "quiz": "क्विज़ {n} / 100",
+    "listLabel": "आपके अभ्यास और पाठ",
+    "topic": {
+      "seatbelt_slopes": "सीटबेल्ट",
+      "faulty_machine_nearby": "मशीन की ख़राबी"
+    },
+    "secAssigned": "01 — आपके लिए",
+    "secOpen": "02 — जब चाहें",
+    "becauseUnknown": "पहले की घटना की वजह से",
+    "doneNote": "पूरे हुए काम इस डिवाइस की हाल की गतिविधि से दिखते हैं।"
+  },
+  "lesson": {
+    "kind": {
+      "rule": "नियम",
+      "why": "क्यों",
+      "how": "कैसे",
+      "example": "उदाहरण",
+      "check": "जाँच"
+    },
+    "frame": "पाठ",
+    "cardProgress": "{n} / {total}",
+    "quizLabel": "क्विज़",
+    "quizProgress": "प्रश्न {n} / {total}",
+    "next": "आगे",
+    "back": "← पीछे",
+    "listen": "सुनें",
+    "soundBlocked": "आवाज़ बंद है, सुनें दबाएँ",
+    "correct": "सही",
+    "wrong": "ठीक नहीं। सही जवाब: {answer}",
+    "picked": "आपने यह चुना",
+    "right": "सही जवाब",
+    "endTitle": "{total} में से {n} सही",
+    "saving": "सेव हो रहा है…",
+    "done": "पूरा ✓",
+    "notSaved": "सेव नहीं हुआ। फिर कोशिश करें।",
+    "retry": "फिर कोशिश करें",
+    "loading": "पाठ आ रहा है…",
+    "loadFailed": "पाठ नहीं मिला। फिर कोशिश करें।",
+    "backToTraining": "← अभ्यास",
+    "choicesLabel": "एक जवाब चुनें",
+    "notFound": "यह पाठ उपलब्ध नहीं है।",
+    "reviewNote": "आप यह पाठ पहले पूरा कर चुके हैं। यह दोहराव है: स्कोर सेव नहीं होगा।",
+    "secLesson": "पाठ"
   }
 }

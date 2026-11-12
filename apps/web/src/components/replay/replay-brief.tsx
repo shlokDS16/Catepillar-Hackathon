@@ -68,7 +68,7 @@ export function ReplayBrief({ scenario, attempt, onStart }: BriefProps) {
       </p>
 
       <p className="t-meta text-ink-3 tnum">{t("budget", { s: scenario.brief.time_budget_s })}</p>
-      {/* Left-aligned, not full width: a block button would run under the floating SOS plate. */}
+      {/* Left-aligned: the primary action is one plate, not a full-width bar. */}
       <Button variant="primary" onClick={onStart}>
         {t("start")}
       </Button>
