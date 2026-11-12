@@ -89,4 +89,23 @@ Commit: see the head of `lane/l2-landing-v3-a` after e29e014. Counts: tsc and es
 - **L6, partly fixed.** The environment-variable knobs are gone and the file is shorter. The road style patch and the road's floor x values are unchanged.
 - **L7, for the lead.**
 
+## 3D footer wordmark ("the wordmark is the quarry")
+
+- **Module:** `scene/wordmark.ts` (plus `scene/wordmark-path.ts` for the trail). Exact mount API:
+  `mountWordmark(canvas: HTMLCanvasElement, opts: { reducedMotion: boolean; compact: boolean }): Promise<{ setProgress(p: number): void; resize(): void; dispose(): void }>`.
+  - `reducedMotion` or `compact` resolves a no-op controller (no WebGL, nothing drawn): B shows a still.
+  - Otherwise it awaits the display font, builds the heightfield and renders on demand (no loop, no spin). `setProgress(0..1)` and `resize()` schedule one frame. `dispose()` is idempotent and frees geometry, materials, shadow map and the renderer (`forceContextLoss`).
+  - The font family is read from the canvas's computed `--font-barlow-condensed` (falls back to "Barlow Condensed"). The canvas needs an explicit CSS size (it reads `clientWidth/clientHeight`); pixel ratio is capped at 1.5.
+- **What it is:**
+  - SPOTTER is drawn in Barlow Condensed 800 to an offscreen 600x250 canvas, blurred and cut into three terraces, mixed with our own `terrainHeight` and a rolling noise, and displaced onto a 300 x 125 m plane. Each glyph is a mesa with three benches on its flank.
+  - A fragment shader draws contour lines on the surface (8 m, 1.6 m, 0.4 m and 0.1 m families, antialiased in pixels and faded where they would crowd), in the ink and paper palette. A glyph outline fades as it tilts.
+  - A dusk sun casts real shadows (shadow map 4096). The excavator (unchanged `buildExcavator`, scaled 3x) is parked on the O. The day's trail in `#F1B995` is traced across the letters, and the haul road is a dashed line.
+  - Progress 0: straight down, where it reads as the flat contour wordmark. By 0.6 it tilts to a 33 degree dusk oblique, and it holds to 1. The trail draws over 0.25-0.95.
+- **Posters** in `public/landing/` (webp and avif, all at most 37 KB): `wordmark-top.*` and `wordmark-3d.*` at 1440 x 600, and `wordmark-top-m.*` and `wordmark-3d-m.*` at 750 x 330.
+- **Screenshots** in `docs/design/qa/landing-v3/`: `A-wordmark-1440-p0.png`, `A-wordmark-1440-p0.5.png`, `A-wordmark-1440-p1.png`, `A-wordmark-375-p0.png`, `A-wordmark-375-p0.5.png` and `A-wordmark-375-p1.png` (the 375 ones are the 750 x 330 phone poster framing). Rendered through an esbuild bundle of the module in a scratch page, since the real mount is B's. I iterated on blur, camera fit, elevation (24 to 33 degrees, for legibility) and the line families.
+- **Tests:** `scene/wordmark.test.ts` has 11 tests (heightfield rise and benches, determinism, perch finder, camera pose, trail, and the no-WebGL API). Disposal of a live renderer is not unit-tested (no WebGL in node).
+- **Totals:** tsc and eslint clean, 558 tests pass, build green.
+- **`contours.svg`:** B needs it only as a flat-drawing fallback. If B uses the `wordmark-top` poster for no-JS or no-WebGL, it can be dropped.
+- The stale comment at `scene/index.ts` about the stage 5 trail is fixed.
+
 Exports B uses: none changed. `SceneController`, `SceneReadout`, `getReadout`, `getAnchors` (4 points) and `shift.ts` are as before. Not changed in this commit: `route.ts` gained exports `truckProgress` and `ringLevelFor`, and `REWIND_T` was an internal constant.
