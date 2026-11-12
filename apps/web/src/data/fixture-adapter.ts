@@ -1,7 +1,7 @@
 import { AnomalyDetected, MySnapshotOut } from "@cat/shared";
 import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, protocolCard, replayScenario, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
 import type { ReplayScenario } from "@cat/shared";
-import { RpcError, type DataPort, type PortMessage } from "@/data/port";
+import { RpcError, type DataPort, type PortMessage, type RecurrenceHint } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
 import type { SiteMapData } from "@/map/site-map";
 import type { LedgerScenario } from "@/ledger/fixtures";
@@ -365,12 +365,19 @@ export class FixtureAdapter implements DataPort {
     const { fixtureAnswerKey, scoreReplay } = await import("@/replay/fixture-scoring");
     return scoreReplay(replayScenario as ReplayScenario, fixtureAnswerKey, input);
   }
-  async lessonGet() {
+  async lessonGet(code: string) {
     await wait(this.latencyMs);
+    // The fixture authors one lesson; any other code is "not found", never someone else's content.
+    if (code !== lessonContent.code) throw new RpcError("not_found");
     return lessonContent;
   }
   async lessonComplete() {
     await wait(this.latencyMs);
+  }
+  async recurrence(lessonCode: string): Promise<RecurrenceHint | null> {
+    await wait(this.latencyMs);
+    // Scripted: the demo run has no repeat of the seatbelt event after its lesson.
+    return lessonCode === lessonContent.code ? { lesson_code: lessonCode, repeats: 0, days: 7, simulated: true } : null;
   }
 
   /** Beat 1's "vest on" also unblocks Start for the fixture's PPE check. */

@@ -188,3 +188,14 @@ describe("task + PPE override state (F10)", () => {
     expect(reduce(initialState, { type: "snapshot", snapshot: blocked, nowMs: NOW }).ppeMissing).toEqual(["vest"]);
   });
 });
+
+describe("training progress", () => {
+  it("records a finished lesson and a finished replay, and survives a new snapshot", () => {
+    let s = reduce(boot(), { type: "lesson_done", assignmentId: IDS.assignment, score: 67 });
+    s = reduce(s, { type: "replay_done", replayId: IDS.replay, scores: { safety: 80, procedure: 70, efficiency: 60 } });
+    expect(s.training.lessonDone[IDS.assignment]).toBe(67);
+    expect(s.training.replayDone[IDS.replay]).toEqual({ safety: 80, procedure: 70, efficiency: 60 });
+    const again = reduce(s, { type: "snapshot", snapshot: MySnapshotOut.parse(mySnapshot), nowMs: NOW });
+    expect(again.training).toEqual(s.training);
+  });
+});

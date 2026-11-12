@@ -29,6 +29,34 @@ class Store {
   };
 }
 
+/**
+ * Screens call the port, and the store learns what finished: a confirmed lesson_complete or
+ * replay_submit becomes training progress (S5a done rows, Home hint). Wrapping here keeps this
+ * true for every adapter, so no screen has to remember to dispatch.
+ */
+function withProgress(port: DataPort, dispatch: (a: Action) => void): DataPort {
+  return new Proxy(port, {
+    get(target, prop) {
+      const value = Reflect.get(target, prop, target) as unknown;
+      if (typeof value !== "function") return value;
+      if (prop === "lessonComplete") {
+        return async (input: Parameters<DataPort["lessonComplete"]>[0]) => {
+          await target.lessonComplete(input);
+          dispatch({ type: "lesson_done", assignmentId: input.p_assignment_id, score: input.p_quiz_score });
+        };
+      }
+      if (prop === "replaySubmit") {
+        return async (input: Parameters<DataPort["replaySubmit"]>[0]) => {
+          const result = await target.replaySubmit(input);
+          dispatch({ type: "replay_done", replayId: input.p_replay_id, scores: result.scores });
+          return result;
+        };
+      }
+      return (value as (...a: unknown[]) => unknown).bind(target);
+    },
+  });
+}
+
 const StoreContext = createContext<{ store: Store; port: DataPort } | null>(null);
 
 export function DataProvider({ port, children }: { port: DataPort; children: ReactNode }) {
@@ -69,7 +97,7 @@ export function DataProvider({ port, children }: { port: DataPort; children: Rea
     };
   }, [port, store]);
 
-  const value = useMemo(() => ({ store, port }), [store, port]);
+  const value = useMemo(() => ({ store, port: withProgress(port, store.dispatch) }), [store, port]);
   return <StoreContext.Provider value={value}>{children}</StoreContext.Provider>;
 }
 

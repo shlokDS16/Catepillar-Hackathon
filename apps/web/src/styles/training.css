@@ -1,0 +1,226 @@
+/*
+ * Training list (S5a) and Lesson (S5c). Plates, ink rules and tokens only: correct and wrong are
+ * a filled tick and an outlined cross, never green and red (visual-language §5.1).
+ */
+
+/* ---------- S5a ---------- */
+.training {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
+  max-width: var(--content-max);
+}
+.tr-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.tr-section > h2,
+.tr-section > h3 {
+  margin: 0;
+}
+.tr-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 1024px) {
+  .tr-list {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.tr-row {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  height: 100%;
+}
+.tr-row > p {
+  margin: 0;
+}
+/* A finished row recedes with a hairline rule, as a printed sign that has been ticked off. */
+.tr-row[data-status="done"] {
+  border-color: var(--rule-soft);
+}
+.tr-row-top {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.tr-row-action {
+  margin-top: auto;
+  padding-top: var(--s-2);
+}
+.tr-empty {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.tr-empty > h2 {
+  margin: 0;
+}
+
+/* ---------- S5c ---------- */
+.lesson {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  max-width: 720px;
+}
+.lesson-back {
+  align-self: flex-start;
+}
+.lesson-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: var(--s-2) var(--s-4);
+}
+.lesson-head > p {
+  margin: 0;
+}
+.lesson-card,
+.lesson-failed {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+  padding: var(--s-5);
+}
+.lesson-card > *,
+.lesson-failed > * {
+  margin: 0;
+}
+.lesson-card {
+  min-height: 60vh;
+}
+.lesson-kind {
+  align-self: flex-start;
+  padding: var(--s-1) var(--s-3);
+  background: var(--ink);
+  color: var(--on-ink);
+  letter-spacing: var(--ls-caption);
+  text-transform: uppercase;
+}
+:lang(hi) .lesson-kind,
+:lang(ta) .lesson-kind {
+  letter-spacing: 0;
+  text-transform: none;
+}
+.lesson-glyph {
+  color: var(--ink);
+}
+.lesson-glyph .picto {
+  width: calc(var(--picto-lg) * 2);
+  height: calc(var(--picto-lg) * 2);
+}
+.lesson-body {
+  max-width: 48ch;
+}
+.lesson-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--hit-gap);
+  margin-top: auto;
+}
+.lesson-end {
+  justify-content: center;
+}
+.lesson-end .lesson-actions {
+  margin-top: var(--s-3);
+}
+
+/* The quiz: 2-4 icon plates, at least --hit high. After a tap the plate shows a result mark. */
+.lesson-choices {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-3);
+  grid-template-columns: minmax(0, 1fr);
+}
+@media (min-width: 640px) {
+  .lesson-choices {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+.lesson-choice {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+  width: 100%;
+  min-height: var(--hit);
+  padding: var(--s-3) var(--s-4);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--ff-body);
+  text-align: start;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.lesson-choice:active {
+  background: var(--surface-sunk);
+  box-shadow: inset 0 var(--bw) 0 0 var(--ink);
+}
+.lesson-choice-glyph {
+  flex: none;
+  display: inline-flex;
+}
+.lesson-choice-glyph .picto {
+  width: var(--picto-lg);
+  height: var(--picto-lg);
+}
+.lesson-choice-label {
+  flex: 1;
+  min-width: 0;
+}
+.lesson-choice-result {
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+}
+.lesson-choice-result .picto {
+  width: var(--picto);
+  height: var(--picto);
+}
+/* Revealed: locked, no press effect. The picked plate carries a heavy rule; the right answer is marked by its tick. */
+.lesson-choice[aria-disabled="true"] {
+  cursor: default;
+}
+.lesson-choice[aria-disabled="true"]:active {
+  background: var(--surface);
+  box-shadow: none;
+}
+.lesson-choice[data-state="right"] {
+  border-width: var(--bw-heavy);
+  background: var(--surface-sunk);
+}
+.lesson-choice[data-state="wrong"] {
+  border-width: var(--bw-heavy);
+  border-style: dashed;
+}
+.lesson-choice[data-state="answer"] {
+  border-width: var(--bw-heavy);
+}
+.lesson-choice[data-state="dim"] {
+  border-color: var(--rule-soft);
+  color: var(--ink-2);
+}
+.lesson-reveal {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.lesson-reveal:empty {
+  display: none;
+}
+.lesson-reveal > p {
+  margin: 0;
+}

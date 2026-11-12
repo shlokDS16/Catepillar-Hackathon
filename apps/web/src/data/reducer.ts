@@ -1,5 +1,6 @@
 import { EVENT_TYPES, type AnomalyDetected, type AnyEvent, type EVENT_REGISTRY, type EventType, type GuardianHazard } from "@cat/shared";
 import type { z } from "zod";
+import { emptyProgress, type TrainingProgress } from "@/training/assignments";
 import type { AlertRecord, AppEvent, Assignment, ClockTick, Machine, OperatorState, Snapshot, Task } from "@/data/types";
 
 /**
@@ -19,6 +20,8 @@ export type AppState = {
   machine: Machine | null;
   operator: OperatorState | null;
   assignments: Assignment[];
+  /** Finished lessons and replays this session (S5a done rows, Home recurrence hint). */
+  training: TrainingProgress;
   /** Dispatch lines per alert id ("telegram sent", "twilio_voice answered"), newest last. */
   dispatch: Record<string, string[]>;
   /** Ledger sequence numbers per incident id, from `incident.logged`. */
@@ -53,6 +56,7 @@ export const initialState: AppState = {
   machine: null,
   operator: null,
   assignments: [],
+  training: emptyProgress,
   dispatch: {},
   ledgerSeq: {},
   ppeMissing: [],
@@ -74,6 +78,8 @@ export type Action =
   | { type: "event"; event: AppEvent; nowMs: number }
   | { type: "clock"; tick: ClockTick; nowMs: number }
   | { type: "connectivity"; connectivity: Connectivity }
+  | { type: "lesson_done"; assignmentId: string; score: number }
+  | { type: "replay_done"; replayId: string; scores: { safety: number; procedure: number; efficiency: number } }
   | { type: "machine_moved"; machine: Partial<Pick<Machine, "location" | "moving" | "health" | "speed_kmh">>; nowMs: number };
 
 function upsertAlert(alerts: AlertRecord[], next: AlertRecord): AlertRecord[] {
@@ -132,6 +138,10 @@ export function reduce(state: AppState, action: Action): AppState {
       };
     case "connectivity":
       return { ...state, connectivity: action.connectivity };
+    case "lesson_done":
+      return { ...state, training: { ...state.training, lessonDone: { ...state.training.lessonDone, [action.assignmentId]: action.score } } };
+    case "replay_done":
+      return { ...state, training: { ...state.training, replayDone: { ...state.training.replayDone, [action.replayId]: action.scores } } };
     case "machine_moved":
       return state.machine ? { ...state, machine: { ...state.machine, ...action.machine }, lastFrameMs: action.nowMs } : state;
     case "event":
