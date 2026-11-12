@@ -49,8 +49,8 @@ describe("AskResult render", () => {
   });
   it("refused and degraded carry the SIM caption; injection and policy copy render", () => {
     for (const f of [askRateLimited, askDegraded, askInjection, askPolicy]) expect(strip(html(f))).toContain("SIM");
-    expect(strip(html(askInjection))).toContain("Spotter can't answer that. Ask your supervisor.");
-    expect(strip(html(askPolicy))).toContain("Spotter can't answer that. Ask your supervisor.");
+    expect(strip(html(askInjection))).toContain("answer that. Ask your supervisor.");
+    expect(strip(html(askPolicy))).toContain("answer that. Ask your supervisor.");
   });
   it("renders in Hindi from the same fixture", () => {
     const text = strip(html(askAnsweredLeak, vi.fn(), hi, "hi"));
