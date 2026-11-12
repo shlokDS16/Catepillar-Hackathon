@@ -348,8 +348,12 @@ export const ReplayScenario = z.object({
     time_limit_s: z.number().int().positive(),
     kind: z.enum(["single", "order"]),                                // "order" = arrange protocol actions in sequence
     choices: z.array(z.object({ id: z.string(), label: I18nText, pictogram: z.string() })).min(2).max(5) })).min(3).max(4) }),
-  reenactment: z.object({ duration_ms: z.number().int(), trail: z.array(Pt), machine_track: z.array(Pt.extend({
-    speed_kmh: z.number(), pitch_deg: z.number() })), wind: z.array(z.object({ t_ms: z.number().int(), from_deg: z.number(), kmh: z.number() })),
+  reenactment: z.object({ duration_ms: z.number().int(),
+    event_ms: z.number().int().optional(),                            // 2.1.0 (B10b): where the event sits in [0, duration_ms]; absent = the last fix
+    trail: z.array(Pt), machine_track: z.array(Pt.extend({
+    speed_kmh: z.number(), pitch_deg: z.number(),
+    seatbelt_fastened: z.boolean().nullable().optional() })),       // 2.1.0: same name as frames.ts; null/absent = no reading
+    wind: z.array(z.object({ t_ms: z.number().int(), from_deg: z.number(), kmh: z.number() })),
     real_response_ms: z.number().int().nullable() }),                  // played in the debrief
 });
 
@@ -376,6 +380,8 @@ export const LessonContent = z.object({                               // D10: ca
 ```
 Reads: `replay_get(p_replay_id)` → `ReplayScenario` (own replays only); lessons by `select` on `lessons`;
 `assignments[].replay_id` in `my_snapshot`.
+`replay_submit` is idempotent on `p_request_id` (a repeat returns the stored debrief). Both RPCs are operator-only and own-replay-only:
+`forbidden` for any other role, `not_found` for another operator's replay or an id that does not exist; `validation` for a malformed `p_choices`.
 Scoring (server-side, `replay_submit`, data-model §2.8): safety (weighted correct safety-axis choices),
 procedure (protocol order + investigation process vs `ideal_open_order`, relevant cards opened, irrelevant
 ones penalised), efficiency (steps within countdown). Answer keys never leave the server before submit.

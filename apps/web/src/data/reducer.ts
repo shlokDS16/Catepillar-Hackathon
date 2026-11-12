@@ -1,5 +1,6 @@
 import { EVENT_TYPES, type AnomalyDetected, type AnyEvent, type EVENT_REGISTRY, type EventType, type GuardianHazard } from "@cat/shared";
 import type { z } from "zod";
+import { emptyProgress, type TrainingProgress } from "@/training/assignments";
 import type { AlertRecord, AppEvent, Assignment, ClockTick, Machine, OperatorState, Snapshot, Task } from "@/data/types";
 
 /**
@@ -19,6 +20,10 @@ export type AppState = {
   machine: Machine | null;
   operator: OperatorState | null;
   assignments: Assignment[];
+  /** Finished lessons and replays this session (S5a done rows, Home recurrence hint). */
+  training: TrainingProgress;
+  /** When events happened (event id to sim or recorded time), so an assignment can say "because of 09:40". Newest 300. */
+  eventTimes: Record<string, string>;
   /** Dispatch lines per alert id ("telegram sent", "twilio_voice answered"), newest last. */
   dispatch: Record<string, string[]>;
   /** Ledger sequence numbers per incident id, from `incident.logged`. */
@@ -53,6 +58,8 @@ export const initialState: AppState = {
   machine: null,
   operator: null,
   assignments: [],
+  training: emptyProgress,
+  eventTimes: {},
   dispatch: {},
   ledgerSeq: {},
   ppeMissing: [],
@@ -95,6 +102,44 @@ function patchTask(tasks: Task[], id: string, patch: Partial<Task>): Task[] {
 /** A supervisor override lasts 15 minutes (interaction-map §7). */
 export const OVERRIDE_MS = 15 * 60_000;
 
+/** Re-key event times by id and keep the newest 300. */
+function withTimes(times: Record<string, string>, events: ReadonlyArray<{ id: string; sim_ts: string | null; recorded_at: string }>): Record<string, string> {
+  const next = { ...times };
+  for (const e of events) next[e.id] = e.sim_ts ?? e.recorded_at;
+  const keys = Object.keys(next);
+  if (keys.length > 300) for (const k of keys.slice(0, keys.length - 300)) delete next[k];
+  return next;
+}
+
+/**
+ * my_snapshot lists open assignments only (supabase 002c: completed_at is null), so a re-snapshot
+ * would drop finished ones. Assignments already known and finished stay in the list; contract gap
+ * logged in docs/sessions/track-f.md.
+ */
+function mergeAssignments(known: Assignment[], fresh: Assignment[], training: TrainingProgress): Assignment[] {
+  const out = [...fresh];
+  for (const a of known) {
+    const finished = training.lessonDone[a.id] != null || (a.replay_id != null && training.replayDone[a.replay_id] != null);
+    if (finished && !out.some((x) => x.id === a.id)) out.push(a);
+  }
+  return out;
+}
+
+/** Completions that are still among the snapshot's recent events (the last 50) count as done. */
+function foldCompletions(training: TrainingProgress, events: ReadonlyArray<{ type: string; payload: Record<string, unknown> }>): TrainingProgress {
+  let next = training;
+  for (const e of events) {
+    if (e.type === "training.lesson_completed") {
+      const p = e.payload as PayloadOf<"training.lesson_completed">;
+      next = { ...next, lessonDone: { ...next.lessonDone, [p.assignment_id]: p.quiz_score } };
+    } else if (e.type === "training.replay_completed") {
+      const p = e.payload as PayloadOf<"training.replay_completed">;
+      next = { ...next, replayDone: { ...next.replayDone, [p.replay_id]: p.scores } };
+    }
+  }
+  return next;
+}
+
 export function reduce(state: AppState, action: Action): AppState {
   switch (action.type) {
     case "snapshot": {
@@ -106,7 +151,9 @@ export function reduce(state: AppState, action: Action): AppState {
         alerts: s.active_alerts,
         machine: s.machine,
         operator: s.operator_state,
-        assignments: s.assignments,
+        assignments: mergeAssignments(state.assignments, s.assignments, state.training),
+        eventTimes: withTimes(state.eventTimes, s.recent_events),
+        training: foldCompletions(state.training, s.recent_events),
         // A task still blocked on PPE after a reload stays blocked: the items come from the operator's PPE flags.
         ppeMissing: s.tasks.some((x) => x.status === "blocked_ppe")
           ? Object.entries(s.operator_state?.ppe ?? {}).filter(([, ok]) => ok === false).map(([k]) => k)
@@ -158,7 +205,7 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
   if (!state.snapshot) {
     return state.buffer.some((b) => b.seq === raw.seq) ? state : { ...state, buffer: [...state.buffer.slice(-199), raw] };
   }
-  const base: AppState = { ...state, lastFrameMs: nowMs, seenSeq: [...state.seenSeq.slice(-200), raw.seq] };
+  const base: AppState = { ...state, eventTimes: withTimes(state.eventTimes, [raw]), lastFrameMs: nowMs, seenSeq: [...state.seenSeq.slice(-200), raw.seq] };
   if (!isKnown(raw)) return base;
   const e = raw;
 
@@ -332,6 +379,14 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
         ...base,
         assignments: state.assignments.map((a) => (a.because_event_id === r.source_event_id ? { ...a, replay_id: r.replay_id } : a)),
       };
+    }
+    case "training.lesson_completed": {
+      const lc = payload(e, "training.lesson_completed");
+      return { ...base, training: { ...state.training, lessonDone: { ...state.training.lessonDone, [lc.assignment_id]: lc.quiz_score } } };
+    }
+    case "training.replay_completed": {
+      const rc = payload(e, "training.replay_completed");
+      return { ...base, training: { ...state.training, replayDone: { ...state.training.replayDone, [rc.replay_id]: rc.scores } } };
     }
     case "training.lesson_assigned": {
       const la = payload(e, "training.lesson_assigned");

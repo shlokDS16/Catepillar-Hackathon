@@ -373,15 +373,17 @@ begin
     'each entry has the MachineDelta fields';
 end $$;
 
--- ── 8. step_loop is a stub that keeps the queue intact (B10b fills it in) ────────────────────────
+-- ── 8. step_loop (B10b) drains a queue row: it is marked done or errored, never silently left ─────
 do $$
-declare v_event uuid;
+declare v_event uuid; v_n int;
 begin
   select e.id into v_event from public.events e where e.run_id = pg_temp.id('run') limit 1;
   insert into private.loop_queue (event_id) values (v_event) on conflict (event_id) do nothing;
-  assert private.step_loop(20) = 0, 'the B9 stub builds nothing';
-  assert (select done_at is null and error is null from private.loop_queue where event_id = v_event),
-    'and it must never mark a queue row done: that would silently discard B10b''s work';
+  v_n := private.step_loop(20);
+  assert v_n >= 1, 'step_loop handled the queue row';
+  assert (select done_at is not null or error is not null from private.loop_queue where event_id = v_event),
+    'the row is marked done or errored (the full builder tests are 010_replay.sql)';
+  assert (select count(*) from public.events where id = v_event) = 1, 'and the event is untouched';
 end $$;
 
 -- ── 9. step_requeue: the outbox, not the provider (data-model §3.3, G2-10) ───────────────────────

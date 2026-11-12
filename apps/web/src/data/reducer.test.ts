@@ -188,3 +188,26 @@ describe("task + PPE override state (F10)", () => {
     expect(reduce(initialState, { type: "snapshot", snapshot: blocked, nowMs: NOW }).ppeMissing).toEqual(["vest"]);
   });
 });
+
+describe("training progress", () => {
+  it("records a finished lesson and a finished replay, and survives a new snapshot", () => {
+    let s = reduce(boot(), { type: "event", event: ev("training.lesson_completed", 600, { payload: { assignment_id: IDS.assignment, quiz_score: 67 } } as Partial<AppEvent>), nowMs: NOW });
+    s = reduce(s, { type: "event", event: ev("training.replay_completed", 601), nowMs: NOW });
+    expect(s.training.lessonDone[IDS.assignment]).toBe(67);
+    expect(s.training.replayDone[IDS.replay]).toEqual(EVENT_PAYLOADS["training.replay_completed"].scores);
+    const again = reduce(s, { type: "snapshot", snapshot: MySnapshotOut.parse(mySnapshot), nowMs: NOW });
+    expect(again.training).toEqual(s.training);
+  });
+  it("keeps a finished assignment that a later snapshot no longer lists, and learns event times", () => {
+    let s = reduce(boot(), { type: "event", event: ev("training.lesson_assigned", 610), nowMs: NOW });
+    s = reduce(s, { type: "event", event: ev("training.lesson_completed", 611), nowMs: NOW });
+    const again = reduce(s, { type: "snapshot", snapshot: MySnapshotOut.parse({ ...mySnapshot, assignments: [] }), nowMs: NOW });
+    expect(again.assignments.map((a) => a.id)).toEqual([IDS.assignment]);
+    expect(Object.keys(s.eventTimes)).toContain(seatbeltBreachEvent.id);
+  });
+  it("folds completions found in the snapshot's recent events", () => {
+    const completed = { ...seatbeltBreachEvent, seq: 700, type: "training.lesson_completed", payload: EVENT_PAYLOADS["training.lesson_completed"] };
+    const snap = MySnapshotOut.parse({ ...mySnapshot, recent_events: [completed] });
+    expect(reduce(initialState, { type: "snapshot", snapshot: snap, nowMs: NOW }).training.lessonDone[IDS.assignment]).toBe(100);
+  });
+});

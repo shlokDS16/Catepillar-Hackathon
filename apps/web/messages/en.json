@@ -163,20 +163,20 @@
     "forecast": "peak {c} °C forecast by {time} (scenario forecast)",
     "etaImpact": "ETA {pct, number, +#;-#} %",
     "loopTitle": "Because of today",
-    "becauseToday": "Because of today",
-    "practise": "Practise · about 3 min",
-    "lessonCards": "Lesson · {n} cards",
     "todaysTasks": "Today's tasks",
     "noTasks": "No tasks today. Ask your supervisor.",
     "modeLabel": "View",
     "simple": "Simple",
     "detailed": "Detailed",
     "modeNotSaved": "Not saved on this device",
-    "lessonLink": "Lesson",
     "lesson": {
       "seatbelt_slopes": "Seatbelt off on a slope",
       "faulty_machine_nearby": "Faulty machine nearby"
-    }
+    },
+    "recurrence": "{topic}: {n, plural, =0 {0 repeats} one {# repeat} other {# repeats}} in {days} days",
+    "recurrenceTitle": "Since your lesson",
+    "recurrenceSim": "SIMULATED",
+    "secLoop": "02 — PRACTISE"
   },
   "map": {
     "mapLabel": "Site map",
@@ -459,6 +459,7 @@
       "practiseAgain": "Practise again",
       "player": {
         "caption": "Re-enactment from your recorded data · simulated · event marked at the last recorded position",
+        "captionExact": "Re-enactment from your recorded data · simulated",
         "mapLabel": "Re-enactment on the site plan",
         "readoutsLabel": "Readouts at this moment",
         "time": "Time",
@@ -829,5 +830,70 @@
       "body": "The operator cockpit opens on a simulated shift you can drive yourself.",
       "foot": "Spotter is a student project. It is not affiliated with or endorsed by Caterpillar Inc."
     }
+  },
+  "training": {
+    "assignedTitle": "Assigned to you",
+    "emptyTitle": "Nothing assigned. Well done.",
+    "openLessonsTitle": "Lessons you can open any time",
+    "because": "Because of {time}",
+    "kind": {
+      "replay": "Practice",
+      "lesson": "Lesson"
+    },
+    "status": {
+      "todo": "To do",
+      "done": "Done"
+    },
+    "practise": "Practise · about 3 min",
+    "practiseAgain": "Practise again",
+    "lessonStart": "Start lesson · {n} cards",
+    "lessonStartPlain": "Start lesson",
+    "lessonAgain": "Open again",
+    "replayTitle": "Practice: {title}",
+    "lessonTitle": "Lesson: {title}",
+    "scores": "Safety {safety} · Procedure {procedure} · Efficiency {efficiency}",
+    "quiz": "Quiz {n} / 100",
+    "listLabel": "Your practice and lessons",
+    "topic": {
+      "seatbelt_slopes": "Seatbelt",
+      "faulty_machine_nearby": "Machine fault"
+    },
+    "secAssigned": "01 — ASSIGNED TO YOU",
+    "secOpen": "02 — OPEN ANY TIME",
+    "becauseUnknown": "Because of an earlier event",
+    "doneNote": "Finished items come from this device's recent activity."
+  },
+  "lesson": {
+    "kind": {
+      "rule": "RULE",
+      "why": "WHY",
+      "how": "HOW",
+      "example": "EXAMPLE",
+      "check": "CHECK"
+    },
+    "frame": "Lesson",
+    "cardProgress": "{n} / {total}",
+    "quizLabel": "Quiz",
+    "quizProgress": "Question {n} of {total}",
+    "next": "Next",
+    "back": "← Back",
+    "listen": "Listen",
+    "soundBlocked": "Sound blocked, tap Listen",
+    "correct": "Correct",
+    "wrong": "Not quite. The right answer: {answer}",
+    "picked": "You picked this",
+    "right": "Right answer",
+    "endTitle": "{n} of {total} correct",
+    "saving": "Saving…",
+    "done": "Done ✓",
+    "notSaved": "Not saved. Try again.",
+    "retry": "Try again",
+    "loading": "Loading the lesson…",
+    "loadFailed": "Lesson not available. Try again.",
+    "backToTraining": "← Practice",
+    "choicesLabel": "Choose one answer",
+    "notFound": "This lesson is not available.",
+    "reviewNote": "You finished this lesson before. This is a review: no score is saved.",
+    "secLesson": "LESSON"
   }
 }
