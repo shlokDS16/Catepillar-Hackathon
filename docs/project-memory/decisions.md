@@ -118,3 +118,13 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 ## 2026-11-12 — D18: Thin live path (Shlok, AskUserQuestion), answering the P4 FAIL
 - Phase validator (docs/gates/P4P5-final-validation.md): P4 FAIL because apps/web reads fixtures only (providers.tsx:13). Decision: wire the real backend for the most visible flows (operator snapshot, replay_get/replay_submit, ledger_verify) behind a Live switch; fixtures stay the default so the demo cannot break. Analytics evidence numbers were typed constants: re-captioned "illustrative, not measured" (lane/l2-judge-content).
 - D18 amendment (lead L0 session 3, 2026-11-12): Vercel env vars cannot be read or set from this session (API 403, no CLI), and no demo users existed. A first design (anonymous sign-in plus a public "join as operator" RPC) was refused by the auto-mode safety check as an auth weakening, and the lead agrees. Built instead: seeded demo auth users (operator, FM) whose generated passwords live only in the git-ignored local .env; the Live switch is an email + password sign-in the team uses during a demo; the publishable key and URL may be committed as public fallbacks; SOS always stays on the fixture dry-run path. Judges clicking alone see fixtures.
+
+## D19 (2026-11-12): Landing v3 "one shift, never an empty frame"
+Shlok: the hero scroll shows empty screens, and everything after the 3D (the close and the SPOTTER wordmark) is dull. Production audit (scripts/qa/scroll-audit.sh, built on agent-browser): 18 of 33 frames dead, thin or flat at 1440, and 14 of 27 at 375.
+Decision: adopt docs/design/landing-v3-spec.md.
+- One pinned scene with a copy column that swaps text at stage boundaries.
+- A shift tape (clock plus six ledger ticks) on every frame, and live SIM readouts.
+- No held ink wipe.
+- A real-product proof section.
+- A footer whose wordmark is drawn from our own terrain contours.
+Acceptance gate: the scroll audit reports 0 dead, thin or flat at 1440 and 375. Two Sonnet lanes (A scene, B page), each with an Opus review. Landing files are owned by lead session 2; session 4 imports scene/excavator.ts and parts.ts read-only, so their exports stay stable.

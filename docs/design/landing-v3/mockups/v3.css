@@ -1,0 +1,42 @@
+/* Landing v3 mockup tokens. Mirrors apps/web/src/styles/tokens.css (origin/main) plus the v3 additions
+   named in docs/design/landing-v3-spec.md §4. Static mockups only, not app code. */
+:root {
+  --frame: #16150f;
+  --frame-2: #1e1d16;          /* v3: raised ink (HUD plate) */
+  --on-frame: #f2f0ea;
+  --on-frame-2: #b9b5aa;
+  --frame-rule: #3a382f;
+  --paper: #f2f0ea;
+  --paper-2: #e7e4db;          /* v3: recessed paper (capture bed) */
+  --ink: #16150f;
+  --ink-2: #4b483f;
+  --ink-3: #6b675d;
+  --rule-soft: #cfcbc0;
+  --state-clear: #0b6b37;
+  --state-caution: #ffc700;
+  --state-warning: #ff6a00;
+  --state-critical: #b3102a;
+  --first-light: #f1b995;      /* = --dawn-horizon; v3's single non-state accent */
+  --ff-display: "Barlow Condensed", system-ui, sans-serif;
+  --ff-body: "Barlow", system-ui, sans-serif;
+  --ff-mono: ui-monospace, "Cascadia Mono", "Roboto Mono", Menlo, Consolas, monospace; /* product stack, provenance captions only */
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+html, body { background: var(--frame); color: var(--on-frame); font-family: var(--ff-body); -webkit-font-smoothing: antialiased; }
+.sim { font-family: var(--ff-mono); font-size: 12px; font-weight: 500; letter-spacing: 0.02em; color: var(--frame); background: var(--first-light); padding: 3px 6px 2px; line-height: 1; display: inline-block; }
+.num { font-variant-numeric: tabular-nums; }
+.fig { font-family: var(--ff-display); font-weight: 800; font-variant-numeric: tabular-nums; letter-spacing: -0.01em; } /* Barlow Condensed has tnum: measured 11:11 = 08:48 = 152.2 px at 64 px */
+.mono { font-family: var(--ff-mono); font-size: 13px; letter-spacing: 0.02em; }
+.disp { font-family: var(--ff-display); font-weight: 800; letter-spacing: -0.03em; line-height: 0.92; }
+a { color: inherit; }
+:focus-visible { outline: 3px solid var(--first-light); outline-offset: 3px; }
+
+/* Nav (shared) */
+.nav { position: fixed; z-index: 30; top: 20px; left: 24px; right: 24px; display: flex; justify-content: space-between; align-items: center; pointer-events: none; }
+.nav > * { pointer-events: auto; }
+.brand { font-family: var(--ff-display); font-weight: 800; font-size: 22px; letter-spacing: 0.04em; text-transform: uppercase; color: var(--on-frame); text-decoration: none; padding: 10px 14px; background: var(--frame); border: 1px solid var(--frame-rule); }
+.lang { font-weight: 600; font-size: 16px; min-width: 56px; height: 48px; display: grid; place-items: center; background: var(--frame); border: 1px solid var(--frame-rule); color: var(--on-frame); }
+
+/* Pictogram shapes (stand-ins for the product's <Pictogram>) */
+.sh { width: 16px; height: 16px; flex: none; display: inline-block; }

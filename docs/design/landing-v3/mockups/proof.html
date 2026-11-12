@@ -1,0 +1,93 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Landing v3 mockup: product proof</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600&family=Barlow+Condensed:wght@700;800&display=swap" rel="stylesheet" />
+<link rel="stylesheet" href="v3.css" />
+<style>
+  html, body { background: var(--paper); color: var(--ink); }
+  .nav .brand, .nav .lang { background: var(--paper); color: var(--ink); border-color: var(--ink); }
+  .proof { position: relative; min-height: 100svh; display: grid; grid-template-columns: 500px 1fr; grid-template-rows: auto 1fr; grid-template-areas: "head tray" "roles tray"; column-gap: 56px; padding: 120px 64px 48px; align-content: center; }
+  .head { grid-area: head; } .roles { grid-area: roles; align-self: start; } .tray { grid-area: tray; align-self: center; }
+  h2 { font-size: 84px; color: var(--ink); }
+  .lede { font-size: 19px; line-height: 1.5; color: var(--ink-2); margin: 18px 0 28px; max-width: 40ch; }
+  .roles { list-style: none; border-top: 2px solid var(--ink); }
+  .roles li { border-bottom: 1px solid var(--rule-soft); }
+  .roles a { display: grid; grid-template-columns: 1fr auto; column-gap: 16px; padding: 16px 0 16px 20px; text-decoration: none; position: relative; min-height: 48px; }
+  .roles .who { font-family: var(--ff-display); font-weight: 800; font-size: 32px; letter-spacing: -0.01em; line-height: 1; }
+  .roles .does { grid-column: 1; font-size: 16px; line-height: 1.45; color: var(--ink-2); margin-top: 6px; max-width: 38ch; }
+  .roles .go { grid-column: 2; grid-row: 1 / span 2; align-self: center; font-weight: 600; font-size: 16px; padding: 12px 16px; border: 2px solid var(--ink); white-space: nowrap; }
+  .roles li.on a::before { content: ""; position: absolute; left: 0; top: 16px; bottom: 16px; width: 6px; background: var(--ink); }
+  .roles li.on .go { background: var(--ink); color: var(--paper); }
+  .roles li:not(.on) .who { color: var(--ink-2); }
+
+  .tray { position: relative; height: 560px; }
+  .sheet { position: absolute; left: 0; right: 0; top: 0; background: var(--paper-2); border: 2px solid var(--ink); }
+  .sheet.back2 { transform: translate(36px, -36px); background: #d9d5cb; }
+  .sheet.back1 { transform: translate(18px, -18px); background: #e1ddd3; }
+  .sheet.back1, .sheet.back2 { height: 520px; }
+  .sheet .bar { height: 40px; display: flex; align-items: center; justify-content: space-between; padding: 0 14px; border-bottom: 2px solid var(--ink); background: var(--paper); }
+  .bar .path { font-family: var(--ff-mono); font-size: 13px; color: var(--ink); }
+  .bar .tag { font-family: var(--ff-mono); font-size: 12px; color: var(--ink-2); }
+  .shotwrap { position: relative; }
+  .shot { display: block; width: 100%; height: auto; aspect-ratio: 1440 / 900; object-fit: cover; object-position: top left; }
+  .front { z-index: 2; position: relative; }
+  .tray { height: auto; }
+  .note { position: absolute; z-index: 3; left: 64px; top: 168px; display: flex; align-items: center; gap: 10px; pointer-events: none; }
+  .note .box { position: absolute; left: 0; top: 0; }
+  .note-box { position: absolute; z-index: 3; border: 3px solid var(--first-light); box-shadow: 0 0 0 2px var(--ink); }
+  .note-tag { position: absolute; z-index: 3; background: var(--ink); color: var(--paper); font-weight: 600; font-size: 15px; padding: 8px 12px; }
+  .cap { margin-top: 20px; font-family: var(--ff-mono); font-size: 13px; color: var(--ink-2); }
+
+  @media (max-width: 767px) {
+    .nav { top: 12px; left: 16px; right: 16px; }
+    .brand { font-size: 18px; padding: 8px 10px; }
+    .proof { grid-template-columns: 1fr; gap: 24px; padding: 88px 16px 40px; align-items: start; }
+    h2 { font-size: 52px; }
+    .lede { font-size: 17px; margin: 12px 0 0; }
+    .proof { grid-template-areas: "head" "tray" "roles"; grid-template-rows: none; }
+    .tray { height: auto; margin-top: 8px; }
+    .bar .long { display: none; }
+    .sheet.back1, .sheet.back2 { display: none; }
+    .sheet.front { position: relative; }
+    .shot { aspect-ratio: 390 / 600; }
+    .note-box, .note-tag { display: none; }
+    .roles li:not(.on) { display: none; }
+    .roles .who { font-size: 30px; }
+    .roles a { grid-template-columns: 1fr; padding-left: 16px; }
+    .roles .go { grid-column: 1; grid-row: auto; justify-self: start; margin-top: 12px; }
+  }
+</style>
+</head>
+<body>
+<header class="nav"><a class="brand" href="#">Spotter</a><span class="lang">En</span></header>
+<section class="proof" aria-labelledby="h7">
+  <div class="head">
+    <h2 id="h7" class="disp">The same shift, in the app.</h2>
+    <p class="lede">Three screens from the working product, running on demo data. Start from the seat you sit in.</p>
+  </div>
+    <ul class="roles">
+      <li class="on"><a href="#"><span class="who">Operator</span><span class="does">One plain word for the machine, the task and its time left. Practice built from your own events.</span><span class="go">Open the operator cockpit</span></a></li>
+      <li><a href="#"><span class="who">Fleet manager</span><span class="does">Alerts sorted by tier, then age, each with one next step.</span><span class="go">Open the fleet inbox</span></a></li>
+      <li><a href="#"><span class="who">Auditor</span><span class="does">Check that no entry was changed after the fact.</span><span class="go">Verify the ledger</span></a></li>
+    </ul>
+  <div class="tray">
+    <div class="sheet back2" aria-hidden="true"></div>
+    <div class="sheet back1" aria-hidden="true"></div>
+    <figure class="sheet front">
+      <div class="bar"><span class="path">/op · Operator cockpit</span><span class="tag">demo data<span class="long"> · captured from the live app</span></span></div>
+      <div class="shotwrap"><picture>
+        <source media="(max-width: 767px)" srcset="assets/proof-op-390.png" />
+        <img class="shot" src="assets/proof-op.png" alt="The operator cockpit: a caution plate in the status band, the word NEEDS PPE in large type, the task Excavation at 0 per cent, 77 minutes left, and a labelled drawing of the machine's parts." />
+      </picture>
+      <span class="note-box" style="left:11.2%; top:19.4%; width:22%; height:9.6%" aria-hidden="true"></span>
+      <span class="note-tag" style="left:34.6%; top:20.2%" aria-hidden="true">One plain word</span></div>
+    </figure>
+    <p class="cap">Screens are captured from the deployed app on demo data.</p>
+  </div>
+</section>
+</body>
+</html>
