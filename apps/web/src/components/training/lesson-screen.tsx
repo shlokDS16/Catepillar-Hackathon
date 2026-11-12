@@ -11,6 +11,8 @@ import { Plate } from "@/components/ui/plate";
 import { newRequestId, RpcError } from "@/data/port";
 import { useAppState, useDataPort } from "@/data/store";
 import type { Lang } from "@/data/types";
+import { DiagramPlayer } from "@/components/training/diagram/diagram-player";
+import { diagramFor } from "@/lesson-diagrams/registry";
 import { lessonGlyph, lessonProgress, lessonReduce, quizCorrect, quizScore, startLesson, type LessonState } from "@/training/lesson";
 import { cx } from "@/lib/cx";
 
@@ -184,20 +186,35 @@ function CardView({ lesson, index, onNext, onBack }: { lesson: LessonContent; in
   const title = localText(card.title, lang);
   const body = localText(card.body, lang);
   useAutoplay(card.audio_id);
+  const animated = diagramFor(card.pictogram) !== null;
+  const text = (
+    <div className="lesson-text">
+      <h2 id="lesson-card-title" className="t-title" lang={title.english ? "en" : undefined}>
+        {title.value}
+      </h2>
+      <p className="t-body lesson-body" lang={body.english ? "en" : undefined}>
+        {body.value}
+      </p>
+    </div>
+  );
   return (
-    <Plate as="section" className="lesson-card" aria-labelledby="lesson-card-title">
+    <Plate as="section" className={cx("lesson-card", animated && "lesson-card-anim")} aria-labelledby="lesson-card-title">
       <p className="t-caption lesson-kind">{t(`kind.${card.kind}`)}</p>
-      <div className="lesson-glyph">
-        <Glyph name={card.pictogram} />
-      </div>
-      <div className="lesson-text">
-        <h2 id="lesson-card-title" className="t-title" lang={title.english ? "en" : undefined}>
-          {title.value}
-        </h2>
-        <p className="t-body lesson-body" lang={body.english ? "en" : undefined}>
-          {body.value}
-        </p>
-      </div>
+      {animated ? (
+        <>
+          {text}
+          <div className="lesson-anim">
+            <DiagramPlayer pictogram={card.pictogram} title={title.value} />
+          </div>
+        </>
+      ) : (
+        <>
+          <div className="lesson-glyph">
+            <Glyph name={card.pictogram} />
+          </div>
+          {text}
+        </>
+      )}
       <div className="lesson-actions">
         <Button variant="primary" onClick={onNext}>
           {t("next")}
@@ -262,7 +279,7 @@ function QuizView({ lesson, index, picked, onAnswer, onNext }: { lesson: LessonC
                 </span>
                 {revealed && (isPicked || isCorrect) ? (
                   <span className="lesson-choice-result">
-                    <Mark kind={isCorrect ? "check" : "cross"} />
+                    <Mark kind={isCorrect ? "check" : "cross"} className="lesson-mark-in" />
                     <span className="t-meta">{isPicked ? (isCorrect ? t("correct") : t("picked")) : t("right")}</span>
                   </span>
                 ) : null}

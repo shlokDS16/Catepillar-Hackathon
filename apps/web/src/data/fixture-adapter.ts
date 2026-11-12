@@ -1,5 +1,5 @@
 import { AnomalyDetected, MySnapshotOut } from "@cat/shared";
-import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, protocolCard, replayScenario, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
+import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, swingLessonContent, protocolCard, replayScenario, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
 import type { ReplayScenario } from "@cat/shared";
 import { RpcError, type DataPort, type PortMessage, type RecurrenceHint } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
@@ -395,9 +395,10 @@ export class FixtureAdapter implements DataPort {
   }
   async lessonGet(code: string) {
     await wait(this.latencyMs);
-    // The fixture authors one lesson; any other code is "not found", never someone else's content.
-    if (code !== lessonContent.code) throw new RpcError("not_found");
-    return lessonContent;
+    // The fixture authors two lessons; any other code is "not found", never someone else's content.
+    const found = [lessonContent, swingLessonContent].find((l) => l.code === code);
+    if (!found) throw new RpcError("not_found");
+    return found;
   }
   async lessonComplete(input: Parameters<DataPort["lessonComplete"]>[0]) {
     await wait(this.latencyMs);

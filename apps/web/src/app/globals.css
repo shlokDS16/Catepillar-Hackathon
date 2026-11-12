@@ -18,6 +18,7 @@
 @import "../styles/map-overlay.css" layer(components);
 @import "../styles/map-timeline.css" layer(components);
 @import "../styles/training.css" layer(components);
+@import "../styles/lesson-anim.css" layer(components);
 
 /*
  * Tailwind 4 theme map. The default palette, type scale, radii and shadows are cleared so a
