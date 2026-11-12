@@ -33,8 +33,9 @@ describe("scoreReplay (fixture answer key)", () => {
     expect(r.review).toHaveLength(3);
     expect(r.review[1].chosen).toEqual(["belt"]);
     expect(r.review[2]).toMatchObject({ step: 3, chosen: [], best: ["a", "b", "c"] });
-    expect(r.scores.safety).toBe(100);
-    expect(r.scores.procedure).toBe(66.7);
+    // safety 2/2; protocol 0 (timed out); investigation 0 (net 1-1=0, no ideal pair); procedure 0;
+    // efficiency: steps 1 and 2 within their countdown, step 3 timed out = 2/3.
+    expect(r.scores).toEqual({ safety: 100, procedure: 0, efficiency: 66.7 });
     expect(r.process_trace.opened).toEqual(["c_trend", "c_wind"]);
   });
 
@@ -43,11 +44,12 @@ describe("scoreReplay (fixture answer key)", () => {
       p_open_order: [],
       p_choices: [
         { step: 1, choice_ids: ["continue"], ms },
-        { step: 2, choice_ids: ["belt"], ms },
+        { step: 2, choice_ids: ["belt"], ms: 16_000 },
         { step: 3, choice_ids: ["c", "b", "a"], ms },
       ],
     });
-    expect(r.scores).toEqual({ safety: 50, procedure: 33.3, efficiency: 0 });
+    // safety 1/2; protocol 0 of 3 pairs; no cards opened = 0; efficiency: step 2 is 16 s over a 15 s limit = 2/3.
+    expect(r.scores).toEqual({ safety: 50, procedure: 0, efficiency: 66.7 });
   });
 
   it("scores only the first max_open cards and ignores repeats", () => {
@@ -57,6 +59,21 @@ describe("scoreReplay (fixture answer key)", () => {
     });
     expect(r.process_trace.opened).toEqual(["c_wind", "c_fault", "c_weather", "c_shift"]);
     expect(r.scores).toEqual({ safety: 0, procedure: 0, efficiency: 0 });
+  });
+
+  it("gives Kendall pair credit on the order step and order credit on the investigation (hand-computed)", () => {
+    const r = scoreReplay(scenario, fixtureAnswerKey, {
+      p_open_order: ["c_map", "c_trend", "c_card"],
+      p_choices: [
+        { step: 1, choice_ids: ["stop"], ms },
+        { step: 2, choice_ids: ["belt"], ms },
+        { step: 3, choice_ids: ["a", "c", "b"], ms },
+      ],
+    });
+    // protocol: pairs (a,b) ok, (a,c) ok, (b,c) reversed = 2/3. investigation: net 3/3 = 1;
+    // ideal pairs (trend,map) reversed, (trend,card) ok, (map,card) ok = 2/3, so (1 + 2/3)/2 = 5/6.
+    // procedure = (2/3 + 5/6)/2 = 0.75.
+    expect(r.scores).toEqual({ safety: 100, procedure: 75, efficiency: 100 });
   });
 
   it("carries a why for every card so missed chips can be explained", () => {

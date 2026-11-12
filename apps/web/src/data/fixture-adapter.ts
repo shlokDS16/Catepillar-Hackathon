@@ -1,7 +1,6 @@
 import { AnomalyDetected, MySnapshotOut } from "@cat/shared";
 import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, protocolCard, replayScenario, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
 import type { ReplayScenario } from "@cat/shared";
-import { fixtureAnswerKey, scoreReplay } from "@/replay/fixture-scoring";
 import { RpcError, type DataPort, type PortMessage } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
 import type { SiteMapData } from "@/map/site-map";
@@ -363,6 +362,7 @@ export class FixtureAdapter implements DataPort {
   }
   async replaySubmit(input: Parameters<DataPort["replaySubmit"]>[0]) {
     await wait(this.latencyMs * 3);
+    const { fixtureAnswerKey, scoreReplay } = await import("@/replay/fixture-scoring");
     return scoreReplay(replayScenario as ReplayScenario, fixtureAnswerKey, input);
   }
   async lessonGet() {

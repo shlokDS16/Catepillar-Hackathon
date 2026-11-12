@@ -18,48 +18,71 @@ export type AnswerKey = {
   /** The path a careful operator opens, in order. */
   ideal: string[];
   /** Best choice(s) per step; for an "order" step the correct sequence. */
-  steps: { step: number; best: string[]; why: I18nText }[];
+  steps: { step: number; best: string[]; axis: "safety" | "procedure"; weight: number; why: I18nText }[];
   rule: ReplayDebriefResult["rule"];
   lesson_code: string | null;
 };
 
-const pct = (n: number, d: number) => (d === 0 ? 100 : Math.round((n / d) * 1000) / 10);
+const round1 = (x: number) => Math.round(x * 1000) / 10;
+const clamp01 = (x: number) => Math.min(1, Math.max(0, x));
 
-const sameSequence = (a: readonly string[], b: readonly string[]) => a.length === b.length && a.every((x, i) => x === b[i]);
+/** Share of the reference's ordered pairs that `given` also has, in the same order (Kendall-style). */
+export function pairCredit(reference: readonly string[], given: readonly string[]): number {
+  let total = 0;
+  let ok = 0;
+  for (let a = 0; a < reference.length; a++) {
+    for (let b = a + 1; b < reference.length; b++) {
+      total++;
+      const ia = given.indexOf(reference[a]);
+      const ib = given.indexOf(reference[b]);
+      if (ia !== -1 && ib !== -1 && ia < ib) ok++;
+    }
+  }
+  return total === 0 ? 1 : ok / total;
+}
 
 /**
- * Rules (one place, so the screen and the tests agree):
- * - Only the first `max_open` opened ids count; repeats are ignored.
- * - efficiency = relevant cards opened / max(cards opened, ideal path length).
- * - procedure = Decide steps answered exactly right / all steps. A timed-out step is `chosen: []`
- *   and counts wrong. An "order" step is right only in the exact sequence; a "single" step on equal sets.
- * - safety = the same, over "single" steps only (the immediate-action choices).
+ * data-model.md section 2.8 (api-contracts section 5, UI-18), in one place so the fixture and the
+ * server (B10b) agree:
+ * - Only the first `max_open` opened ids count; repeats are ignored (UI-20).
+ * - safety = weighted correct choices on safety-axis steps (a timed-out step is wrong).
+ * - procedure = 1/2 protocol order (Kendall pair credit on the order step, 0 if it timed out)
+ *   + 1/2 investigation, where investigation = 1/2 net relevance (relevant opened minus irrelevant
+ *   opened, over relevant cards, floored at 0) + 1/2 order agreement with `ideal` (pair credit).
+ *   The 1/2 splits are this fixture's reading of "plus"; section 2.8 gives no weights.
+ * - efficiency = steps answered within their countdown (`ms` <= `time_limit_s` x 1000) over all
+ *   steps; a timed-out step (absent from `p_choices`) is not within.
  */
 export function scoreReplay(scenario: ReplayScenario, key: AnswerKey, input: SubmitInput): ReplayDebriefResult {
   const max = scenario.investigate.max_open ?? Number.POSITIVE_INFINITY;
   const opened = input.p_open_order.filter((id, i, all) => all.indexOf(id) === i).slice(0, max);
   const relevantIds = new Set(key.cards.filter((c) => c.relevant).map((c) => c.card_id));
   const relevantOpened = opened.filter((id) => relevantIds.has(id)).length;
+  const irrelevantOpened = opened.length - relevantOpened;
+  const net = relevantIds.size === 0 ? 1 : clamp01((relevantOpened - irrelevantOpened) / relevantIds.size);
+  const investigation = (net + pairCredit(key.ideal, opened)) / 2;
 
   const rows = scenario.decide.steps.map((def) => {
     const k = key.steps.find((s) => s.step === def.step);
     const best = k?.best ?? [];
     const given = input.p_choices.find((c) => c.step === def.step);
     const chosen = given ? [...given.choice_ids] : [];
-    const correct =
-      chosen.length > 0 &&
-      (def.kind === "order"
-        ? sameSequence(chosen, best)
-        : chosen.length === best.length && best.every((b) => chosen.includes(b)));
-    return { def, k, best, chosen, correct };
+    const correct = chosen.length > 0 && chosen.length === best.length && (def.kind === "order" ? chosen.every((c, n) => c === best[n]) : best.every((b) => chosen.includes(b)));
+    const within = given !== undefined && given.ms <= def.time_limit_s * 1000;
+    const credit = def.kind === "order" ? (chosen.length > 0 ? pairCredit(best, chosen) : 0) : correct ? 1 : 0;
+    return { def, k, best, chosen, within, credit, weight: k?.weight ?? 1, axis: k?.axis ?? "safety" };
   });
 
-  const single = rows.filter((r) => r.def.kind === "single");
+  const safetyRows = rows.filter((r) => r.axis === "safety");
+  const safetyW = safetyRows.reduce((n, r) => n + r.weight, 0);
+  const orderRows = rows.filter((r) => r.def.kind === "order");
+  const protocol = orderRows.length === 0 ? 1 : orderRows.reduce((n, r) => n + r.credit, 0) / orderRows.length;
+
   return {
     scores: {
-      safety: pct(single.filter((r) => r.correct).length, single.length),
-      procedure: pct(rows.filter((r) => r.correct).length, rows.length),
-      efficiency: pct(relevantOpened, Math.max(opened.length, key.ideal.length)),
+      safety: safetyW === 0 ? 100 : round1(safetyRows.reduce((n, r) => n + r.weight * r.credit, 0) / safetyW),
+      procedure: round1((protocol + investigation) / 2),
+      efficiency: rows.length === 0 ? 100 : round1(rows.filter((r) => r.within).length / rows.length),
     },
     process_trace: { opened, ideal: key.ideal, relevant: key.cards },
     review: rows.map((r) => ({
@@ -91,9 +114,9 @@ export const fixtureAnswerKey: AnswerKey = {
   ],
   ideal: ["c_trend", "c_map", "c_card"],
   steps: [
-    { step: 1, best: ["stop"], why: i("Stop first, before anything else.", "सबसे पहले रोकें।") },
-    { step: 2, best: ["belt"], why: i("Fasten the seatbelt before moving again.", "फिर से चलने से पहले सीटबेल्ट लगाएँ।") },
-    { step: 3, best: ["a", "b", "c"], why: i("Park, report, then resume.", "पार्क करें, रिपोर्ट करें, फिर शुरू करें।") },
+    { step: 1, best: ["stop"], axis: "safety", weight: 1, why: i("Stop first, before anything else.", "सबसे पहले रोकें।") },
+    { step: 2, best: ["belt"], axis: "safety", weight: 1, why: i("Fasten the seatbelt before moving again.", "फिर से चलने से पहले सीटबेल्ट लगाएँ।") },
+    { step: 3, best: ["a", "b", "c"], axis: "procedure", weight: 1, why: i("Park, report, then resume.", "पार्क करें, रिपोर्ट करें, फिर शुरू करें।") },
   ],
   rule: {
     card_id: "seatbelt_slopes",
