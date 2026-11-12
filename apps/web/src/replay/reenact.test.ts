@@ -37,6 +37,7 @@ const M: ReenactModel = {
   ],
   beltDefault: "unknown",
   eventMs: 20000,
+  eventExact: false,
   responseMs: 28000,
   responseClamped: false,
 };
@@ -113,10 +114,44 @@ describe("stateAt", () => {
 describe("buildReenactModel on the fixture (sparse data)", () => {
   const model = buildReenactModel(replayScenario as ReplayScenario);
 
-  it("puts the flag at the last fix and the stopwatch real_response_ms after it", () => {
+  it("puts the flag at event_ms and the stopwatch real_response_ms after it", () => {
     expect(model.durationMs).toBe(120000);
-    expect(model.eventMs).toBe(60000);
-    expect(model.responseMs).toBe(68400);
+    expect(model.eventExact).toBe(true);
+    expect(model.eventMs).toBe(52000);
+    expect(model.responseMs).toBe(60400);
+  });
+
+  it("falls back to the last recorded fix when event_ms is absent", () => {
+    const s = replayScenario as ReplayScenario;
+    const old = buildReenactModel({ ...s, reenactment: { ...s.reenactment, event_ms: undefined } });
+    expect(old.eventExact).toBe(false);
+    expect(old.eventMs).toBe(60000);
+    expect(old.responseMs).toBe(68400);
+  });
+
+  it("clamps an event_ms past the end onto the timeline", () => {
+    const s = replayScenario as ReplayScenario;
+    expect(buildReenactModel({ ...s, reenactment: { ...s.reenactment, event_ms: 999999 } }).eventMs).toBe(120000);
+  });
+
+  it("reads the belt from the track: step function, null entries hold the last reading", () => {
+    const s = replayScenario as ReplayScenario;
+    const track = [
+      { t_ms: 0, lat: 21.1, lon: 79.1, speed_kmh: 1, pitch_deg: 0, seatbelt_fastened: true },
+      { t_ms: 10000, lat: 21.1, lon: 79.1, speed_kmh: 1, pitch_deg: 0, seatbelt_fastened: null },
+      { t_ms: 20000, lat: 21.1, lon: 79.1, speed_kmh: 1, pitch_deg: 0, seatbelt_fastened: false },
+    ];
+    const m = buildReenactModel({ ...s, reenactment: { ...s.reenactment, machine_track: track } });
+    expect(stateAt(m, 5000).seatbelt).toBe("on");
+    expect(stateAt(m, 15000).seatbelt).toBe("on");
+    expect(stateAt(m, 20000).seatbelt).toBe("off");
+  });
+
+  it("a track with only null belt readings stays unknown", () => {
+    const s = replayScenario as ReplayScenario;
+    const track = [{ t_ms: 0, lat: 21.1, lon: 79.1, speed_kmh: 1, pitch_deg: 0, seatbelt_fastened: null }];
+    const m = buildReenactModel({ ...s, reenactment: { ...s.reenactment, machine_track: track } });
+    expect(stateAt(m, 0).seatbelt).toBe("unknown");
   });
 
   it("works with a one-sample track: the machine stays, heading is north, the trail still draws", () => {
@@ -125,7 +160,7 @@ describe("buildReenactModel on the fixture (sparse data)", () => {
     expect(mid.speed_kmh).toBeCloseTo(6.2);
     expect(mid.trail).toHaveLength(2);
     expect(mid.wind).toEqual({ from_deg: 250, kmh: 12 });
-    expect(mid.seatbelt).toBe("unknown");
+    expect(mid.seatbelt).toBe("off");
   });
 
   it("clamps the stopwatch to the end when the response falls past it", () => {
@@ -137,7 +172,9 @@ describe("buildReenactModel on the fixture (sparse data)", () => {
   });
 
   it("never invents a seatbelt reading: unknown without a series, exact with one", () => {
-    expect(stateAt(model, 0).seatbelt).toBe("unknown");
+    const s = replayScenario as ReplayScenario;
+    const bare = buildReenactModel({ ...s, reenactment: { ...s.reenactment, machine_track: [{ t_ms: 0, lat: 21.1, lon: 79.1, speed_kmh: 1, pitch_deg: 0 }] } });
+    expect(stateAt(bare, 0).seatbelt).toBe("unknown");
     expect(stateAt(M, 0).seatbelt).toBe("on");
   });
 
