@@ -3,12 +3,12 @@
 import { useEffect, useState } from "react";
 import { useTranslations } from "next-intl";
 import { AnomalyExplain } from "@/components/map/anomaly-explain";
-import { MapView } from "@/components/map/map-view";
+import { MapWorkspace } from "@/components/map/map-workspace";
 import { Button } from "@/components/ui/button";
-import { Chip } from "@/components/ui/chip";
 import { Plate } from "@/components/ui/plate";
 import { Sheet } from "@/components/ui/sheet";
 import { useAppState, useDataPort } from "@/data/store";
+import { hazardForMachine } from "@/map/hazards";
 import type { SiteMapData } from "@/map/site-map";
 
 /**
@@ -24,8 +24,6 @@ export function FmMapScreen() {
   const guardian = useAppState((s) => s.guardian);
   const guardianByAlert = useAppState((s) => s.guardianByAlert);
   const alerts = useAppState((s) => s.alerts);
-  const machine = useAppState((s) => s.machine);
-  const connectivity = useAppState((s) => s.connectivity);
   const [data, setData] = useState<SiteMapData | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
@@ -59,61 +57,16 @@ export function FmMapScreen() {
   }
   if (!data) return <Plate loading className="map-slot" />;
 
-  const anomalyPins = Object.values(anomalies).map((a) => ({ id: a.anomaly_id, lat: a.lat, lon: a.lon }));
-  // Only a Guardian hazard names a machine code, so it is the join from a machine to its anomaly
-  // (AnomalyDetected carries no machine reference). Prefer a hazard whose alert is still live, so
-  // a cleared hazard can never drive the sheet.
-  const liveAnomalyIds = new Set(
-    alerts
-      .filter((a) => a.status === "open" || a.status === "acknowledged" || a.status === "escalated")
-      .map((a) => guardianByAlert[a.alert_id])
-      .filter((id): id is string => Boolean(id)),
-  );
-  const hazardFor = (code: string) => {
-    const candidates = Object.values(guardian).filter((h) => h.machine_code === code);
-    return candidates.find((h) => liveAnomalyIds.has(h.anomaly_id)) ?? candidates[0];
-  };
+  // The join from a machine to its anomaly is a Guardian hazard (see hazardForMachine).
   const selectedMachine = data.machines.find((m) => m.id === selected);
-  const selectedHazard = selectedMachine ? hazardFor(selectedMachine.code) : undefined;
+  const selectedHazard = selectedMachine ? hazardForMachine(selectedMachine.code, guardian, alerts, guardianByAlert) : undefined;
   const selectedAnomaly = selectedHazard ? anomalies[selectedHazard.anomaly_id] : undefined;
 
   return (
-    <div className="map-screen">
-      <MapView
-        data={data}
-        me={machine?.location ?? null}
-        anomalies={anomalyPins}
-        onSelectMachine={setSelected}
-        offline={connectivity.kind === "nosignal"}
-      />
-
-      <section aria-label={t("machineList")} className="flex flex-col gap-2">
-        <h2 className="t-title">{t("machineList")}</h2>
-        <ul className="list-none p-0 m-0 flex flex-wrap gap-4">
-          {data.machines.map((m) => {
-            const anomaly = (() => {
-              const h = hazardFor(m.code);
-              return h ? anomalies[h.anomaly_id] : undefined;
-            })();
-            return (
-              <li key={m.id}>
-                <Button onClick={() => setSelected(m.id)}>
-                  {m.code}
-                  {anomaly ? (
-                    <Chip tone={anomaly.severity_tier === "critical" ? "critical" : anomaly.severity_tier === "warning" ? "warning" : "caution"} word>
-                      {t(`tier.${anomaly.severity_tier}`)}
-                    </Chip>
-                  ) : null}
-                </Button>
-              </li>
-            );
-          })}
-        </ul>
-      </section>
-
+    <MapWorkspace variant="fm" data={data} me={null} ownCode={null} selectedId={selected} onSelect={setSelected}>
       <Sheet open={selected !== null} onClose={() => setSelected(null)} title={selectedMachine ? selectedMachine.code : t("anomalyDetail")}>
         {selectedAnomaly ? <AnomalyExplain anomaly={selectedAnomaly} variant="full" /> : <p className="t-body text-ink-2">{t("noAnomaly")}</p>}
       </Sheet>
-    </div>
+    </MapWorkspace>
   );
 }

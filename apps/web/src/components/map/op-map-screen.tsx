@@ -4,7 +4,7 @@ import { useEffect, useState } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { takeoverQueue } from "@/alerts/selectors";
 import { GuardianCard } from "@/components/map/guardian-card";
-import { MapView } from "@/components/map/map-view";
+import { MapWorkspace } from "@/components/map/map-workspace";
 import { Button } from "@/components/ui/button";
 import { Plate } from "@/components/ui/plate";
 import { ProvenanceLine } from "@/components/ui/provenance";
@@ -31,6 +31,7 @@ export function OpMapScreen() {
   const connectivity = useAppState((s) => s.connectivity);
 
   const [data, setData] = useState<SiteMapData | null>(null);
+  const [selected, setSelected] = useState<string | null>(null);
   const [failed, setFailed] = useState(false);
   const [attempt, setAttempt] = useState(0);
   useEffect(() => {
@@ -98,11 +99,9 @@ export function OpMapScreen() {
   if (!data) return <Plate loading className="map-slot" />;
 
   const me = operator?.location ?? machine?.location ?? null;
-  const anomalyPins = Object.values(anomalies).map((a) => ({ id: a.anomaly_id, lat: a.lat, lon: a.lon }));
 
   return (
-    <div className="map-screen">
-      <MapView data={data} me={me} anomalies={anomalyPins} offline={offline} />
+    <MapWorkspace variant="op" data={data} me={me} ownCode={machine?.code ?? null} selectedId={selected} onSelect={setSelected}>
       {offline && operator?.ts ? (
         <p className="t-meta text-ink-3">{t("asOf", { time: format.dateTime(new Date(operator.ts), "time") })}</p>
       ) : null}
@@ -117,6 +116,6 @@ export function OpMapScreen() {
         />
       ) : null}
       <ProvenanceLine fields={[["operator_state", "location"], ["machine_state", "location"]]} />
-    </div>
+    </MapWorkspace>
   );
 }

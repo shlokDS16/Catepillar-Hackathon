@@ -1,0 +1,293 @@
+/*
+ * S4 Map, part 2 of 3: what is drawn over the basemap or the paper plan. The safety colours appear
+ * only on a live, fresh hazard and its rings (visual-language state rules); replayed and stale data
+ * is ink, dashed.
+ */
+
+.map-overlay {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+}
+.map-zone {
+  fill: var(--ink);
+  fill-opacity: 0.08;
+  stroke: var(--ink);
+  stroke-width: var(--bw);
+  stroke-dasharray: 6 4;
+}
+.map-ring {
+  fill: none;
+  stroke: var(--ink-2);
+  stroke-width: var(--bw-heavy);
+  stroke-dasharray: 8 6;
+}
+.map-rings[data-live] .map-ring[data-ring="danger"] {
+  stroke: var(--state-critical);
+  fill: color-mix(in srgb, var(--state-critical) 8%, transparent);
+}
+.map-rings[data-live] .map-ring[data-ring="warning"] {
+  stroke: var(--state-warning);
+}
+.map-ring-label {
+  font-family: var(--ff-body);
+  font-size: var(--t-meta);
+  font-weight: var(--fw-label);
+  fill: var(--ink);
+  paint-order: stroke;
+  stroke: var(--paper);
+  stroke-width: var(--s-1);
+  stroke-linejoin: round;
+}
+.map-trail,
+.map-trail-casing {
+  fill: none;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.map-trail-casing {
+  stroke: var(--paper);
+  stroke-width: calc(var(--s-1) + var(--bw) * 2);
+}
+.map-trail {
+  stroke: var(--ink-3);
+  stroke-width: var(--bw);
+  stroke-dasharray: 1 1; /* pathLength is 1: one dash as long as the path, so it can be drawn */
+}
+.map-trail[data-tier="own"] {
+  stroke: var(--ink);
+  stroke-width: var(--s-1);
+}
+.map-trail[data-tier="hazard"] {
+  stroke: var(--ink-2);
+}
+.map-trail[data-stale] {
+  opacity: 0.5;
+}
+@keyframes map-draw {
+  from {
+    stroke-dashoffset: 1;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+/* A trail draws itself once when it arrives, to say "this is the path travelled". The scrubber and
+   Replay redraw it by moving the cursor, not by animating; reduced motion zeroes the duration. */
+@media (prefers-reduced-motion: no-preference) {
+  .map-trail {
+    animation: map-draw var(--dur-draw) var(--ease) both;
+  }
+}
+.map-pin {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: var(--bw);
+  stroke-dasharray: 4 4;
+}
+.map-pin[data-live] {
+  fill: var(--state-warning);
+  fill-opacity: 0.25;
+  stroke: var(--state-warning);
+  stroke-dasharray: none;
+}
+
+/* ---------- Machine markers: real buttons, an 80 px hit area around a 32-40 px glyph ---------- */
+.map-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  overflow: hidden;
+}
+.map-marker {
+  position: absolute;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  box-sizing: border-box;
+  width: var(--marker);
+  height: var(--marker);
+  padding: 0;
+  border: 0;
+  background: transparent;
+  color: var(--ink);
+  transform: translate(-50%, -50%);
+  pointer-events: auto;
+  cursor: pointer;
+  touch-action: manipulation;
+  -webkit-tap-highlight-color: transparent;
+}
+.map-marker:disabled {
+  cursor: default;
+}
+/* Overlapping hit areas resolve by z-order: mine over a hazard over the rest. */
+.map-marker[data-tier="hazard"] {
+  z-index: 2;
+}
+.map-marker[data-tier="own"] {
+  z-index: 3;
+}
+.map-marker[data-selected],
+.map-marker:focus-visible {
+  z-index: 4;
+}
+.map-marker:focus-visible {
+  outline: none;
+}
+/* The selection and focus ring hugs the glyph, not the 80 px hit area. */
+.map-marker[data-selected]::after,
+.map-marker:focus-visible::after {
+  content: "";
+  position: absolute;
+  inset-block-start: 50%;
+  inset-inline-start: 50%;
+  width: var(--s-7);
+  height: var(--s-7);
+  transform: translate(-50%, -50%);
+  border: var(--focus-w) solid var(--ink);
+  outline: var(--bw-hair) solid var(--paper);
+  pointer-events: none;
+}
+.map-glyph {
+  width: var(--glyph);
+  height: var(--glyph);
+  overflow: visible;
+}
+.map-glyph-body {
+  fill: var(--paper);
+  stroke: var(--ink);
+  stroke-width: 3.5;
+  stroke-linejoin: round;
+}
+.map-marker[data-tier="own"] .map-glyph {
+  width: var(--glyph-own);
+  height: var(--glyph-own);
+}
+.map-marker[data-tier="own"] .map-glyph-body {
+  fill: var(--ink);
+  stroke: var(--paper);
+  paint-order: stroke;
+  stroke-width: 5;
+}
+.map-marker[data-tone="critical"] .map-glyph-body {
+  fill: var(--state-critical);
+}
+.map-marker[data-tone="warning"] .map-glyph-body {
+  fill: var(--state-warning);
+}
+.map-marker[data-tone="caution"] .map-glyph-body {
+  fill: var(--state-caution);
+}
+/* Not heard for a minute: hollow and dashed, never a safety colour. */
+.map-marker[data-stale] .map-glyph-body {
+  fill: var(--surface-sunk);
+  stroke-dasharray: 5 4;
+}
+.map-marker[data-tier="own"][data-stale] .map-glyph-body {
+  fill: var(--ink-3);
+}
+
+/* Labels: the code, plus the exceptions only. The side is chosen by label-layout.ts so none overlap. */
+.map-marker-label {
+  position: absolute;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  padding: var(--s-1) var(--s-2);
+  background: var(--paper);
+  border: var(--bw-hair) solid var(--ink);
+  color: var(--ink);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  white-space: nowrap;
+  pointer-events: none;
+}
+.map-marker-label[data-side="below"] {
+  inset-block-start: calc(50% + var(--label-gap));
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+}
+.map-marker-label[data-side="above"] {
+  inset-block-end: calc(50% + var(--label-gap));
+  inset-inline-start: 50%;
+  transform: translateX(-50%);
+}
+.map-marker-label[data-side="right"] {
+  inset-inline-start: calc(50% + var(--label-gap));
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+}
+.map-marker-label[data-side="left"] {
+  inset-inline-end: calc(50% + var(--label-gap));
+  inset-block-start: 50%;
+  transform: translateY(-50%);
+}
+.map-marker-code {
+  font-weight: var(--fw-title);
+}
+.map-marker-meta {
+  font-family: var(--ff-mono);
+  font-size: var(--t-caption);
+  letter-spacing: var(--ls-caption);
+  text-transform: uppercase;
+}
+.map-marker[data-tone] .map-marker-label {
+  border-width: var(--bw);
+}
+.map-marker[data-stale] .map-marker-label {
+  border-style: dashed;
+}
+
+/* ---------- The frame's one provenance stamp, in the mono voice of the Debrief theatre ---------- */
+.map-frame-stamp {
+  position: absolute;
+  inset-block-start: var(--s-3);
+  inset-inline-start: var(--s-3);
+  z-index: 5;
+  display: flex;
+  gap: var(--s-2);
+  margin: 0;
+  padding: var(--s-1) var(--s-2);
+  background: var(--paper);
+  border: var(--bw-hair) solid var(--ink);
+  color: var(--ink);
+  font-family: var(--ff-mono);
+  font-size: var(--t-caption);
+  font-weight: var(--fw-label);
+  letter-spacing: var(--ls-caption);
+  text-transform: uppercase;
+  pointer-events: none;
+}
+.map-frame-stamp[data-kind="replayed"] {
+  background: var(--ink);
+  color: var(--on-ink);
+  border-style: dashed;
+  border-color: var(--on-ink);
+}
+
+/* ---------- Provenance stamp on a list row: Live / Replayed / Simulated + age. Ink only. ---------- */
+.map-prov {
+  display: inline-flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+  color: var(--ink);
+}
+.map-prov-kind {
+  padding: 0 var(--s-1);
+  border: var(--bw-hair) solid var(--ink);
+  font-weight: var(--fw-title);
+  background: var(--surface);
+}
+.map-prov[data-kind="live"] .map-prov-kind {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.map-prov[data-kind="replayed"] .map-prov-kind {
+  border-style: dashed;
+  background: transparent;
+}
+.map-prov[data-stale] .map-prov-age {
+  font-weight: var(--fw-title);
+}

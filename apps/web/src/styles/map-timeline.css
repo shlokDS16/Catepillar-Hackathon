@@ -1,0 +1,174 @@
+/*
+ * S4 Map, part 3 of 3: the time cursor in one 80 px row (Replay, scrubber, Live), with event flags.
+ * Dashed rules mean stale or replayed on this map, so a disabled control is solid grey instead.
+ */
+
+.map-timeline {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  flex: none;
+}
+.map-timeline-row {
+  display: flex;
+  align-items: center;
+  gap: var(--s-3);
+}
+.map-play {
+  flex: none;
+}
+.map-scrub {
+  position: relative;
+  flex: 1 1 auto;
+  min-width: 0;
+}
+.map-range {
+  display: block;
+  width: 100%;
+  height: var(--hit);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  cursor: pointer;
+  touch-action: pan-y;
+  -webkit-appearance: none;
+  appearance: none;
+}
+/* A thin track, a thin visible thumb, and a 40 x 80 hit area around it. */
+.map-range::-webkit-slider-runnable-track {
+  height: var(--s-1);
+  background: var(--ink);
+  border: 0;
+  border-radius: var(--r-0);
+}
+.map-range::-moz-range-track {
+  height: var(--s-1);
+  background: var(--ink);
+  border: 0;
+  border-radius: var(--r-0);
+}
+.map-range::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  box-sizing: border-box;
+  width: var(--range-thumb-w);
+  height: var(--hit);
+  margin-top: calc((var(--s-1) - var(--hit)) / 2);
+  border: 0;
+  border-radius: var(--r-0);
+  background: linear-gradient(var(--ink), var(--ink)) center / var(--s-2) var(--s-7) no-repeat;
+}
+.map-range::-moz-range-thumb {
+  box-sizing: border-box;
+  width: var(--range-thumb-w);
+  height: var(--hit);
+  border: 0;
+  border-radius: var(--r-0);
+  background: linear-gradient(var(--ink), var(--ink)) center / var(--s-2) var(--s-7) no-repeat;
+}
+/* The ticks are inset by half a thumb, so a flag sits where the thumb's centre stops for it. */
+.map-ticks {
+  position: absolute;
+  inset-block: 0;
+  inset-inline: calc(var(--range-thumb-w) / 2);
+  pointer-events: none;
+}
+.map-tick {
+  position: absolute;
+  inset-block-start: 50%;
+  width: var(--s-1);
+  height: var(--s-5);
+  background: var(--ink);
+  transform: translate(-50%, -50%);
+}
+.map-tick[data-tier="warning"],
+.map-tick[data-tier="critical"] {
+  height: var(--s-6);
+}
+.map-tick svg {
+  position: absolute;
+  inset-block-end: 100%;
+  inset-inline-start: 50%;
+  width: var(--s-4);
+  height: var(--s-4);
+  transform: translateX(-25%);
+  fill: var(--ink);
+}
+
+/* Live: an ink stamp with a dot while pinned; a button back to it when the cursor is in the past. */
+.map-live {
+  display: inline-flex;
+  flex: none;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: var(--s-1);
+  box-sizing: border-box;
+  min-width: var(--hit);
+  min-height: var(--hit);
+  padding: var(--s-2);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--ff-mono);
+  font-size: var(--t-caption);
+  font-weight: var(--fw-title);
+  letter-spacing: var(--ls-caption);
+  text-transform: uppercase;
+  line-height: var(--lh-meta);
+}
+button.map-live {
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.map-live[data-live] {
+  background: var(--ink);
+  color: var(--on-ink);
+  flex-direction: row;
+  gap: var(--s-2);
+}
+.map-live-dot {
+  width: var(--s-3);
+  height: var(--s-3);
+  border-radius: 50%;
+  background: var(--on-ink);
+}
+
+/* Events as flags under the track: a clock time and what happened. */
+.map-flags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+.map-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  box-sizing: border-box;
+  min-height: var(--hit);
+  padding: var(--s-2) var(--s-3);
+  border: var(--bw) solid var(--ink);
+  border-radius: var(--r-0);
+  background: var(--surface);
+  color: var(--ink);
+  font-family: var(--ff-body);
+  font-size: var(--t-meta);
+  font-weight: var(--fw-label);
+  cursor: pointer;
+  touch-action: manipulation;
+}
+.map-flag[data-current] {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.map-flag svg {
+  width: var(--s-4);
+  height: var(--s-4);
+  flex: none;
+}
+.map-event-line {
+  margin: 0;
+}
