@@ -32,6 +32,8 @@ type ButtonAsButton = CommonProps & {
 type ButtonAsLink = CommonProps & {
   href: string;
   disabled?: boolean;
+  /** Off for a route that is not built yet, so the prefetch does not 404 in the console. */
+  prefetch?: boolean;
 };
 
 export type ButtonProps = ButtonAsButton | ButtonAsLink;
@@ -74,7 +76,7 @@ export function Button(props: ButtonProps) {
   );
 
   if ("href" in rest && typeof rest.href === "string") {
-    const { href, disabled } = rest as ButtonAsLink;
+    const { href, disabled, prefetch } = rest as ButtonAsLink;
     if (disabled) {
       return (
         <span role="link" className={cx("btn", className)} aria-disabled="true" {...dataAttrs}>
@@ -83,7 +85,7 @@ export function Button(props: ButtonProps) {
       );
     }
     return (
-      <Link href={href} className={cx("btn", className)} {...dataAttrs}>
+      <Link href={href} prefetch={prefetch} className={cx("btn", className)} {...dataAttrs}>
         {content}
       </Link>
     );

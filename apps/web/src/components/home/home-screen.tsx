@@ -101,7 +101,7 @@ export function HomeScreen() {
                   {t("home.practise")}
                 </Button>
               ) : null}
-              <Link href={`/op/training/lesson/${loop.lesson_code}`} className="t-label underline underline-offset-4">
+              <Link href={`/op/training/lesson/${loop.lesson_code}`} prefetch={false} className="t-label underline underline-offset-4">
                 {lessonCards != null ? t("home.lessonCards", { n: lessonCards }) : t("home.lessonLink")}
               </Link>
             </div>
