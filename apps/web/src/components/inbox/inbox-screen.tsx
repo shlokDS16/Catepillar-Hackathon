@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { KIND_PICTO } from "@/alerts/kinds";
 import { safetyTone } from "@/alerts/selectors";
+import { FleetStrip } from "@/components/inbox/fleet-strip";
 import { InboxDetail, useRowMeta, useShortAge } from "@/components/inbox/inbox-detail";
 import { OverrideSheet } from "@/components/inbox/override-sheet";
 import { Button } from "@/components/ui/button";
@@ -209,6 +210,7 @@ export function InboxScreen() {
     return (
       <div className="inbox-desktop">
         {banner}
+        <FleetStrip items={items} selectedId={selectedId} />
         <div className="inbox-split">
           <div className="inbox-list-col">
             <div className="inbox-tiers" aria-label={t("listKicker", { n: groups.needsAction.length })}>
@@ -275,6 +277,7 @@ export function InboxScreen() {
   return (
     <div className="inbox-triage">
       {banner}
+      <FleetStrip items={items} selectedId={lead?.id ?? null} />
       <p className="t-label inbox-count">
         {t("needsAction")} <span className="tnum">({groups.needsAction.length})</span>
       </p>
