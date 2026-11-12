@@ -242,6 +242,11 @@ export function firstDifference(a: string, b: string): number {
 }
 
 export interface WitnessComparison {
+  /**
+   * True when sealed near-miss rows are present: `match` then means chain and witness agree, NOT that every
+   * row was checked byte for byte. A UI must not show a plain green tick when `partial` is true.
+   */
+  partial: boolean;
   /** The range, count, root and head the witness claims all match what we recomputed. */
   match: boolean;
   reason: LedgerCheckReason | null;
@@ -256,6 +261,10 @@ export interface WitnessComparison {
  * recompute agrees with them, and this comparison still fails.
  */
 export function compareWitness(result: LedgerVerifyResult, witness: WitnessLine): WitnessComparison {
+  return { ...compareWitnessCore(result, witness), partial: result.sealed > 0 };
+}
+
+function compareWitnessCore(result: LedgerVerifyResult, witness: WitnessLine): Omit<WitnessComparison, "partial"> {
   if (result.status === "failed") {
     return { match: false, reason: result.reason, detail: result.detail, root_diff_at: -1, head_diff_at: -1 };
   }

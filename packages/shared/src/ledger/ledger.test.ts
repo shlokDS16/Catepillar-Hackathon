@@ -156,7 +156,10 @@ describe("verifyLedger on exported rows (R2-2)", () => {
       const line = `SPOTTER-LEDGER v1 seq=1..2 n=2 root=${full.root_hex} head=${full.head_hash} at=14:02 IST np=${await npHash([1])}`;
       const witness = parseWitnessLine(line)!;
       expect(witness.np_hash).toBe(await npHash([1]));
-      expect(compareWitness(await verifyLedger([sealed, second]), witness).match).toBe(true);
+      const cmp = compareWitness(await verifyLedger([sealed, second]), witness);
+      expect(cmp.match).toBe(true);
+      expect(cmp.partial).toBe(true);
+      expect(compareWitness(full, { ...witness, np_hash: undefined }).partial).toBe(false);
     });
   });
 

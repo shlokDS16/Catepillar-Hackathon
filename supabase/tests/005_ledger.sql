@@ -363,7 +363,9 @@ begin
   assert e_log is not null, 'incident.logged carries non_punitive for a near miss';
   assert (select count(*) from public.events where type = 'incident.logged' and payload ->> 'non_punitive' = 'false') = 2,
     'and false for the other incidents';
-  if (select exists (select 1 from pg_inherits where inhparent = 'realtime.messages'::regclass)) then
+  assert exists (select 1 from pg_inherits where inhparent = 'realtime.messages'::regclass),
+    'realtime.messages has no partitions: run scripts/b0/realtime-wake.ts first';
+  if true then
     select id into e_belt from public.events where idempotency_key = 'det:ledger:seatbelt:1';
     assert 'sup:' || pg_temp.id('site') = any (select topic from realtime.messages where extension = 'broadcast' and payload ->> 'id' = e_belt::text),
       'positive control: an ordinary event still reaches sup:';
@@ -425,12 +427,25 @@ begin
   assert not exists (select 1 from public.events where operator_id = pg_temp.id('op_other')
                        and type in ('incident.reported', 'incident.logged')), 'no event names the near-miss reporter to the FM';
   assert exists (select 1 from public.events where type = 'safety.seatbelt_breach'), 'positive control: the FM still reads ordinary events';
+  -- 003f: my_snapshot (security definer) carries no sealed event for the FM
+  assert not exists (select 1 from jsonb_array_elements(public.my_snapshot() -> 'recent_events') x
+                     where x ->> 'type' = 'incident.reported' or x -> 'payload' ->> 'non_punitive' = 'true'
+                        or x ->> 'operator_id' = pg_temp.id('op_other')::text),
+    'FM my_snapshot recent_events holds no near-miss event';
+  assert exists (select 1 from jsonb_array_elements(public.my_snapshot() -> 'recent_events') x where x ->> 'type' = 'safety.seatbelt_breach'),
+    'positive control: my_snapshot still lists ordinary events';
+  assert (select count(*) from public.near_miss_list()) = 1, 'FM reads near misses through near_miss_list only';
 end $$;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_trainer'), 'role', 'authenticated')::text, true);
 do $$
 begin
-  assert (select count(*) from public.incidents) = 1, 'TR sees near misses only';
-  assert (select count(*) from public.incidents where incident_type <> 'near_miss') = 0, 'TR sees nothing else';
+  assert (select count(*) from public.incidents) = 0, 'TR reads no incident directly (003f): no machine/time join to a name';
+  assert (select count(*) from public.near_miss_list()) = 1, 'TR reads the near miss through near_miss_list';
+  assert (select array_agg(n.nm order by n.ord) from pg_proc p, unnest(p.proargnames, p.proargmodes) with ordinality n(nm, md, ord)
+          where p.oid = 'public.near_miss_list()'::regprocedure and n.md = 't')
+       = array['incident_id', 'seq', 'occurred_at', 'operator_pseudonym', 'description', 'severity'],
+    'near_miss_list has exactly the anonymised column set';
+  assert (select occurred_at = date_trunc('day', occurred_at) from public.near_miss_list() limit 1), 'near_miss_list gives the day, not the time';
   begin
     perform public.ledger_export(1, 3);
     raise exception 'a trainer exported the ledger';

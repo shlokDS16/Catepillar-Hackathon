@@ -45,7 +45,7 @@ end $$;
 
 -- private: only the RLS helpers (the five, plus event_is_sealed from 003e, which events_read calls) are callable by authenticated
 do $$
-declare r record; allowed text[] := array['app_role', 'my_operator_id', 'my_site_id', 'is_staff', 'is_fm', 'event_is_sealed'];
+declare r record; allowed text[] := array['app_role', 'my_operator_id', 'my_site_id', 'is_staff', 'is_fm', 'event_is_sealed', 'event_visible'];
 begin
   for r in select p.proname, p.oid from pg_proc p join pg_namespace n on n.oid = p.pronamespace where n.nspname = 'private'
   loop
