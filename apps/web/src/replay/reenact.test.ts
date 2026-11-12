@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import { replayDebrief, replayScenario } from "@cat/shared/fixtures";
 import type { ReplayDebriefResult, ReplayScenario } from "@cat/shared";
+import { demoReplayScenario } from "./fixture-recording";
 import { reviewRows, traceRows } from "./debrief";
 import {
   advance,
@@ -285,5 +286,22 @@ describe("Debrief view-models", () => {
   it("an order step is correct only in the same sequence", () => {
     const r = { ...result, review: [{ step: 3, chosen: ["b", "a", "c"], best: ["a", "b", "c"], why: { en: "x" } }] };
     expect(reviewRows(r, scenario)[0]).toMatchObject({ kind: "order", correct: false, answered: true });
+  });
+});
+
+describe("the fixture re-enactment readouts change with time", () => {
+  const model = buildReenactModel(demoReplayScenario);
+  it("speed, pitch, seatbelt and wind differ between two times", () => {
+    const early = stateAt(model, 5000);
+    const late = stateAt(model, 60000);
+    expect(early.speed_kmh).not.toBe(late.speed_kmh);
+    expect(early.pitch_deg).not.toBe(late.pitch_deg);
+    expect(early.seatbelt).toBe("on");
+    expect(late.seatbelt).toBe("off");
+    expect(early.wind?.kmh).not.toBe(late.wind?.kmh);
+  });
+  it("the belt is on before the flag moment and off by it", () => {
+    expect(stateAt(model, 20000).seatbelt).toBe("on");
+    expect(stateAt(model, model.eventMs).seatbelt).toBe("off");
   });
 });

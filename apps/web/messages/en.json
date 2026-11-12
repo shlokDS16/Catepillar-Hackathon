@@ -136,7 +136,9 @@
   "provenance": {
     "assumed": "assumed",
     "simulated": "simulated",
-    "someAssumed": "Some values are assumed"
+    "someAssumed": "Some values are assumed",
+    "sourceWeather": "Weather: Open-Meteo archive, CC BY 4.0",
+    "sourceOpenMeteo": "Open-Meteo archive, CC BY 4.0"
   },
   "hero": {
     "machine": "{code} · {model}",
@@ -438,14 +440,14 @@
       "scoresNote": "Scores are for learning, not punishment.",
       "forLearning": "For learning",
       "vsSafest": "You vs safest",
-      "rightCount": "{n} of {total} right",
+      "rightCount": "{n} of {total} decisions right",
       "simulated": "Simulated",
       "right": "Right",
       "notQuite": "Not this time",
       "scoreSpoken": "{label}: {v} out of 100",
       "score": {
         "safety": "Safety",
-        "procedure": "Right steps",
+        "procedure": "How you worked",
         "efficiency": "Speed"
       },
       "you": "You",
@@ -593,6 +595,20 @@
     "colSeq": "#",
     "colTime": "Time",
     "colType": "Type",
+    "types": {
+      "seatbelt_breach": "Seatbelt off",
+      "guardian_hazard": "Guardian hazard",
+      "sos": "SOS",
+      "ppe_override": "PPE override",
+      "ppe_violation": "PPE missing",
+      "near_miss": "Near miss",
+      "first_aid": "First aid",
+      "property_damage": "Property damage",
+      "manual": "Manual entry",
+      "correction": "Correction",
+      "overspeed": "Overspeed",
+      "proximity": "Proximity"
+    },
     "colOperator": "Operator",
     "colMachine": "Machine",
     "colHash": "Hash",

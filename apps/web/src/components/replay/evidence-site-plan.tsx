@@ -1,7 +1,7 @@
 "use client";
 
 import type { ReactNode } from "react";
-import { useTranslations } from "next-intl";
+import { useLocale, useTranslations } from "next-intl";
 import { flagPoint, planCentroid, snapshotPoints, type MapSnapshotCard } from "@/replay/evidence";
 import { planBounds, planProject, type LatLon } from "@/map/site-map";
 
@@ -33,6 +33,9 @@ export function SitePlanFrame({
   label: string;
   children: (g: PlanGeometry) => ReactNode;
 }) {
+  const locale = useLocale();
+  // Zone names are data; the one pattern the fixtures use ("Bench 3") is localised for Hindi.
+  const zoneLabel = (name: string) => (locale === "hi" ? name.replace(/^Bench (\d+)$/, "बेंच $1") : name);
   const box = planBounds([...zones.flatMap((z) => z.polygon), ...points, center], center);
   const toXY = (p: LatLon) => planProject(p, center);
   const path = (pts: readonly LatLon[]) =>
@@ -49,7 +52,7 @@ export function SitePlanFrame({
             <path d={`${path(z.polygon)} Z`} className="plan-zone" />
             {c ? (
               <text x={c.x} y={c.y} fontSize={u} className="plan-zone-name" textAnchor="middle">
-                {z.name}
+                {zoneLabel(z.name)}
               </text>
             ) : null}
           </g>
@@ -100,14 +103,18 @@ export function EvidenceSitePlan({ card }: { card: MapSnapshotCard }) {
         )}
       </SitePlanFrame>
       <ul className="plan-key t-meta text-ink-2">
-        <li>
-          <span className="plan-key-mark" data-mark="trail" aria-hidden="true" />
-          {t("map.trail")}
-        </li>
-        <li>
-          <span className="plan-key-mark" data-mark="track" aria-hidden="true" />
-          {t("map.track")}
-        </li>
+        {trail.length > 1 ? (
+          <li>
+            <span className="plan-key-mark" data-mark="trail" aria-hidden="true" />
+            {t("map.trail")}
+          </li>
+        ) : null}
+        {track.length > 1 ? (
+          <li>
+            <span className="plan-key-mark" data-mark="track" aria-hidden="true" />
+            {t("map.track")}
+          </li>
+        ) : null}
         <li>
           <span className="plan-key-mark" data-mark="flag" aria-hidden="true" />
           {t("map.flag")}

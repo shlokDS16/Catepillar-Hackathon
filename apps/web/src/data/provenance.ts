@@ -15,6 +15,12 @@ const SOURCE_LABEL: Partial<Record<ProvenanceTable, string>> = {
   weather_snapshots: "Open-Meteo archive, CC BY 4.0",
 };
 
+/** Message key (under "provenance") for each source line, so the line can be translated. */
+export const SOURCE_MESSAGE_KEY: Record<string, string> = {
+  "Weather: Open-Meteo archive, CC BY 4.0": "sourceWeather",
+  "Open-Meteo archive, CC BY 4.0": "sourceOpenMeteo",
+};
+
 /** The raw registry answer, or null when the column is not listed (internal). */
 export function provenanceKind(table: ProvenanceTable, field: string): Provenance | null {
   const entry = FIELD_PROVENANCE[table] as Partial<Record<Provenance, readonly string[]>>;

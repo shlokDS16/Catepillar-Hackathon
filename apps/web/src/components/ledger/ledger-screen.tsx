@@ -432,7 +432,7 @@ function EntriesTable({ state }: { state: VerifyState }) {
                   ) : (
                     <>
                       <td className="num">{v.time ?? "—"}</td>
-                      <td>{v.type ? v.type.replace(/_/g, " ") : "—"}</td>
+                      <td>{v.type ? (t.has(`types.${v.type}`) ? t(`types.${v.type}`) : v.type.replace(/_/g, " ")) : "—"}</td>
                       <td className="num" aria-label={v.operator ? undefined : t("withheld")}>{v.operator ?? "—"}</td>
                       <td className="num">{v.machine ?? "—"}</td>
                     </>

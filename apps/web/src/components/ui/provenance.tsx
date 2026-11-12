@@ -3,7 +3,7 @@
 import { useTranslations } from "next-intl";
 import { Chip } from "@/components/ui/chip";
 import { Mark } from "@/components/ui/pictogram";
-import { anyAssumed, provenanceOf, type ProvenanceTable } from "@/data/provenance";
+import { SOURCE_MESSAGE_KEY, anyAssumed, provenanceOf, type ProvenanceTable } from "@/data/provenance";
 import { useMode } from "@/data/mode";
 
 type ProvenanceChipProps = { table: ProvenanceTable; field: string; inputAssumed?: boolean };
@@ -17,7 +17,10 @@ export function ProvenanceChip({ table, field, inputAssumed }: ProvenanceChipPro
   const { mode } = useMode();
   const tag = provenanceOf(table, field, { inputAssumed });
   if (mode === "simple" || tag.kind === "none") return null;
-  if (tag.kind === "source") return <span className="t-meta text-ink-3">{tag.label}</span>;
+  if (tag.kind === "source") {
+    const key = SOURCE_MESSAGE_KEY[tag.label];
+    return <span className="t-meta text-ink-3">{key ? t(key) : tag.label}</span>;
+  }
   return <Chip tone="meta">{t(tag.kind)}</Chip>;
 }
 

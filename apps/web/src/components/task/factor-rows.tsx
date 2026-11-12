@@ -4,6 +4,7 @@ import { useTranslations } from "next-intl";
 import { Chip } from "@/components/ui/chip";
 import { factorRows, type FactorTag } from "@/task/task-state";
 import type { Task } from "@/data/types";
+import { SOURCE_MESSAGE_KEY } from "@/data/provenance";
 
 /**
  * L4 "Why this estimate": one row per factor with its effect on the ETA ("Heat +22 %") and where the
@@ -37,8 +38,11 @@ export function FactorRows({ factors, detailed }: { factors: Task["eta_factors"]
   );
 }
 
-function TagView({ tag, label }: { tag: FactorTag; label: (k: "assumed" | "simulated") => string }) {
+function TagView({ tag, label }: { tag: FactorTag; label: (k: "assumed" | "simulated" | "sourceWeather" | "sourceOpenMeteo") => string }) {
   if (tag.kind === "none") return null;
-  if (tag.kind === "source") return <span className="t-meta text-ink-3">{tag.label}</span>;
+  if (tag.kind === "source") {
+    const key = SOURCE_MESSAGE_KEY[tag.label] as "sourceWeather" | "sourceOpenMeteo" | undefined;
+    return <span className="t-meta text-ink-3">{key ? label(key) : tag.label}</span>;
+  }
   return <Chip tone="meta">{label(tag.kind)}</Chip>;
 }
