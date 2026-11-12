@@ -94,6 +94,10 @@
 }
 .map-canvas .maplibregl-ctrl-attrib a {
   color: var(--ink-2);
+  /* A 24 px tap target (WCAG 2.5.8) around the small text. */
+  display: inline-block;
+  min-height: 24px;
+  line-height: 24px;
 }
 /* A paper wash calms the basemap so the ink on top reads in sunlight. */
 .map-wash {

@@ -262,11 +262,11 @@ export function LandingEngine() {
         const cols: Array<{ col: HTMLElement; d: number; k: number }> = [];
         [...text].forEach((ch, k) => {
           const wrap = document.createElement("span");
-          wrap.className = "dg";
+          wrap.className = "l-dg";
           wrap.setAttribute("aria-hidden", "true");
           if (/\d/.test(ch)) {
             const col = document.createElement("span");
-            col.className = "dg-c";
+            col.className = "l-dg-c";
             for (let d = 0; d < 10; d++) {
               const c = document.createElement("span");
               c.textContent = String(d);

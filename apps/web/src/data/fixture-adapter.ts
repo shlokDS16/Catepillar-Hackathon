@@ -1,6 +1,6 @@
+import { demoReplayScenario } from "@/replay/fixture-recording";
 import { AnomalyDetected, MySnapshotOut } from "@cat/shared";
-import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, swingLessonContent, protocolCard, replayScenario, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
-import type { ReplayScenario } from "@cat/shared";
+import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, swingLessonContent, protocolCard, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
 import { RpcError, type DataPort, type PortMessage, type RecurrenceHint } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
 import type { SiteMapData } from "@/map/site-map";
@@ -414,12 +414,12 @@ export class FixtureAdapter implements DataPort {
   }
   async replayGet() {
     await wait(this.latencyMs);
-    return replayScenario;
+    return demoReplayScenario;
   }
   async replaySubmit(input: Parameters<DataPort["replaySubmit"]>[0]) {
     await wait(this.latencyMs * 3);
     const { fixtureAnswerKey, scoreReplay } = await import("@/replay/fixture-scoring");
-    const result = scoreReplay(replayScenario as ReplayScenario, fixtureAnswerKey, input);
+    const result = scoreReplay(demoReplayScenario, fixtureAnswerKey, input);
     this.push(this.event("training.replay_completed", { replay_id: input.p_replay_id, attempt_id: crypto.randomUUID(), scores: result.scores }));
     return result;
   }

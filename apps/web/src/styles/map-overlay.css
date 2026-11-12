@@ -132,7 +132,8 @@
   z-index: 4;
 }
 .map-marker:focus-visible {
-  outline: none;
+  /* The visible ring is the ::after below; this transparent outline keeps a ring in forced-colors mode. */
+  outline: var(--focus-w) solid transparent;
 }
 /* The selection and focus ring hugs the glyph, not the 80 px hit area. */
 .map-marker[data-selected]::after,
@@ -147,6 +148,10 @@
   border: var(--focus-w) solid var(--ink);
   outline: var(--bw-hair) solid var(--paper);
   pointer-events: none;
+}
+/* Keyboard focus is stronger than selection: a second ink ring outside a paper gap, so it reads on any tile. */
+.map-marker:focus-visible::after {
+  box-shadow: 0 0 0 var(--bw-hair) var(--paper), 0 0 0 calc(var(--focus-w) + var(--bw-hair)) var(--ink);
 }
 .map-glyph {
   width: var(--glyph);

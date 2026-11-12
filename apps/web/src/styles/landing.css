@@ -440,7 +440,8 @@
 
 .l-stats {
   display: flex;
-  gap: var(--s-7);
+  flex-wrap: wrap;
+  gap: var(--s-4) var(--s-7);
   margin: var(--s-2) 0 0;
 }
 
@@ -470,6 +471,7 @@
   line-height: 1;
   letter-spacing: -0.03em;
   font-variant-numeric: tabular-nums;
+  white-space: nowrap; /* the rolling digit columns must never wrap one per line */
 }
 
 /* Guardian legend: one row under the body copy; the active state is the only filled plate. */
@@ -998,19 +1000,19 @@
   --dg-h: 1em;
 }
 
-.dg {
+.l-dg {
   display: inline-block;
   height: var(--dg-h);
   overflow: hidden;
   vertical-align: top;
 }
 
-.dg-c {
+.l-dg-c {
   display: block;
   transition: transform 1.1s var(--ease-quint);
 }
 
-.dg-c > span {
+.l-dg-c > span {
   display: block;
   height: var(--dg-h);
   line-height: var(--dg-h);
