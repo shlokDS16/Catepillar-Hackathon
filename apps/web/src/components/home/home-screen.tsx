@@ -52,7 +52,8 @@ export function HomeScreen() {
     <div className="bayhome">
       <BayStage>
         <div className="bay-head">
-          <p className="t-state bay-word" aria-label={t("home.stageLabel")}>
+          <p className="t-state bay-word">
+            <span className="sr-only">{t("home.stageLabel")}: </span>
             {t(`enums.work.${word}`)}
           </p>
           {audio.available ? (
@@ -97,44 +98,44 @@ export function HomeScreen() {
             </Plate>
           ) : null}
 
-        <section aria-label={t("home.todaysTasks")} className="flex flex-col gap-2">
-          <h2 className="t-title">{t("home.todaysTasks")}</h2>
-          {tasks.length === 0 ? (
-            <p className="t-body text-ink-2">{t("home.noTasks")}</p>
-          ) : (
-            <ul className="list-none p-0 m-0 flex flex-col">
-              {tasks.map((task) => (
-                <li key={task.id} className="task-row" data-current={task.id === current?.id || undefined}>
-                  <span className="t-label tnum">{format.dateTime(new Date(task.planned_start), "time")}</span>
-                  <span className="t-body">{t(`enums.task.${task.task_type}`)}</span>
-                  <Chip tone={task.status === "in_progress" ? "ink" : task.status === "blocked_ppe" ? "caution" : "outline"} word>
-                    {t(`enums.taskStatus.${task.status}`)}
-                  </Chip>
-                  <span className="t-meta text-ink-2 tnum">
-                    {task.eta_p50_min == null
-                      ? ""
-                      : detailed && task.eta_p90_min != null
-                        ? t("hero.etaRange", { min: Math.round(task.eta_p50_min), max: Math.round(task.eta_p90_min) })
-                        : t("hero.etaMin", { min: Math.round(task.eta_p50_min) })}
-                  </span>
-                  <ProvenanceChip table="tasks" field="planned_start" />
-                </li>
-              ))}
-            </ul>
-          )}
-        </section>
+          <section aria-label={t("home.todaysTasks")} className="flex flex-col gap-2">
+            <h2 className="t-title">{t("home.todaysTasks")}</h2>
+            {tasks.length === 0 ? (
+              <p className="t-body text-ink-2">{t("home.noTasks")}</p>
+            ) : (
+              <ul className="list-none p-0 m-0 flex flex-col">
+                {tasks.map((task) => (
+                  <li key={task.id} className="task-row" data-current={task.id === current?.id || undefined}>
+                    <span className="t-label tnum">{format.dateTime(new Date(task.planned_start), "time")}</span>
+                    <span className="t-body">{t(`enums.task.${task.task_type}`)}</span>
+                    <Chip tone={task.status === "in_progress" ? "ink" : task.status === "blocked_ppe" ? "caution" : "outline"} word>
+                      {t(`enums.taskStatus.${task.status}`)}
+                    </Chip>
+                    <span className="t-meta text-ink-2 tnum">
+                      {task.eta_p50_min == null
+                        ? ""
+                        : detailed && task.eta_p90_min != null
+                          ? t("hero.etaRange", { min: Math.round(task.eta_p50_min), max: Math.round(task.eta_p90_min) })
+                          : t("hero.etaMin", { min: Math.round(task.eta_p50_min) })}
+                    </span>
+                    <ProvenanceChip table="tasks" field="planned_start" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
 
-        <ProvenanceLine fields={[["machine_state", "speed_kmh"], ["tasks", "planned_start"], ["operator_state", "ppe"]]} />
+          <ProvenanceLine fields={[["machine_state", "speed_kmh"], ["tasks", "planned_start"], ["operator_state", "ppe"]]} />
 
-        <div className="flex items-center gap-4" role="group" aria-label={t("home.modeLabel")}>
-          <Chip tone={mode === "simple" ? "ink" : "outline"} aria-pressed={mode === "simple"} onClick={() => setMode("simple")}>
-            {t("home.simple")}
-          </Chip>
-          <Chip tone={mode === "detailed" ? "ink" : "outline"} aria-pressed={mode === "detailed"} onClick={() => setMode("detailed")}>
-            {t("home.detailed")}
-          </Chip>
-          {persistFailed ? <span className="t-meta text-ink-3">{t("home.modeNotSaved")}</span> : null}
-        </div>
+          <div className="flex items-center gap-4" role="group" aria-label={t("home.modeLabel")}>
+            <Chip tone={mode === "simple" ? "ink" : "outline"} aria-pressed={mode === "simple"} onClick={() => setMode("simple")}>
+              {t("home.simple")}
+            </Chip>
+            <Chip tone={mode === "detailed" ? "ink" : "outline"} aria-pressed={mode === "detailed"} onClick={() => setMode("detailed")}>
+              {t("home.detailed")}
+            </Chip>
+            {persistFailed ? <span className="t-meta text-ink-3">{t("home.modeNotSaved")}</span> : null}
+          </div>
         </div>
       </div>
 

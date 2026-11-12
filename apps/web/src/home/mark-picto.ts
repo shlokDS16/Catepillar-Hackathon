@@ -1,16 +1,22 @@
+import { KIND_PICTO } from "@/alerts/kinds";
 import type { PictogramName } from "@/components/ui/pictogram";
+import type { AlertKind } from "@/data/types";
+
+/** Lesson code to pictogram: an explicit table, never a substring guess. */
+const LESSON_PICTO: Record<string, PictogramName> = {
+  seatbelt_slopes: "seatbelt",
+  faulty_machine_nearby: "fault",
+};
 
 /**
- * The pictogram for a shift-tape mark, from what the mark is about (its lesson code, which names the
- * event type), not one icon for all. Heat is its own; an unknown or missing code gets the neutral
- * "fault" triangle (visual-language §4: a pictogram always accompanies colour and word).
+ * The pictogram for a shift-tape mark, from what the mark is about: heat is its own; an assignment's
+ * lesson code goes through the table; a live breach mark (no assignment yet) uses its alert kind;
+ * anything else gets the neutral "fault" triangle (visual-language §4: a pictogram always accompanies
+ * colour and word).
  */
-export function markPictogram(mark: { kind: "breach" | "heat"; lessonCode: string | null }): PictogramName {
+export function markPictogram(mark: { kind: "breach" | "heat"; lessonCode: string | null; alertKind?: AlertKind | null }): PictogramName {
   if (mark.kind === "heat") return "heat";
-  const code = (mark.lessonCode ?? "").toLowerCase();
-  if (code.includes("seatbelt") || code.includes("belt")) return "seatbelt";
-  if (code.includes("proximity") || code.includes("zone")) return "proximity";
-  if (code.includes("ppe") || code.includes("vest") || code.includes("helmet")) return "vest";
-  if (code.includes("heat")) return "heat";
+  if (mark.lessonCode && LESSON_PICTO[mark.lessonCode]) return LESSON_PICTO[mark.lessonCode]!;
+  if (mark.alertKind) return KIND_PICTO[mark.alertKind];
   return "fault";
 }

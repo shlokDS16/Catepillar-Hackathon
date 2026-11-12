@@ -4,7 +4,7 @@ import { AlertLayer } from "@/components/alerts/alert-layer";
 import { AskChip } from "@/components/chrome/ask-chip";
 import { AppProviders } from "@/components/chrome/providers";
 import { LanguageChip } from "@/components/chrome/language-sheet";
-import { LockableBody } from "@/components/chrome/lockable";
+import { InertRegion, LockableBody } from "@/components/chrome/lockable";
 import { ActiveTitle, Nav } from "@/components/chrome/nav";
 import type { ShellRole } from "@/components/chrome/nav-items";
 import { SosControl } from "@/components/chrome/sos-control";
@@ -30,6 +30,7 @@ export async function Shell({ role, children }: ShellProps) {
       <a href="#main" className="skip-link t-label">
         {t("skipToContent")}
       </a>
+      <InertRegion role={role}>
       <StatusStrip
         showSafety={operator}
         title={<ActiveTitle role={role} className={operator ? "sr-only" : "strip-title"} />}
@@ -40,9 +41,10 @@ export async function Shell({ role, children }: ShellProps) {
           </>
         }
       />
+      </InertRegion>
       <Nav role={role} />
       {operator ? <SosControl /> : null}
-      <LockableBody>
+      <LockableBody role={role}>
         <main id="main" className="shell-main">
           {children}
         </main>

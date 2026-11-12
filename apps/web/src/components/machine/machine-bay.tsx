@@ -33,7 +33,7 @@ export function BayStage({ children }: { children?: ReactNode }) {
           <MachineDrawing parts={parts} highlight={hl?.id} callouts={callouts} />
         </div>
       ) : null}
-      <p className="t-caption text-ink-3 bay-cap">{t("drawingNote")}</p>
+      {parts.length > 0 ? <p className="t-caption text-ink-3 bay-cap">{t("drawingNote")}</p> : null}
     </section>
   );
 }

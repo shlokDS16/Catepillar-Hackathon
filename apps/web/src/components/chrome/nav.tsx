@@ -27,7 +27,7 @@ export function Nav({ role, badges }: NavProps) {
   const shown = useMotionLock(serverLocked);
   const alerts = useAppState((s) => s.alerts);
   return (
-    <nav className="nav" data-sos={role === "operator" || undefined} aria-label={t("primary")} inert={shellInert(shown, alerts) || undefined}>
+    <nav className="nav" data-sos={role === "operator" || undefined} aria-label={t("primary")} inert={shellInert(role, shown, alerts) || undefined}>
       {items.map(({ key, href, icon: Icon }) => {
         const badge = badges?.[key];
         return (

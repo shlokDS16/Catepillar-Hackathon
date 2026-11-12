@@ -1,4 +1,4 @@
-import type { AlertRecord, Assignment, Task, Weather } from "@/data/types";
+import type { AlertKind, AlertRecord, Assignment, Task, Weather } from "@/data/types";
 
 /** What the shift tape reads: slices of the client state. Times are ISO strings; `now` is the sim clock. */
 export type ShiftInput = {
@@ -21,6 +21,8 @@ export type ShiftMark = {
   href: string | null;
   /** The assignment's own lesson code, so the label names its event; null for an alert with no assignment. */
   lessonCode: string | null;
+  /** The alert kind behind a live (assignment-less) breach mark, so its pictogram matches the event; null otherwise. */
+  alertKind: AlertKind | null;
 };
 export type ShiftTape = {
   startMs: number;
@@ -117,10 +119,10 @@ export function buildShiftSegments(input: ShiftInput, nowIso: string): ShiftTape
   for (const a of input.assignments) {
     const at = a.replay_id && a.because_event_id ? input.eventTimes[a.because_event_id] : undefined;
     if (!a.replay_id || !at) continue;
-    marks.push({ id: `breach:${a.id}`, kind: "breach", atMs: ms(at), href: `/op/training/replay/${a.replay_id}`, lessonCode: a.lesson_code });
+    marks.push({ id: `breach:${a.id}`, kind: "breach", atMs: ms(at), href: `/op/training/replay/${a.replay_id}`, lessonCode: a.lesson_code, alertKind: null });
   }
-  if (marks.length === 0 && breachAlert) marks.push({ id: `breach:${breachAlert.alert_id}`, kind: "breach", atMs: ms(breachAlert.first_seen), href: null, lessonCode: null });
-  if (heatMs != null && heatMs >= startMs) marks.push({ id: "heat", kind: "heat", atMs: heatMs, href: null, lessonCode: null });
+  if (marks.length === 0 && breachAlert) marks.push({ id: `breach:${breachAlert.alert_id}`, kind: "breach", atMs: ms(breachAlert.first_seen), href: null, lessonCode: null, alertKind: breachAlert.kind });
+  if (heatMs != null && heatMs >= startMs) marks.push({ id: "heat", kind: "heat", atMs: heatMs, href: null, lessonCode: null, alertKind: null });
   marks.sort((a, b) => a.atMs - b.atMs);
 
   const hours: number[] = [];

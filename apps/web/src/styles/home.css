@@ -24,6 +24,8 @@
   .bayhome > .bay-stage, .bay-partslist, .bay-tape, .bay-extras { grid-column: 1 / -1; }
   .bay-now { grid-column: 1; }
   .bay-loop { grid-column: 2; }
+  /* Tablet: the parts list follows Now and Practice (tie with the tape; DOM order puts it first). */
+  .bay-partslist { order: 4; }
 }
 
 @media (min-width: 1024px) {
@@ -36,13 +38,7 @@
   .bay-loop { order: 2; }
   .bay-partslist { order: 3; }
   .bay-extras { order: 4; }
-  .tape { display: grid; grid-template-columns: auto 1fr; gap: var(--s-2) var(--s-4); align-items: center; }
-  .tape > * { grid-column: 1 / -1; }
-  .tape > h2 { grid-column: 1; }
-  .tape > .tape-key { grid-column: 2; grid-row: 1; justify-content: flex-end; }
-  .tape-rows { flex-direction: row; flex-wrap: wrap; }
-  .tape-rows > li { flex: 1 1 auto; }
-  /* The Caution banner sits under the strip (row 2) and the body moves to row 3. */
+  /* Shell grid (operator, 1024 px up): the Caution banner sits under the strip (row 2) and the body moves to row 3. Kept here with the layout that depends on it. */
   .shell[data-role="operator"] { grid-template-rows: auto auto minmax(0, 1fr); }
   .shell[data-role="operator"] > .shell-body { grid-row: 3; }
   .shell[data-role="operator"] > .nav { grid-row: 1 / span 3; }
