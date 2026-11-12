@@ -2,7 +2,10 @@ import * as THREE from "three";
 import { RoomEnvironment } from "three/addons/environments/RoomEnvironment.js";
 import { buildExcavator, type Pose } from "./excavator";
 import { buildHaulTruck } from "./truck";
-import { buildRocks, buildTerrain, roadPoint, terrainHeight } from "./terrain";
+import { buildRocks, buildTerrain, terrainHeight } from "./terrain";
+import { cameraState } from "./camera-path";
+import { TRAIL_XZ, getRoute, ringLevel, truckF } from "./route";
+import { S2, S3, S5 } from "../shift";
 
 /*
  * One three.js renderer for stages 1-5 (dossier §4, landing v2 spec "Scene"). Loaded by dynamic
@@ -26,14 +29,35 @@ export type SceneOptions = {
 
 /** A screen-space point in CSS pixels relative to the canvas. */
 export type SceneAnchor = { id: "cylinder" | "cab" | "beacon"; x: number; y: number; visible: boolean };
+/**
+ * `getAnchors()` returns a fourth point, `{ id: "truck" }`, above the haul truck's cab (landing v3 spec
+ * section 8.3), visible only while the truck is. It is typed outside `SceneAnchor` so the v2 engine, which
+ * narrows `id` to the first three, keeps compiling until its replacement widens its own type.
+ */
+export type SceneAnchorId = SceneAnchor["id"] | "truck";
+
+/** The last rendered frame's numbers for the page's live readouts (landing v3 spec §8.3). */
+export type SceneReadout = {
+  boomDeg: number;
+  stickDeg: number;
+  bucketDeg: number; // from the current Pose, in degrees
+  phase: "dig" | "swing" | "dump" | "return" | "travel";
+  cycles: number; // 0..14, trail ticks passed
+  trail: number; // 0..1, the drawn share of the trail
+  nearestM: number | null; // truck front to excavator centre; null when the truck is hidden
+  ring: 0 | 1 | 2 | 3 | 4; // same value onRing reports
+  replay: boolean; // stage 5 rewind running
+};
 
 export type SceneController = {
   setProgress: (ps: number[]) => void;
   setRunning: (on: boolean) => void;
   resize: () => void;
   renderOnce: () => void;
-  /** The boom cylinder, the cab and the cab-roof beacon, in that order. Returns the last rendered frame's points (a shared array, do not mutate). */
+  /** The boom cylinder, the cab, the cab-roof beacon and the haul truck, in that order. Returns the last rendered frame's points (a shared array, do not mutate). */
   getAnchors: () => SceneAnchor[];
+  /** The last rendered frame's values (a shared object, do not mutate). */
+  getReadout: () => SceneReadout;
   dispose: () => void;
 };
 
@@ -73,13 +97,8 @@ const RINGS = [
   { r: 6, color: 0xb3102a },
 ];
 
-function ringLevel(d: number): number {
-  if (d <= 6) return 4;
-  if (d <= 12) return 3;
-  if (d <= 18) return 2;
-  if (d <= 26) return 1;
-  return 0;
-}
+/** Stage 5: how far back along the trail the replay rewinds (the machine's last stretch before the warning). */
+const REWIND_T = 0.82;
 
 /* Dig cycle keys: [time, boom, stick, bucket, yaw]. Solved so the teeth touch the floor in front. */
 const CYCLE: Array<[number, number, number, number, number]> = [
@@ -156,7 +175,8 @@ function glowTexture(): THREE.CanvasTexture {
 
 export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}): SceneController {
   const compact = window.innerWidth < 768 || window.matchMedia("(pointer: coarse)").matches;
-  const dpr = Math.min(window.devicePixelRatio || 1, 1.5);
+  // Phones and coarse pointers render at DPR 1 (spec §8.1 A4); desktop keeps the 1.5 cap.
+  const dpr = compact ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
   const renderer = new THREE.WebGLRenderer({
     canvas,
     antialias: dpr < 1.5,
@@ -251,12 +271,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   scene.add(truck.group);
 
   /* Trail: a 0.35 m tube drawn with drawRange, a glowing head, 14 cycle ticks. */
-  const pts: THREE.Vector3[] = (
-    [
-      [0, 0], [10, -3], [22, -12], [28, -2], [21, 12], [7, 20], [-11, 22], [-25, 12],
-      [-25, -8], [-11, -15], [-3, -6], [0, 0],
-    ] as Array<[number, number]>
-  ).map(([x, z]) => new THREE.Vector3(x, terrainHeight(x, z) + 0.2, z));
+  const pts: THREE.Vector3[] = TRAIL_XZ.map(([x, z]) => new THREE.Vector3(x, terrainHeight(x, z) + 0.2, z));
   const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
   const curveLen = curve.getLength();
   const TUBE_SEG = 640;
@@ -327,21 +342,13 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   ringGroup.visible = false;
   scene.add(ringGroup);
 
-  // The truck's route: down the spiral haul road, then straight along the floor beside the machine.
-  const route: THREE.Vector3[] = [];
-  for (let i = 0; i <= 12; i++) {
-    const p = roadPoint(0.6 + (0.4 * i) / 12);
-    route.push(new THREE.Vector3(p.x, 0, p.z));
-  }
-  for (const x of [-34, -22, -12, -1.5]) route.push(new THREE.Vector3(x, 0, -5.4));
-  for (const p of route) p.y = terrainHeight(p.x, p.z);
-  const routeCurve = new THREE.CatmullRomCurve3(route, false, "centripetal");
-  const routeLen = routeCurve.getLength();
+  // The truck's route and its stage 4 schedule live in route.ts (pure, unit tested against shift.ts).
+  const { curve: routeCurve, length: routeLen } = getRoute();
   const truckBack = new THREE.Vector3();
   const truckFront = new THREE.Vector3();
 
   /* Dust motes catching the low sun. One draw call. */
-  const DUST = compact ? 160 : 300;
+  const DUST = compact ? 0 : 300;
   const dustPos = new Float32Array(DUST * 3);
   for (let i = 0; i < DUST; i++) {
     dustPos[i * 3] = (Math.random() - 0.5) * 130;
@@ -362,6 +369,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   });
   const dust = new THREE.Points(dustGeo, dustMat);
   dust.frustumCulled = false;
+  dust.visible = !compact;
   scene.add(dust);
 
   /* Camera path: one Catmull-Rom through all waypoints, driven by global scroll progress. */
@@ -370,24 +378,26 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   const sh = Math.sin(h0);
   /** A point in the machine's frame (forward, up, left-negative z) in world space. */
   const M = (lx: number, ly: number, lz: number): [number, number, number] => [lx * ch + lz * sh, ly, -lx * sh + lz * ch];
-  type Key = { pos: [number, number, number]; tgt: [number, number, number]; fov: number; sx: number; sy: number; m?: { sx: number; sy: number } };
+  /*
+   * Waypoints (k / 5 along the path, see camera-path.ts): hero, wide, stage 2 close orbit, stage 3 high
+   * oblique, stage 4 rings, stage 5 overhead. `sx` and `sy` are view-offset fractions that put the action
+   * where the copy column and the shift tape are not (spec §5): on landscape it sits in the right 62 %
+   * with the bottom 120 px clear; on portrait it sits in the band from 120 px to 55 % of the height.
+   */
+  type Key = { pos: [number, number, number]; tgt: [number, number, number]; fov: number; sx: number; sy: number; m: { sx: number; sy: number } };
   const W: Key[] = [
-    { pos: M(20, 3.0, -14), tgt: M(1.2, 2.0, 0.2), fov: 30, sx: 0.25, sy: 0, m: { sx: -0.25, sy: -0.16 } },
-    { pos: [46, 18, -36], tgt: [-18, 5, 14], fov: 38, sx: 0.06, sy: 0 },
-    { pos: M(8, 4.6, -29), tgt: M(3.0, 3.0, 0.2), fov: 28, sx: 0.08, sy: -0.04 },
-    { pos: [-8, 36, 70], tgt: [0, 0, 2], fov: 38, sx: 0, sy: 0 },
-    { pos: [26, 38, 40], tgt: [-6, 0, -1], fov: 34, sx: 0.08, sy: 0 },
-    { pos: [34, 74, 78], tgt: [0, 0, 0], fov: 40, sx: 0, sy: 0 },
+    { pos: M(20, 3.0, -14), tgt: M(1.2, 2.0, 0.2), fov: 30, sx: 0.2, sy: -0.06, m: { sx: 0, sy: -0.15 } },
+    { pos: [46, 18, -36], tgt: [-18, 5, 14], fov: 38, sx: 0.17, sy: -0.06, m: { sx: 0, sy: -0.15 } },
+    { pos: M(8, 4.6, -29), tgt: M(3.0, 3.0, 0.2), fov: 28, sx: 0.19, sy: -0.07, m: { sx: 0, sy: -0.15 } },
+    { pos: [-8, 36, 70], tgt: [0, 0, 2], fov: 38, sx: 0.17, sy: -0.07, m: { sx: 0, sy: -0.14 } },
+    { pos: [26, 38, 40], tgt: [-6, 0, -1], fov: 34, sx: 0.17, sy: -0.07, m: { sx: 0, sy: -0.15 } },
+    { pos: [34, 74, 78], tgt: [0, 0, 0], fov: 40, sx: 0.16, sy: -0.07, m: { sx: 0, sy: -0.14 } },
   ];
-  const TRAVEL = [0.95, 0.45, 0.45, 0.4, 0.55];
-  /* Stage 1 holds the hero framing for the first third, then pulls back. */
-  const HOLD = [0.35, 0, 0, 0, 0];
-  const ORBIT = [0, 0.5, 0.25, 0, 0];
   const posCurve = new THREE.CatmullRomCurve3(W.map((k) => new THREE.Vector3(...k.pos)), false, "centripetal");
   const tgtCurve = new THREE.CatmullRomCurve3(W.map((k) => new THREE.Vector3(...k.tgt)), false, "centripetal");
   const auxCurve = (portrait: boolean) =>
     new THREE.CatmullRomCurve3(
-      W.map((k) => new THREE.Vector3(k.fov, k.sx + (portrait ? k.m?.sx ?? 0 : 0), k.sy + (portrait ? k.m?.sy ?? 0 : 0))),
+      W.map((k) => new THREE.Vector3(k.fov, portrait ? k.m.sx : k.sx, portrait ? k.m.sy : k.sy)),
       false,
       "centripetal",
     );
@@ -404,7 +414,12 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   let governorStep = 0;
   let lastRing = -1;
   let ready = false;
+  let acc = 0;
+  let drawn = false;
+  let pulsing = false;
   let cycPhase = 0;
+  /** Beacon and head pulses run only where motion is welcome and the budget allows it. */
+  const animate = !opts.reducedMotion && !compact;
   const stow = new Damped(0);
   const halt = new Damped(0);
   const cx = [new Damped(), new Damped(), new Damped()];
@@ -442,8 +457,14 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     { id: "cylinder", x: 0, y: 0, visible: false },
     { id: "cab", x: 0, y: 0, visible: false },
     { id: "beacon", x: 0, y: 0, visible: false },
+    { id: "truck" as unknown as SceneAnchor["id"], x: 0, y: 0, visible: false },
   ];
-  const anchorObjs = [exc.anchors.cylinder, exc.anchors.cab, exc.anchors.beacon];
+  const anchorObjs = [exc.anchors.cylinder, exc.anchors.cab, exc.anchors.beacon, truck.group];
+  const readout: SceneReadout = { boomDeg: 0, stickDeg: 0, bucketDeg: 0, phase: "dig", cycles: 0, trail: 0, nearestM: null, ring: 0, replay: false };
+  const applied: Pose = { boom: 0, stick: 0, bucket: 0 };
+  const seatbeltColor = new THREE.Color();
+  const lastPs = [-1, -1, -1, -1, -1];
+  const RAD2DEG = 180 / Math.PI;
   let wantAnchors = false;
   const H = new THREE.Vector2(0.878, -0.479);
   const sunDir = new THREE.Vector3();
@@ -466,22 +487,20 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     return lerp(0.55, 1, inout(win(ps[0], 0, 0.85)));
   }
 
-  /** Where the trail head is, 0..1: forward while stage 3 runs, rewinding in stage 5. */
+  /** Where the trail head is, 0..1: forward while stage 3 runs; in stage 5 it rewinds to REWIND_T, then redraws. */
   function trailT(): number {
-    if (ps[4] > 0) return 1 - smoothstep(win(ps[4], 0.05, 0.9));
-    return inout(win(ps[2], 0, 0.85));
+    if (ps[4] > 0) {
+      const rw = S5.rewind[1];
+      return ps[4] < rw ? lerp(1, REWIND_T, smoothstep(win(ps[4], 0, rw))) : lerp(REWIND_T, 1, smoothstep(win(ps[4], rw, 1)));
+    }
+    return inout(win(ps[2], S3.draw[0], S3.draw[1]));
   }
 
   function computeCamera() {
-    let s = 0;
-    for (let i = 0; i < 5; i++) if (ps[i] > 0) s = i;
-    const p = ps[s];
-    const e = quint(win(p, HOLD[s], TRAVEL[s]));
-    const t = (s + e) / 5;
+    const { t, orbit } = cameraState(ps);
     posCurve.getPoint(t, wantPos);
     tgtCurve.getPoint(t, wantTgt);
     (aspect < 0.9 ? auxPort : auxLand).getPoint(t, wantAux);
-    const orbit = (Math.max(0, p - TRAVEL[s]) * ORBIT[s]) / (1 - TRAVEL[s] + 1e-6);
     if (orbit !== 0) {
       tmp.subVectors(wantPos, wantTgt);
       const c = Math.cos(orbit);
@@ -509,7 +528,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     skyU.uFog.value.copy(fog.color);
 
     dustMat.opacity = 0.7 * dawn * (1 - win(ps[1] + ps[2], 0.5, 1.3));
-    if (!opts.reducedMotion) {
+    if (!opts.reducedMotion && !compact) {
       const arr = dustGeo.attributes.position as THREE.BufferAttribute;
       for (let i = 0; i < DUST; i++) {
         arr.setX(i, arr.getX(i) - dt * 0.55);
@@ -547,14 +566,14 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     const yaw = cyclePose(phase, pose);
     const k = stow.x;
     exc.house.rotation.y = lerp(yaw, 0, k);
-    exc.setPose({
-      boom: lerp(pose.boom, TRAVEL_POSE.boom, k),
-      stick: lerp(pose.stick, TRAVEL_POSE.stick, k),
-      bucket: lerp(pose.bucket, TRAVEL_POSE.bucket, k),
-    });
+    applied.boom = lerp(pose.boom, TRAVEL_POSE.boom, k);
+    applied.stick = lerp(pose.stick, TRAVEL_POSE.stick, k);
+    applied.bucket = lerp(pose.bucket, TRAVEL_POSE.bucket, k);
+    exc.setPose(applied);
 
     // Trail draw. In stage 5 the trail rewinds with the machine.
-    const fade = win(ps[3], 0, 0.2) * (1 - win(ps[4], 0, 0.2));
+    // It dims to a ghost under the rings, comes back for the rewind, and is a ghost again while it redraws.
+    const fade = Math.max(win(ps[3], 0, 0.2) * (1 - win(ps[4], 0, 0.2)), win(ps[4], S5.rewind[1], S5.rewind[1] + 0.07) * 0.7);
     trailMat.opacity = lerp(0.95, 0.3, fade);
     const count = Math.floor(t * TUBE_SEG) * RADIAL * 6;
     trailGeo.setDrawRange(0, count);
@@ -563,7 +582,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     head.visible = headOn;
     head.position.copy(pt);
     head.position.y += 0.45;
-    head.scale.setScalar(1 + (opts.reducedMotion ? 0 : Math.sin(time * 4) * 0.12));
+    head.scale.setScalar(1 + (animate ? Math.sin(time * 4) * 0.12 : 0));
     for (let i = 0; i < TICKS; i++) {
       const on = smoothstep(win(t - (i + 0.5) / TICKS, 0, 0.025));
       _s.set(on, on, on);
@@ -580,14 +599,13 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     ringGroup.visible = ringsOn;
     truck.group.visible = ringsOn;
     let level = 0;
+    pulsing = false;
     if (ringsOn) {
       const grow = quint(win(ps[3], 0, 0.3));
       const out = 1 - win(ps[4], 0, 0.5);
       const scale = Math.max(0.001, grow * (0.4 + 0.6 * out));
-      // The truck rolls down the haul road, creeps in beside the machine, holds, then backs out.
-      const inn = inout(win(ps[3], 0.12, 0.62));
-      const away = inout(win(ps[3], 0.8, 1));
-      const f = clamp01(inn * (1 - 0.6 * away));
+      // The truck rolls down the haul road, creeps in beside the machine, holds, then backs out (route.ts).
+      const f = truckF(ps[3]);
       routeCurve.getPointAt(f, truckFront);
       routeCurve.getTangentAt(Math.min(0.999, f), tan);
       truck.group.position.copy(truckFront);
@@ -597,7 +615,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
       const slope = Math.atan2(truckFront.y - truckBack.y, Math.max(0.5, Math.hypot(truckFront.x - truckBack.x, truckFront.z - truckBack.z)));
       truck.group.rotation.z = slope;
       truck.spin((f * routeLen) / 0.8);
-      level = ringLevel(Math.hypot(truckFront.x, truckFront.z));
+      level = ringLevel(Math.hypot(truckFront.x - exc.group.position.x, truckFront.z - exc.group.position.z));
       for (let i = 0; i < RINGS.length; i++) {
         const active = level >= 1 && level - 1 === i;
         const u = ringU[i];
@@ -607,6 +625,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
         u.uLine.value = active ? 1 : 0.5;
         if (dt > 0) pulses[i] = Math.max(0, pulses[i] - dt / 0.9);
         u.uPulse.value = opts.reducedMotion ? 0 : pulses[i];
+        if (pulses[i] > 0) pulsing = true;
       }
     }
     if (level !== lastRing) {
@@ -619,11 +638,28 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     // Fault glow on the boom ram and the cab beacon: ring colour, amber to red as the ring steps up.
     const fault = ringsOn ? clamp01((level - 1) / 3) : 0;
     exc.ramMat.emissive.copy(faultAmber).lerp(faultRed, fault);
-    exc.ramMat.emissiveIntensity = ringsOn && level > 0 ? (opts.reducedMotion ? 1.1 : 0.9 + Math.sin(time * 5) * 0.6) * (0.5 + fault * 0.8) : 0;
+    exc.ramMat.emissiveIntensity = ringsOn && level > 0 ? (animate ? 0.9 + Math.sin(time * 5) * 0.6 : 1.1) * (0.5 + fault * 0.8) : 0;
     const bc = ringsOn && level > 0 ? RINGS[level - 1].color : RINGS[0].color;
-    exc.beaconMat.color.setHex(bc);
-    exc.beaconMat.emissive.setHex(bc);
-    exc.beaconMat.emissiveIntensity = opts.reducedMotion ? 1.2 : 1.0 + Math.sin(time * 3) * 0.5;
+    // Stage 2: the beacon turns caution while the seatbelt is off (S2.seatbeltOff, ledger entry 1).
+    const belt = ps[2] > 0 ? 0 : smoothstep(win(ps[1], S2.seatbeltOff[0], S2.seatbeltOff[0] + 0.03)) * (1 - smoothstep(win(ps[1], S2.seatbeltOff[1], S2.seatbeltOff[1] + 0.03)));
+    seatbeltColor.setHex(bc).lerp(faultAmber, belt);
+    exc.beaconMat.color.copy(seatbeltColor);
+    exc.beaconMat.emissive.copy(seatbeltColor);
+    exc.beaconMat.emissiveIntensity = animate ? 1.0 + Math.sin(time * 3) * 0.5 : 1.2;
+
+    // Readout for the page (spec section 8.3): the numbers of the frame about to be rendered.
+    readout.boomDeg = applied.boom * RAD2DEG;
+    readout.stickDeg = applied.stick * RAD2DEG;
+    readout.bucketDeg = applied.bucket * RAD2DEG;
+    const cyc = phase - Math.floor(phase);
+    readout.phase = k > 0.5 ? "travel" : cyc < 0.36 ? "dig" : cyc < 0.5 ? "swing" : cyc < 0.66 ? "dump" : "return";
+    let passed = 0;
+    for (let i = 0; i < TICKS; i++) if (t - (i + 0.5) / TICKS >= 0.0125) passed++;
+    readout.cycles = passed;
+    readout.trail = t;
+    readout.nearestM = truck.group.visible ? Math.hypot(truck.group.position.x - exc.group.position.x, truck.group.position.z - exc.group.position.z) : null;
+    readout.ring = level as SceneReadout["ring"];
+    readout.replay = ps[4] > 0 && ps[4] < S5.rewind[1];
 
     // The shadow box follows the machine, snapped so shadows do not swim.
     const sx = Math.round(exc.group.position.x / 3) * 3;
@@ -670,11 +706,12 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     exc.group.updateMatrixWorld(true);
     anchorObjs.forEach((o, i) => {
       o.getWorldPosition(tmp);
+      if (i === 3) tmp.y += 2.6; // above the truck's cab, for the stage 4 leader
       tmp.project(camera);
       const a = anchorOut[i];
       a.x = (tmp.x * 0.5 + 0.5) * vw;
       a.y = (-tmp.y * 0.5 + 0.5) * vh;
-      a.visible = tmp.z < 1 && Math.abs(tmp.x) <= 1.02 && Math.abs(tmp.y) <= 1.02;
+      a.visible = tmp.z < 1 && Math.abs(tmp.x) <= 1.02 && Math.abs(tmp.y) <= 1.02 && (i < 3 || truck.group.visible);
     });
   }
 
@@ -701,14 +738,35 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     }
   }
 
+  /** True while anything on screen would still change with no scroll: the dig cycle, a pulse, the camera settling. */
+  function sceneMoving(): boolean {
+    if (!opts.reducedMotion && halt.x < 0.98 && stow.x < 0.98) return true;
+    if (pulsing) return true;
+    const v = Math.abs(cx[0].v) + Math.abs(cx[1].v) + Math.abs(cx[2].v) + Math.abs(tx[0].v) + Math.abs(tx[1].v) + Math.abs(tx[2].v) + Math.abs(cfov.v) + Math.abs(csx.v) + Math.abs(csy.v);
+    if (v > 1e-3) return true;
+    return Math.abs(stow.v) + Math.abs(halt.v) > 1e-3;
+  }
+
   function tick(now: number) {
     if (!running) return;
     raf = requestAnimationFrame(tick);
-    const dt = Math.max(0, Math.min(0.25, (now - last) / 1000 || 0.016));
+    acc += Math.max(0, Math.min(0.25, (now - last) / 1000 || 0.016));
     last = now;
+    // Phones and coarse pointers: at most 30 frames a second (spec section 8.1 A4).
+    if (compact && acc < 1 / 30 - 0.004) return;
+    const dt = acc;
+    acc = 0;
     time += dt;
     updateWorld(dt);
     updateCamera(dt, false);
+    // ...and only when something changed: the stage progress moved, or the scene is still moving.
+    let psChanged = !drawn;
+    for (let i = 0; i < 5; i++) {
+      if (ps[i] !== lastPs[i]) psChanged = true;
+      lastPs[i] = ps[i];
+    }
+    if (compact && !psChanged && !sceneMoving()) return;
+    drawn = true;
     renderer.render(scene, camera);
     if (wantAnchors) computeAnchors();
     opts.onFrame?.();
@@ -718,8 +776,10 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     }
     // Governor: 30 slow frames drop the pixel ratio to 1.0; another 60 drop it to 0.75.
     // Rolling window: a good frame bleeds the slow count, so isolated hitches never add up.
-    if (dt * 1000 <= 22) slow = Math.max(0, slow - 0.5);
-    if (dt * 1000 > 22 && renderer.getPixelRatio() > 0.75) {
+    // On the 30 fps cap a normal frame takes 33 ms, so the slow line moves to 40 ms there.
+    const slowMs = compact ? 40 : 22;
+    if (dt * 1000 <= slowMs) slow = Math.max(0, slow - 0.5);
+    if (dt * 1000 > slowMs && renderer.getPixelRatio() > 0.75) {
       slow += 1;
       const need = governorStep === 0 ? 30 : 60;
       if (slow >= need) {
@@ -751,6 +811,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     },
     resize,
     renderOnce: () => renderOnce(opts.snap ?? true),
+    getReadout: () => readout,
     getAnchors() {
       if (!wantAnchors) {
         wantAnchors = true;
