@@ -22,6 +22,7 @@
 @import "../styles/safety.css" layer(components);
 @import "../styles/ask.css" layer(components);
 @import "../styles/lesson-anim.css" layer(components);
+@import "../styles/bay.css" layer(components);
 
 /*
  * Tailwind 4 theme map. The default palette, type scale, radii and shadows are cleared so a

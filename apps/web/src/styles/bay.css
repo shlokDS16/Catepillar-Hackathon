@@ -1,0 +1,66 @@
+/* Machine Bay (D17): drafting-paper stage with the machine in ink. Tokens only. */
+.bay { display: flex; flex-direction: column; gap: var(--s-4); }
+.bay-stage { background-color: var(--bay); border: var(--bw) solid var(--ink); padding: var(--s-3);
+  background-image: linear-gradient(var(--bay-grid) var(--bw-hair), transparent var(--bw-hair)), linear-gradient(90deg, var(--bay-grid) var(--bw-hair), transparent var(--bw-hair));
+  background-size: var(--bay-grid-step) var(--bay-grid-step); }
+.bay-cap { margin: var(--s-2) 0 0; }
+.bay-draw { position: relative; width: 100%; }
+.bay-svg { display: block; width: 100%; height: auto; }
+
+.bay-svg .bay-ground { stroke: var(--ink); stroke-width: var(--bw-heavy); }
+.bay-svg .bay-hatch { stroke: var(--ink-3); stroke-width: var(--bw-hair); }
+.bay-svg .bay-part, .bay-svg .bay-p > :is(path, rect) { fill: var(--surface); stroke: var(--ink); stroke-width: var(--bw); stroke-linejoin: round; }
+.bay-svg .bay-dark > rect, .bay-svg .bay-dark-fill { fill: var(--ink-2); stroke: var(--ink); stroke-width: var(--bw); }
+.bay-svg .bay-glass { fill: var(--surface-sunk); stroke: var(--ink); stroke-width: var(--bw-hair); }
+.bay-svg .bay-line { fill: none; stroke: var(--ink); stroke-width: var(--bw); stroke-linecap: round; }
+.bay-svg .bay-thick { stroke-width: var(--bw-heavy); }
+.bay-svg .bay-thicker { stroke-width: calc(var(--bw-heavy) * 2); }
+.bay-svg .bay-p > .bay-ram { fill: var(--ink-2); }
+
+/* Live state fills: a part is coloured only while it has a live state other than ok. */
+.bay-svg [data-state="caution"] > :is(path, rect):not(.bay-ram) { fill: var(--state-caution); }
+.bay-svg [data-state="warning"] > :is(path, rect):not(.bay-ram) { fill: var(--state-warning); }
+.bay-svg [data-state="critical"] > :is(path, rect):not(.bay-ram) { fill: var(--state-critical); }
+/* The highlighted part: heavier outline (replay: dashed ink, never a state colour). */
+.bay-svg [data-hl] > :is(path, rect) { stroke-width: var(--bw-heavy); }
+.bay-draw[data-variant="replay"] .bay-svg [data-hl] > :is(path, rect) { stroke-dasharray: var(--s-2) var(--s-1); }
+
+.bay-svg .bay-leader { stroke: var(--ink); stroke-width: var(--bw-hair); }
+.bay-svg .bay-anchor { fill: var(--ink); }
+.bay-svg .bay-pin { fill: var(--ink); }
+.bay-svg .bay-pin-n { fill: var(--on-ink); font-family: var(--ff-display); font-weight: var(--fw-figure); font-size: var(--t-body); }
+
+/* Tags: only from 768 px; the parts list carries state below that. */
+.bay-tags, .bay-leaders { display: none; list-style: none; margin: 0; padding: 0; }
+@media (min-width: 768px) {
+  .bay-tags { display: block; }
+  .bay-leaders { display: inline; }
+}
+.bay-tag { position: absolute; transform: translate(-50%, -50%); display: flex; align-items: center; gap: var(--s-2);
+  background: var(--surface); border: var(--bw) solid var(--ink); padding: var(--s-1) var(--s-2); max-width: 40%;
+  font-family: var(--ff-body); font-size: var(--t-label); font-weight: var(--fw-title); line-height: var(--lh-label);
+  animation: bay-tag-in 160ms linear both; }
+.bay-tag-text { display: flex; flex-direction: column; min-width: 0; }
+.bay-tag-state { font-size: var(--t-caption); }
+.bay-tag-n { background: var(--ink); color: var(--on-ink); min-width: var(--s-5); text-align: center; }
+.bay-tag[data-state="caution"] { background: var(--state-caution); color: var(--on-signal); }
+.bay-tag[data-state="warning"] { background: var(--state-warning); color: var(--on-signal); }
+.bay-tag[data-state="critical"] { background: var(--state-critical); color: var(--on-ink); }
+.bay-tag[data-hl] { border-width: var(--bw-heavy); }
+@keyframes bay-tag-in { from { opacity: 0; } to { opacity: 1; } }
+@media (prefers-reduced-motion: reduce) { .bay-tag { animation: none; } }
+
+/* Parts list */
+.bay-parts { display: flex; flex-direction: column; gap: var(--s-2); }
+.bay-rows { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; }
+.bay-row { display: flex; align-items: center; gap: var(--s-3); min-height: var(--hit); box-sizing: border-box; padding: var(--s-2) var(--s-3);
+  border-block-end: var(--bw-hair) solid var(--ink); background: var(--surface); }
+.bay-row[data-state] { border-inline-start: var(--bw-heavy) solid var(--ink); }
+.bay-row-n { min-width: var(--s-5); text-align: center; }
+.bay-row-main { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: var(--s-1); }
+.bay-row .chip { flex: none; }
+@media (max-width: 480px) {
+  .bay-row { flex-wrap: wrap; }
+  .bay-row-main { flex-basis: calc(100% - var(--s-7)); }
+}
+.bay-row .chip[data-tone="clear"] { --mark-bg: var(--state-clear); }

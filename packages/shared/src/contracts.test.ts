@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
 import { z } from "zod";
 import { ALERT_POLICIES, AlertKind, AnyEvent, AnomalyType, AskAnswer, CONTRACTS_VERSION, EVENT_REGISTRY, EVENT_TYPES,
-  EXPLANATION_TEMPLATES, EventSource, MODEL_V1, ORGANISER_HEADERS, SQL_ENUMS, WITNESS_LINE, estimateEta, eventSchema,
+  EXPLANATION_TEMPLATES, EventSource, SnapshotMachine, MODEL_V1, ORGANISER_HEADERS, SQL_ENUMS, WITNESS_LINE, estimateEta, eventSchema,
   renderExplanation, templateSlots } from "./index";
-import { FIXTURES, seatbeltBreachEvent } from "./fixtures/index";
+import { FIXTURES, mySnapshot, seatbeltBreachEvent } from "./fixtures/index";
 
 /** Overwrites the value at a dotted path with something no field accepts (an object with a marker key). */
 function breakAt(value: unknown, path: string): unknown {
@@ -30,6 +30,24 @@ describe("fixtures", () => {
       expect(f.schema.safeParse(breakAt(f.value, f.broken)).success).toBe(false);
     });
   }
+});
+
+describe("machine.parts (D17, optional and additive)", () => {
+  const { parts: _drop, ...without } = mySnapshot.machine;
+  it("parses with the field absent", () => {
+    expect(SnapshotMachine.safeParse(without).success).toBe(true);
+  });
+  it("parses with the field present: boom_ram caution, the rest ok", () => {
+    const r = SnapshotMachine.safeParse(mySnapshot.machine);
+    expect(r.success).toBe(true);
+    const parts = mySnapshot.machine.parts;
+    expect(parts.find((p) => p.id === "boom_ram")?.state).toBe("caution");
+    expect(parts.filter((p) => p.state !== "ok").length).toBe(1);
+  });
+  it("rejects an unknown part id or state", () => {
+    expect(SnapshotMachine.safeParse({ ...without, parts: [{ id: "wheel", state: "ok", note_key: "x" }] }).success).toBe(false);
+    expect(SnapshotMachine.safeParse({ ...without, parts: [{ id: "cab", state: "red", note_key: "x" }] }).success).toBe(false);
+  });
 });
 
 describe("registry", () => {
