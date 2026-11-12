@@ -316,22 +316,35 @@ the **event record plus the scenario frames**:
 - *Brief*: template text filled with the event's numbers (machine, slope, time).
 - *Investigate*: evidence cards, one per `evidence_spec` entry, payload by type:
   `telemetry_trend` (speed, pitch, seatbelt from the machine's telemetry, 10 sim-min before → 2 after),
-  `wind` (from `weather_snapshots`), `map_snapshot` (zones within 300 m, the operator's trail, the
+  `wind` (the weather frame in force at the event; the same data `apply_frame` writes to `weather_snapshots`), `map_snapshot` (zones within 300 m, the operator's trail, the
   machine's track), `fault_code` (active codes at `sim_ts`, may be an irrelevant distractor),
   `protocol_card` (the fixed card), `weather` (temperature, WBGT), `shift_hours` (hours since shift
   start, circadian band).
 - *Decide*: the template's sequenced steps (no correct answers in the JSON sent to the client).
+  `evidence_spec` is `{max_open, cards[{id, type, relevant, title, why}]}`; a card whose data does not exist
+  (no weather frame) is left out, never invented. `decide_steps` carry `best`, `axis`, `weight`, `why` beside the
+  client fields; an `order` step lists its choices scrambled. The key (cards `relevant`/`why`, `ideal`, steps, `rule`,
+  `lesson_code`) is stored in `replay_scenarios.answer_key` (column not granted) and returned only by `replay_submit`.
 - *Debrief* inputs: the re-enactment track (operator trail, machine positions and wind over time, from
   frames and snapshots), the operator's real response time (event → ack), the quoted protocol rule.
 
 **replay_attempts**: `id`, `replay_id`, `operator_id`, `started_at`, `completed_at`,
 `open_order text[]` (evidence cards in the order opened), `choices jsonb` (step, choice, ms),
-`safety_score`, `procedure_score`, `efficiency_score` (0-100 each), `process_trace jsonb`.
-Scoring (server-side in `replay_submit`): **safety** = weighted correct choices on safety-axis steps;
-**procedure** = protocol order correctness (Kendall-style: share of correctly ordered pairs vs
-`correct_protocol_order`) + investigation process (share of relevant cards opened, minus irrelevant ones,
-and order agreement with `ideal_open_order`); **efficiency** = share of steps answered within their
-countdown. A timed-out step that the UI omits from `p_choices` counts as wrong on its axis and not
+`safety_score`, `procedure_score`, `efficiency_score` (0-100 each), `process_trace jsonb`, `request_id uuid`
+(unique per replay: `replay_submit` is idempotent), `result jsonb` (the debrief that was returned).
+Scoring (server-side in `replay_submit` → `private.replay_score`; **canonical weights**, B10b, identical to
+`apps/web/src/replay/fixture-scoring.ts` and proved equal by `scripts/replay-parity.test.ts`; every figure is
+`round1(x) = round(x × 1000) / 10` on a float):
+- **safety** = Σ(weight × credit) / Σ(weight) over the **safety-axis steps**, ×100 (100 when there are none);
+- **procedure** = 1/2 **protocol** + 1/2 **investigation**. protocol = mean credit of the `order` steps
+  (Kendall pair credit: the share of the reference's ordered pairs that the answer also has in that order; 0 if the
+  step timed out; 1 when there is no order step). investigation = 1/2 **net relevance** + 1/2 **order agreement**:
+  net relevance = clamp₀₁((relevant opened − irrelevant opened) / relevant cards; 1 when there are none), order
+  agreement = pair credit of the opened ids against `ideal_open_order`;
+- **efficiency** = steps answered within `time_limit_s` / all steps, ×100 (a step that timed out, or whose `ms`
+  exceeds the limit, is not within);
+- credit per step: `order` step = pair credit against `best`; any other step = 1 only for exactly the best set.
+A timed-out step that the UI omits from `p_choices` counts as wrong on its axis and not
 within its countdown (UI-18). Only the first `max_open` ids of `open_order` are scored (UI-20). The
 response carries the process trace vs the ideal, and `training.replay_completed` carries **the same
 `ReplayScores`** as the response (G2 drift fix, UI-19). OP may select own `replay_attempts`.
