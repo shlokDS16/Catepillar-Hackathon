@@ -7,7 +7,8 @@ import { Chip } from "@/components/ui/chip";
 import { Mark } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import { verifyLedger, type LedgerVerifyResult } from "@cat/shared/ledger";
-import { useDataPort } from "@/data/store";
+import { useDataPort, useAppState } from "@/data/store";
+import { publishVerify } from "@/ledger/last-verify";
 import {
   ExportCancelled, LedgerBusyError, checkRange, countSealed, diffAt, exportAll, groupsOf4, isCleanMatch, isPartialMatch, judgeInternal, parsePaste, rowView, runCompare, tableWindow,
   verifiedCount, withBusyRetry,
@@ -90,6 +91,11 @@ export function LedgerScreen() {
   const [to, setTo] = useState("");
   const [compare, setCompare] = useState<CompareState>({ s: "idle" });
   const alive = useRef(true);
+  const simNow = useAppState((s) => s.clock?.sim_now ?? null);
+  const simNowRef = useRef<string | null>(null);
+  useEffect(() => {
+    simNowRef.current = simNow;
+  }, [simNow]);
   // Each run takes a number; a result is used only while its number is still current, so Stop (or a newer run) discards it.
   const runId = useRef(0);
   const autoRan = useRef(false);
@@ -142,6 +148,8 @@ export function LedgerScreen() {
         rows = [];
       }
       if (current()) {
+        // The band and the Inbox seal line read this same result, so they never disagree with this page.
+        publishVerify(out, simNowRef.current ? Date.parse(simNowRef.current) : Date.now(), local ? local.status !== "failed" : true);
         const next = { s: "done" as const, out, rows, local };
         lastDone.current = next;
         setVerify(next);

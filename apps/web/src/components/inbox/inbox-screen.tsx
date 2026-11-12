@@ -14,6 +14,7 @@ import { Pictogram } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import { useAppState, useDataPort } from "@/data/store";
 import type { AlertStatus } from "@/data/types";
+import { tierChips, tierCounts } from "@/inbox/fm-band";
 import { effectiveStatus, groupInbox, type InboxItem } from "@/inbox/inbox";
 import { flat, moveSelection, resolveSelection, selectableIds, triage, unseenOpen, type SelectionKey } from "@/inbox/split";
 
@@ -170,6 +171,19 @@ export function InboxScreen() {
     />
   );
 
+  // "Critical 1 · Warning 1 · Caution 4": colour + pictogram + word + count, only tiers that have an open alert.
+  const chips = tierChips(tierCounts(groups.needsAction));
+  const tiers = chips.length === 0 ? null : (
+    <ul className="inbox-tiers" aria-label={t("tierChips")}>
+      {chips.map(({ tier, n }) => (
+        <li key={tier}>
+          <Chip tone={safetyTone(tier)} word icon={<Pictogram name="fault" />}>
+            {t(`tier.${tier}`)} <span className="tnum">{n}</span>
+          </Chip>
+        </li>
+      ))}
+    </ul>
+  );
   const sheet = <OverrideSheet item={overrideFor} onClose={() => setOverrideFor(null)} onGranted={markGranted} />;
   const top = unseen[0];
   const banner = (
@@ -206,21 +220,13 @@ export function InboxScreen() {
       { key: "resolved", label: t("resolved", { n: groups.resolved.length }), rows: groups.resolved },
       { key: "suppressed", label: t("suppressed", { n: groups.suppressed.length }), rows: groups.suppressed },
     ];
-    const count = (tier: string) => groups.needsAction.filter((i) => i.tier === tier).length;
     return (
       <div className="inbox-desktop">
         {banner}
         <FleetStrip items={items} selectedId={selectedId} />
         <div className="inbox-split">
           <div className="inbox-list-col">
-            <div className="inbox-tiers" aria-label={t("listKicker", { n: groups.needsAction.length })}>
-              {(["critical", "warning", "caution"] as const).map((tier) => (
-                <span key={tier} className="inbox-tier-count tnum" data-tier={count(tier) > 0 ? tier : undefined}>
-                  <span className="sr-only">{t(`tier.${tier}`)}</span>
-                  {count(tier)}
-                </span>
-              ))}
-            </div>
+            {tiers}
             {ids.length === 0 ? (
               <p className="t-body text-ink-2 inbox-empty">{t("empty")}</p>
             ) : (
@@ -280,6 +286,7 @@ export function InboxScreen() {
       <p className="t-label inbox-count">
         {t("needsAction")} <span className="tnum">({groups.needsAction.length})</span>
       </p>
+      {tiers}
       {lead === null ? (
         <p className="t-body text-ink-2">{t("empty")}</p>
       ) : (

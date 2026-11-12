@@ -678,8 +678,25 @@
     "checkNow": "Check now",
     "checkAgain": "Check again"
   },
+  "fmBand": {
+    "label": "Ledger",
+    "verified": "{n} entries · verified {time}",
+    "checkNeeded": "{n} entries · check needed",
+    "unavailable": "Ledger check unavailable"
+  },
   "inbox": {
     "title": "Inbox",
+    "tierChips": "Open alerts by tier",
+    "whyLabel": "Why",
+    "factsLabel": "Facts",
+    "timelineCaption": "Dry run, nothing sent",
+    "ledgerSeal": "Sealed into the ledger when you act, next entry #{n}",
+    "ledgerSealNoN": "Sealed into the ledger when you act",
+    "ledgerSealed": "Recorded in the ledger",
+    "ledgerVerify": "Verify",
+    "ledgerCompare": "Compare",
+    "partCaption": "{part}: {state}",
+    "bayLabel": "Where on the machine",
     "empty": "Nothing needs you right now.",
     "loadFailed": "Could not load the Inbox.",
     "retry": "Try again",
