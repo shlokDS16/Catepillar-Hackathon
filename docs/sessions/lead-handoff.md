@@ -13,25 +13,24 @@ Paste this into a fresh Claude Code session (model Opus, never Fable) opened in 
 > soft stop 92 % weekly, hard stop 96 %. ABSOLUTE: no Twilio call, SMS, Telegram or SOS trigger.
 > Continue from "Queue" below.
 
-## Merged and deployed (main 2fefd43; 62 % weekly)
-Screens: R3 Decide, R4 Debrief (contract 2.1 event_ms + seatbelt_fastened), F10 Task, F14 + phase-4 Inbox (split view,
-mobile triage), F15/F15b + phase-4 Ledger (auto-verify), QA1 fixes, map redesign (mapStateAt, provenance, B frame),
-animated lessons (3 SVG diagrams, ink-only hazards), portal B phases 1-4 (chrome, Debrief theatre, learning loop, FM),
-landing v1 + v2 (wipe ends in the real B frame). Backend: near-miss privacy 003d-003g, B10 detectors 005-005c,
-B10b replay build + server scoring 006/006b/006c (parity with web scoring; random shuffle), B12 alert engine 007-007d
-(dry-run SOS escalator job running on the shared DB). sqltest 11/11, web 363 tests, shared+scripts 158.
+## Merged and deployed (main c0e4426; 63 % weekly at handoff)
+Everything from the previous list plus: F20 Analytics (honest verdict, demo data labelled), F11 Safety + A13 incident
+sheet (near-miss wording true to the backend, harm never sealed, demo failure via /director), L1 003h + 003i (harm is
+never sealed at the source), lesson seeds matching the web lessons. sqltest 13/13 (twice), web 404 tests.
 
-## In flight
-- Wave: phase-5 QA (browser, every screen), F11 Safety, F20 Analytics (check branches lane/l2-qa2, lane/l2-f11, lane/l2-f20).
+## In flight at handoff
+- lane/l2-qa2: fixes for docs QA wave 2 (map marker focus ring, Debrief readouts frozen during playback, "Right steps"
+  label vs "3 of 3 right", landing stage-3 digits wrap at 375, Hindi gaps, lows). Merge through the gate when pushed.
 
 ## Queue (priority order)
-- L1 SAFETY: `incident_log` must refuse p_non_punitive=true for an injury (an injury is never sealed; F11 review). New migration + SQL test.
-- L1: seed the two lesson pictograms (belt_compare, blindspot) and the swing-radius lesson in the DB so the animated diagrams show on the live path.
-0. DONE (map redesign + animated lessons merged). Was: Shlok feedback (2026-11-12, relayed): (a) "Map could be better" (op /op/map and FM /fm/map: design pass in the B ink frame, fix the ~400x320 FM canvas, richer Guardian rings/trail within Site Signage); (b) "visual animated learning": animated lesson cards and illustrations on the Lesson route (motion carve-out, visual-language §5.1; reduced-motion stills; no autoplay audio). Check with the Track F session first that it is not already building either.
-3. L1 B10b/B11: replay scoring server-side (must match apps/web/src/replay/fixture-scoring.ts scoreReplay and data-model §2.8; weights chosen there because §2.8 gives none: procedure = 1/2 protocol Kendall pairs + 1/2 investigation, investigation = 1/2 net relevance + 1/2 order agreement with ideal; safety over safety-axis steps; efficiency = ms within time_limit_s; record them in §2.8 as the canonical weights); add additive contract fields reenactment.event_ms and machine_track[].seatbelt_fastened.
-4. Portal B phase 4: FM Inbox split view / mobile triage, FM map sizing fix, Ledger auto-verify on open.
-5. F11 Safety + A13, F17 Lessons, F20 Analytics (currently a stub), F19 Ask.
-6. Phase 5 QA across 360/375/768/1440, en/hi, reduced motion; then a demo video (video-studio skill).
+1. Merge lane/l2-qa2 (gate). Then a short QA re-run of the routes it touched.
+2. F19 Ask Spotter (S6): fixtures first; refusal copy; A18 opens a prefilled A13 (docs/design/frontend-tasks.md:59).
+3. Final Opus judge-style review of the whole site (judge-simulator agent) + phase-validator against CHECKLIST P4/P5.
+4. Demo video (video-studio / ultrademo skill): landing → operator Home → Replay end to end → Lesson → FM Inbox/Ledger.
+   Never trigger SOS while recording.
+5. Open, non-blocking: Replay retake policy; transient loop-error retry; native Hindi read of new strings; Tamil
+   strings; contract gaps logged in docs/sessions/track-f.md (recurrence RPC, my_snapshot completed assignments).
+6. Shlok decides: rotate the secrets that were printed into a local subagent transcript (see timeline 2026-11-12).
 
 ## Gotchas
 - Realtime partitions exist through 2026-11-15: run `pnpm exec tsx scripts/b0/realtime-wake.ts` before SQL tests after that.
