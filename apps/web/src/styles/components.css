@@ -1453,3 +1453,43 @@
   font-size: var(--t-title);
   font-weight: 700;
 }
+/* ---------- Inbox (S7): rows are plates; the tier chip carries the colour, the rest stays ink ---------- */
+.inbox-row {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.inbox-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.inbox-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-3);
+}
+.inbox-fold > summary {
+  min-height: var(--hit-dense);
+  display: list-item;
+  list-style-position: inside;
+  line-height: var(--hit-dense);
+  cursor: pointer;
+}
+.inbox-textarea {
+  box-sizing: border-box;
+  width: 100%;
+  min-height: calc(var(--hit) * 1.5);
+  padding: var(--s-3);
+  border: var(--bw) solid var(--ink);
+  border-radius: 0;
+  background: var(--surface);
+  color: var(--ink);
+  font: inherit;
+  resize: vertical;
+}
+.inbox-textarea[aria-invalid="true"] {
+  border-style: dashed;
+  border-width: var(--bw-heavy);
+}
