@@ -1,4 +1,4 @@
-// @cat/shared: the frozen contracts (api-contracts rev 3, CONTRACTS_VERSION 1.0.0) shared by apps/web,
+// @cat/shared: the frozen contracts (api-contracts rev 3, CONTRACTS_VERSION 2.0.0) shared by apps/web,
 // apps/mobile, scripts/ and the Edge Functions. Wire format is snake_case; RPC argument names are `p_…`.
 export * from "./contracts/version";
 export * from "./contracts/enums";

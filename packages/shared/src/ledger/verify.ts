@@ -25,9 +25,17 @@ export interface LedgerExportRow {
 
 export type LedgerCheckReason = "seq_gap" | "link_broken" | "hash_mismatch" | "anchor_mismatch" | "witness_mismatch";
 
+/**
+ * `verified`: every row recomputed byte for byte. `verified_with_sealed`: the chain is intact but some
+ * near-miss rows were sealed by the server (their contents cannot be checked here), so this is never
+ * a full verification and a UI must not show a green tick or "match" for it. `failed`: see `reason`.
+ */
+export type LedgerVerifyStatus = "verified" | "verified_with_sealed" | "failed";
+
 export interface LedgerVerifyResult {
-  /** Every row recomputes to its stored hash and links to its predecessor. */
+  /** True only for `status === "verified"`: every row recomputes to its stored hash and links to its predecessor. */
   ok: boolean;
+  status: LedgerVerifyStatus;
   checked: number;
   first_bad_seq: number | null;
   reason: LedgerCheckReason | null;
@@ -38,7 +46,20 @@ export interface LedgerVerifyResult {
   head_hash: string;
   first_seq: number | null;
   last_seq: number | null;
+  /** Rows recomputed byte for byte (`checked` minus the sealed ones). */
+  verified_in_full: number;
+  /**
+   * Near-miss rows the server sealed for the fleet manager (003e): only {v, seq, prev_hash, non_punitive,
+   * sealed} arrives, so their `entry_hash` is taken as given; seq, link and place in the Merkle root are still
+   * checked, and `compareWitness` checks the set of sealed seqs against the witness `np=` field.
+   */
+  sealed: number;
+  sealed_seqs: number[];
+  /** sha256 (hex) of the ascending non_punitive seqs of this range, comma separated: the witness `np=` value. */
+  np_hash: string;
 }
+
+const SEALED_KEYS = ["non_punitive", "prev_hash", "seq", "sealed", "v"];
 
 const HEX64 = /^[0-9a-f]{64}$/;
 
@@ -99,11 +120,20 @@ export async function merkleRoot(entryHashesHex: readonly string[]): Promise<str
   return toHex(level[0]!);
 }
 
-function fail(
+/** The witness `np=` value: sha256 of the ascending non_punitive seqs, comma separated (none: sha256 of the empty text). */
+export async function npHash(seqs: readonly number[]): Promise<string> {
+  const text = [...seqs].sort((a, b) => a - b).join(",");
+  return toHex(await sha256(new TextEncoder().encode(text)));
+}
+
+async function fail(
   checked: number, seq: number | null, reason: LedgerCheckReason, detail: string,
-  rootHex: string, headHash: string, firstSeq: number | null, lastSeq: number | null,
-): LedgerVerifyResult {
-  return { ok: false, checked, first_bad_seq: seq, reason, detail, root_hex: rootHex, head_hash: headHash, first_seq: firstSeq, last_seq: lastSeq };
+  hashes: readonly string[], firstSeq: number | null, lastSeq: number | null,
+): Promise<LedgerVerifyResult> {
+  // computed on the failure path only: the happy path builds the Merkle tree exactly once (linear in rows)
+  const rootHex = await merkleRoot(hashes);
+  const headHash = hashes[hashes.length - 1] ?? ZERO_HASH;
+  return { ok: false, status: "failed", verified_in_full: 0, sealed: 0, sealed_seqs: [], np_hash: "", checked, first_bad_seq: seq, reason, detail, root_hex: rootHex, head_hash: headHash, first_seq: firstSeq, last_seq: lastSeq };
 }
 
 /**
@@ -114,56 +144,70 @@ function fail(
 export async function verifyLedger(rows: readonly LedgerExportRow[]): Promise<LedgerVerifyResult> {
   const sorted = [...rows].sort((a, b) => (BigInt(a.seq) < BigInt(b.seq) ? -1 : BigInt(a.seq) > BigInt(b.seq) ? 1 : 0));
   if (sorted.length === 0) {
-    return { ok: true, checked: 0, first_bad_seq: null, reason: null, detail: null, root_hex: await merkleRoot([]), head_hash: ZERO_HASH, first_seq: null, last_seq: null };
+    return { ok: true, status: "verified", verified_in_full: 0, sealed: 0, sealed_seqs: [], np_hash: await npHash([]), checked: 0, first_bad_seq: null, reason: null, detail: null, root_hex: await merkleRoot([]), head_hash: ZERO_HASH, first_seq: null, last_seq: null };
   }
   const firstSeq = Number(sorted[0]!.seq);
   const lastSeq = Number(sorted[sorted.length - 1]!.seq);
   const hashes: string[] = [];
   let previous: string | null = null;
+  const sealedSeqs: number[] = [];
+  const npSeqs: number[] = [];
 
   for (let i = 0; i < sorted.length; i++) {
     const row = sorted[i]!;
     const seq = Number(row.seq);
-    const rootSoFar = await merkleRoot(hashes);
-    const headSoFar = hashes[hashes.length - 1] ?? ZERO_HASH;
 
     if (i > 0 && seq !== Number(sorted[i - 1]!.seq) + 1) {
-      return fail(i, seq, "seq_gap", `seq jumped from ${sorted[i - 1]!.seq} to ${row.seq}`, rootSoFar, headSoFar, firstSeq, lastSeq);
+      return fail(i, seq, "seq_gap", `seq jumped from ${sorted[i - 1]!.seq} to ${row.seq}`, hashes, firstSeq, lastSeq);
     }
+    const isSealed = "sealed" in row.canonical_fields;
     const keys = Object.keys(row.canonical_fields).sort();
-    const want = [...CANONICAL_V1_FIELDS].sort();
+    const want = isSealed ? [...SEALED_KEYS].sort() : [...CANONICAL_V1_FIELDS].sort();
+    if (isSealed && (row.canonical_fields.sealed !== true || row.canonical_fields.non_punitive !== true)) {
+      return fail(i, seq, "hash_mismatch", `row ${row.seq}: a sealed row must carry sealed=true and non_punitive=true`, hashes, firstSeq, lastSeq);
+    }
     if (keys.length !== want.length || keys.some((k, n) => k !== want[n])) {
-      return fail(i, seq, "hash_mismatch", `row ${row.seq} does not carry exactly the 20 canonical v1 fields`, rootSoFar, headSoFar, firstSeq, lastSeq);
+      return fail(i, seq, "hash_mismatch", `row ${row.seq} does not carry exactly the ${isSealed ? "5 sealed" : "20 canonical v1"} fields`, hashes, firstSeq, lastSeq);
     }
     for (const [column, value] of [["seq", row.seq], ["prev_hash", row.prev_hash], ["v", row.v]] as const) {
       if (row.canonical_fields[column] !== value) {
-        return fail(i, seq, "hash_mismatch", `row ${row.seq}: column ${column} disagrees with the canonical field`, rootSoFar, headSoFar, firstSeq, lastSeq);
+        return fail(i, seq, "hash_mismatch", `row ${row.seq}: column ${column} disagrees with the canonical field`, hashes, firstSeq, lastSeq);
       }
     }
     if (!HEX64.test(row.entry_hash) || !HEX64.test(row.prev_hash)) {
-      return fail(i, seq, "hash_mismatch", `row ${row.seq}: hashes are not 64 lower-case hex characters`, rootSoFar, headSoFar, firstSeq, lastSeq);
+      return fail(i, seq, "hash_mismatch", `row ${row.seq}: hashes are not 64 lower-case hex characters`, hashes, firstSeq, lastSeq);
     }
 
     const expectedPrev = previous ?? (seq === 1 ? ZERO_HASH : row.prev_hash);
     if (row.prev_hash !== expectedPrev) {
-      return fail(i, seq, "link_broken", `row ${row.seq}: prev_hash ${row.prev_hash} ≠ ${expectedPrev}`, rootSoFar, headSoFar, firstSeq, lastSeq);
+      return fail(i, seq, "link_broken", `row ${row.seq}: prev_hash ${row.prev_hash} ≠ ${expectedPrev}`, hashes, firstSeq, lastSeq);
     }
 
+    if (isSealed) {
+      hashes.push(row.entry_hash);
+      previous = row.entry_hash;
+      sealedSeqs.push(seq);
+      npSeqs.push(seq);
+      continue;
+    }
     let computed: string;
     try {
       computed = await entryHash(row.canonical_fields);
     } catch (err) {
-      return fail(i, seq, "hash_mismatch", `row ${row.seq}: ${(err as Error).message}`, rootSoFar, headSoFar, firstSeq, lastSeq);
+      return fail(i, seq, "hash_mismatch", `row ${row.seq}: ${(err as Error).message}`, hashes, firstSeq, lastSeq);
     }
     if (computed !== row.entry_hash) {
-      return fail(i, seq, "hash_mismatch", `row ${row.seq}: recomputed ${computed} ≠ stored ${row.entry_hash}`, rootSoFar, headSoFar, firstSeq, lastSeq);
+      return fail(i, seq, "hash_mismatch", `row ${row.seq}: recomputed ${computed} ≠ stored ${row.entry_hash}`, hashes, firstSeq, lastSeq);
     }
     hashes.push(computed);
     previous = computed;
+    if (row.canonical_fields.non_punitive === true) npSeqs.push(seq);
   }
 
   return {
-    ok: true, checked: sorted.length, first_bad_seq: null, reason: null, detail: null,
+    ok: sealedSeqs.length === 0, status: sealedSeqs.length === 0 ? "verified" : "verified_with_sealed",
+    verified_in_full: sorted.length - sealedSeqs.length, sealed: sealedSeqs.length, sealed_seqs: sealedSeqs,
+    np_hash: await npHash(npSeqs), checked: sorted.length, first_bad_seq: null, reason: null, detail: null,
     root_hex: await merkleRoot(hashes), head_hash: hashes[hashes.length - 1]!,
     first_seq: firstSeq, last_seq: lastSeq,
   };
@@ -173,6 +217,8 @@ export async function verifyLedger(rows: readonly LedgerExportRow[]): Promise<Le
 export const WITNESS_LINE_RE = /^SPOTTER-LEDGER v1 seq=(\d+)\.\.(\d+) n=(\d+) root=([0-9a-f]{64}) head=([0-9a-f]{64})/;
 
 export interface WitnessLine {
+  /** Optional: lines made before 003e carry no `np=`. */
+  np_hash?: string;
   first_seq: number;
   last_seq: number;
   leaf_count: number;
@@ -184,7 +230,8 @@ export interface WitnessLine {
 export function parseWitnessLine(text: string): WitnessLine | null {
   const m = WITNESS_LINE_RE.exec(text.trim());
   if (!m) return null;
-  return { first_seq: Number(m[1]), last_seq: Number(m[2]), leaf_count: Number(m[3]), root_hex: m[4]!, head_hash: m[5]! };
+  const np = / np=([0-9a-f]{64})(?:\s|$)/.exec(text);
+  return { first_seq: Number(m[1]), last_seq: Number(m[2]), leaf_count: Number(m[3]), root_hex: m[4]!, head_hash: m[5]!, ...(np ? { np_hash: np[1]! } : {}) };
 }
 
 /** Index of the first differing character, or -1 when the two strings are equal (UI highlights it). */
@@ -195,6 +242,11 @@ export function firstDifference(a: string, b: string): number {
 }
 
 export interface WitnessComparison {
+  /**
+   * True when sealed near-miss rows are present: `match` then means chain and witness agree, NOT that every
+   * row was checked byte for byte. A UI must not show a plain green tick when `partial` is true.
+   */
+  partial: boolean;
   /** The range, count, root and head the witness claims all match what we recomputed. */
   match: boolean;
   reason: LedgerCheckReason | null;
@@ -209,7 +261,11 @@ export interface WitnessComparison {
  * recompute agrees with them, and this comparison still fails.
  */
 export function compareWitness(result: LedgerVerifyResult, witness: WitnessLine): WitnessComparison {
-  if (!result.ok) {
+  return { ...compareWitnessCore(result, witness), partial: result.sealed > 0 };
+}
+
+function compareWitnessCore(result: LedgerVerifyResult, witness: WitnessLine): Omit<WitnessComparison, "partial"> {
+  if (result.status === "failed") {
     return { match: false, reason: result.reason, detail: result.detail, root_diff_at: -1, head_diff_at: -1 };
   }
   const rootDiff = firstDifference(result.root_hex, witness.root_hex);
@@ -235,6 +291,20 @@ export function compareWitness(result: LedgerVerifyResult, witness: WitnessLine)
         ? `recomputed root ${result.root_hex} ≠ witnessed ${witness.root_hex} (first difference at character ${rootDiff + 1})`
         : `recomputed head ${result.head_hash} ≠ witnessed ${witness.head_hash} (first difference at character ${headDiff + 1})`,
       root_diff_at: rootDiff, head_diff_at: headDiff,
+    };
+  }
+  if (witness.np_hash !== undefined && witness.np_hash !== result.np_hash) {
+    return {
+      match: false, reason: "witness_mismatch",
+      detail: "the set of near-miss (sealed) entries does not match the witnessed np= value: a row may have been relabelled",
+      root_diff_at: -1, head_diff_at: -1,
+    };
+  }
+  if (witness.np_hash === undefined && result.sealed > 0) {
+    return {
+      match: false, reason: "witness_mismatch",
+      detail: "the witness line has no np= field, so the sealed entries cannot be confirmed; use a newer checkpoint line",
+      root_diff_at: -1, head_diff_at: -1,
     };
   }
   return { match: true, reason: null, detail: null, root_diff_at: -1, head_diff_at: -1 };

@@ -183,7 +183,7 @@ begin
     assert (select count(*) from realtime.messages where extension = 'broadcast') = 0, 'OP is refused sup:{site}';
   end if;
   snap := public.my_snapshot();
-  assert snap ->> 'contracts_version' = '1.0.0', 'snapshot version';
+  assert snap ->> 'contracts_version' = '2.0.0', 'snapshot version';
   assert snap -> 'profile' ->> 'role' = 'operator', 'snapshot role';
   assert (snap -> 'run' ->> 'status') = 'playing' and (snap -> 'run' ->> 'sim_now') is not null, 'snapshot run';
   assert snap -> 'site' ->> 'emergency_tel' is not null, 'emergency tel from vault';

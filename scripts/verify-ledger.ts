@@ -100,8 +100,8 @@ if (save) {
 const result = await verifyLedger(rows);
 console.log(`source      ${file ?? `ledger_export(${from}, ${to})`}`);
 console.log(`rows        ${result.checked}  (seq ${result.first_seq ?? "-"}..${result.last_seq ?? "-"})`);
-console.log(`chain       ${result.ok ? "consistent" : `BROKEN at seq ${result.first_bad_seq} (${result.reason})`}`);
-if (!result.ok) console.log(`            ${result.detail}`);
+console.log(`chain       ${result.status === "verified" ? "consistent" : result.status === "verified_with_sealed" ? `intact, ${result.sealed} sealed entries not checked byte for byte` : `BROKEN at seq ${result.first_bad_seq} (${result.reason})`}`);
+if (result.status === "failed") console.log(`            ${result.detail}`);
 console.log(`root        ${result.root_hex}`);
 console.log(`head        ${result.head_hash}`);
 console.log("\nThis is internal consistency only. The proof is the comparison below, against a line");
@@ -110,7 +110,7 @@ console.log("read from the fleet manager's own Telegram chat — never from the 
 const witnessText = arg("witness");
 if (!witnessText) {
   console.log("\nwitness     (none given; pass --witness \"SPOTTER-LEDGER v1 …\" to compare)");
-  process.exitCode = result.ok ? 0 : 1;
+  process.exitCode = result.status === "failed" ? 1 : 0;
 } else {
   const witness = parseWitnessLine(witnessText);
   if (!witness) {
@@ -121,7 +121,7 @@ if (!witnessText) {
     console.log(`\nwitness     seq ${witness.first_seq}..${witness.last_seq} n=${witness.leaf_count}`);
     console.log(`            root ${witness.root_hex}`);
     console.log(`            head ${witness.head_hash}`);
-    console.log(`verdict     ${comparison.match ? "MATCH — the ledger is the one that was witnessed" : "MISMATCH"}`);
+    console.log(`verdict     ${comparison.match ? (result.sealed > 0 ? `PARTIAL MATCH: ${result.sealed} sealed entries are placed by hash only, not checked byte for byte` : "MATCH — the ledger is the one that was witnessed") : "MISMATCH"}`);
     if (!comparison.match) {
       console.log(`            ${comparison.detail}`);
       if (comparison.root_diff_at >= 0) {
