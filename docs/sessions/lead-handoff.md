@@ -33,14 +33,11 @@ Paste this into a fresh Claude Code session (model Opus, never Fable) opened in 
   pictogram; ppe.restored not scoped per operator; IDS.anomaly stands in for EXC-014's id; nav/shell not `inert`
   under a Beat 3 Warning (keyboard can Tab beneath).
 
-## In flight at handoff
-- lane/l1-live-path (D18): re-review @ab4074b approved every fix; one merge-only Medium sent back (move the live/demo
-  switch into main's `dataLabel()`, no "Demo data · Demo data"), plus restore the 002:80 check breadth and a
-  read-only report of the hosted sign-up setting. Next: check the branch's newest commit, have the backend-reviewer
-  confirm the merge (short re-review), then gate. sqltest must stay 14/14.
+## D18 live path: MERGED 4205ddd (backend-reviewer APPROVE @36ac9c4, sqltest 14/14 by the lane)
+- Sign in at /director/live with DEMO_OPERATOR_* or DEMO_FM_* from the main folder .env. Nothing is in flight.
 
 ## Queue after session 3 (priority order)
-1. Finish lane/l1-live-path (above). Then a quick browser pass on production of /op, /op/training, /director.
+1. A quick browser pass on production of /op, /op/training, /director.
 2. D17 phase 2: T5 Bay layout (home-screen.tsx + new styles/home.css; MachineBay, LoopCard, ShiftTape are now
    separate mounts on Home to arrange) and T6 While-you-wait (loop-card variant). Phase 3: T7 inbox detail, T8 fleet
    strip, T9 band ledger cell + triage. Specs: study.md (e). Up to 3 lanes on disjoint files.

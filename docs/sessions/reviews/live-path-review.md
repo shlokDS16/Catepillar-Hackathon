@@ -97,3 +97,20 @@ Note: live mode still lets the fixture clock tick reach `store.clock` and `lastF
 **Counts:** Medium 1, Low 2.
 
 **CHANGES REQUIRED**: merge main and fold the source label into `dataLabel()`. Every earlier finding is fixed or documented, so the merge is the only blocker.
+
+## Merge check @ 36ac9c4
+
+The lane now contains main a720218. Main is still at a720218, and `git merge-tree --write-tree origin/main origin/lane/l1-live-path` reports no conflicts.
+
+| Check | Result |
+|---|---|
+| Live/demo switch inside `dataLabel()` | `chrome/data-label.ts` now takes `source` and `runStatus`. "fallback" shows the notice. "live" shows `chrome.source.live · run.<status or none>`. Demo leaves main's text unchanged, so there is no doubled "Demo data". `data-label.test.ts` adds a case for live and fallback. |
+| `status-strip.tsx` | Calls `dataLabel` and keeps main's `strip-cells` and offline `syncText` cell. The `liveParts` tooltip shows only when live. |
+| en/hi parity | Both catalogues have the same keys (key-set diff empty both ways), including all 8 `chrome.source` keys. |
+| `director-panel.tsx` | The only change against main is the added Live link. Lane A's 8 beats (1, 2, 2b, 3, 4, 5, ledger tamper with re-hash, ledger reset) and the Reset section are intact. |
+| 002 restored checks | Line 80 (`ppe_overrides` = 1, "OP sees own overrides") and line 153 (`shifts` = 2, "TR sees shifts") are back to their original form, with no filter. |
+| Tests | Lane export: web `vitest run src/chrome src/data src/components/chrome` 73/73, web `tsc` 0 errors. I did not re-run sqltest. Line 80 passed unfiltered on the seeded DB earlier. Line 153 sits after the old failure point at line 116, so it was never exercised against the seed. The seed writes no shifts, so it should pass, but the implementer should confirm 002 on the next sqltest run. |
+
+Carried over from the re-review, not blocking: confirm in the dashboard that hosted email sign-up is off.
+
+**APPROVE**
