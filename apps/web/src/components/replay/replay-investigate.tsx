@@ -121,7 +121,7 @@ export function ReplayInvestigate({
             onOpen={open}
           />
 
-          {/* Left-aligned and kept clear of the floating SOS plate in the bottom-right corner. */}
+          {/* The one primary action; the dock (with SOS) sits below the content padding. */}
           <div className="replay-actions">
             <Button
               variant="primary"

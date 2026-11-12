@@ -29,7 +29,7 @@ export function Nav({ role, badges }: NavProps) {
       {items.map(({ key, href, icon: Icon }) => {
         const badge = badges?.[key];
         return (
-          <Link key={key} href={href} className="nav-item" aria-current={active?.key === key ? "page" : undefined}>
+          <Link key={key} href={href} className="nav-item" aria-current={active?.key === key ? (pathname === href || pathname.startsWith(`${href}/`) ? "page" : "true") : undefined}>
             <span className="nav-icon">
               <Icon className="icon" aria-hidden="true" />
               {badge ? <span className="nav-badge tnum">{badge}</span> : null}
@@ -42,11 +42,12 @@ export function Nav({ role, badges }: NavProps) {
   );
 }
 
-/** The title row's screen name, taken from the active nav item. Sub-screens render their own. */
-export function ActiveTitle({ role }: { role: ShellRole }) {
+/** The page h1: the active nav item's name, except the operator Map, which has its own. Hidden for operators (the dock shows it); a display title in the FM band. */
+export function ActiveTitle({ role, className }: { role: ShellRole; className?: string }) {
   const items = navFor(role);
   const pathname = usePathname();
   const t = useTranslations("nav");
   const active = activeItem(items, pathname);
-  return active ? <h1 className="t-title">{t(active.key)}</h1> : null;
+  if (pathname === "/op/map" || pathname.startsWith("/op/map/")) return <h1 className={className}>{t("map")}</h1>;
+  return active ? <h1 className={className}>{t(active.key)}</h1> : null;
 }

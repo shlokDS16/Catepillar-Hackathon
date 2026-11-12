@@ -104,3 +104,6 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 
 ## 2026-11-12 — D16: Near-miss privacy hardening (lead, after 3 Opus reviews)
 - Migrations 003d-003g: sealed ledger rows export only {v, seq, prev_hash, non_punitive, sealed}+entry_hash; private.event_visible() governs events_read, my_snapshot and broadcasts; near_miss_list is trainer-only and returns (day, severity, type) for sealed rows; contracts 2.0.0. Accepted residual: a holder of both trainer and FM roles can align days with sealed ledger rows (no person revealed).
+
+## 2026-11-12 — D14 amendment (portal chrome review): dock cell widths
+- Operator dock = four destination cells plus the 108 x 96 SOS slot. At 360 px a destination cell is 63 px wide (96 px tall), below the 80 px both-ways rule of visual-language §118; the SOS slot is 96 px tall, below the 108 token. Accepted: four labelled destinations plus SOS cannot be wider on a 360 px phone. Language and Ask in the band are 64 x 56 (above the 48 px minimum); the state plate stays 100 x 80. Safe-area insets are added to the dock and SOS heights.

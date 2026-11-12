@@ -21,7 +21,7 @@ export function AskChip() {
   return (
     <>
       <Chip onClick={() => setOpen(true)} icon={<MessageCircleQuestion className="icon" aria-hidden="true" />}>
-        {t("ask")}
+        <span className="sr-only">{t("ask")}</span>
       </Chip>
       <Sheet open={open} onClose={() => setOpen(false)} title={t("ask")}>
         <p className="t-body text-ink-2">{t("comingSoon")}</p>
