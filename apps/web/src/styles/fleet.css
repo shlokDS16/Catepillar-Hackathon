@@ -1,0 +1,62 @@
+/* Fleet strip (FM Inbox). Tokens only. Six columns from 1280 px, three below; phones show three plus "+3 more". */
+.fleet {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+  min-width: 0;
+  padding-block-end: var(--s-3);
+}
+.fleet-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: var(--s-1) var(--s-4);
+}
+.fleet-cells {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: var(--s-3);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+@media (min-width: 1280px) {
+  .fleet-cells { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+}
+.fleet-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-1);
+  min-width: 0;
+  padding: var(--s-3);
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+  overflow-wrap: anywhere;
+}
+/* The selected alert's machine is underlined with a heavy rule. */
+.fleet-cell[data-selected] {
+  box-shadow: inset 0 calc(-1 * var(--bw-heavy)) 0 0 var(--ink);
+  padding-block-end: calc(var(--s-3) + var(--bw-heavy));
+}
+.fleet-code { line-height: 1.1; }
+.fleet-who { overflow-wrap: anywhere; }
+.fleet-more {
+  display: none;
+  align-self: flex-start;
+  min-height: var(--hit);
+  padding-inline: var(--s-4);
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+  color: var(--ink);
+  cursor: pointer;
+}
+.fleet-more:focus-visible { outline: var(--bw-heavy) solid var(--ink); outline-offset: 2px; }
+@media (max-width: 767.98px) {
+  .fleet-cells { grid-template-columns: minmax(0, 1fr); }
+  .fleet:not([data-open]) .fleet-cell:not([data-phone]) { display: none; }
+  .fleet-more { display: inline-flex; align-items: center; }
+}
+
+.wait-stops { margin: 0; }
