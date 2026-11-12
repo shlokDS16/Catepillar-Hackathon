@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { replayScenario } from "@cat/shared/fixtures";
 import type { ReplayScenario } from "@cat/shared";
-import { buildSubmit, orderComplete, orderNumber, stepTotal, SubmitRequestIds, toggleOrder } from "./decide";
+import { buildSubmit, orderComplete, orderNumber, SubmitRequestIds, toggleOrder } from "./decide";
 import { currentStep, initialReplayState, replayReduce, type ReplayAction, type ReplayState } from "./machine";
 
 const scenario = replayScenario as ReplayScenario;
@@ -40,7 +40,7 @@ describe("Decide steps (single and order)", () => {
 
   it("all steps timed out submits an empty p_choices", () => {
     let s = deciding();
-    for (let i = 0; i < stepTotal(scenario); i += 1) s = replayReduce(s, { type: "step_timeout" });
+    for (let i = 0; i < scenario.decide.steps.length; i += 1) s = replayReduce(s, { type: "step_timeout" });
     expect(s.phase).toBe("submitting");
     expect(buildSubmit("r", "q", s.openOrder, s.choices).p_choices).toEqual([]);
   });
@@ -77,11 +77,28 @@ describe("submit (T7)", () => {
 
   it("a failed submit keeps the answers, and retry rebuilds the identical request", () => {
     let s = deciding();
-    for (let i = 0; i < stepTotal(scenario); i += 1) s = replayReduce(s, { type: "answer", choiceIds: ["x"], ms: 5 });
+    for (let i = 0; i < scenario.decide.steps.length; i += 1) s = replayReduce(s, { type: "answer", choiceIds: ["x"], ms: 5 });
     const first = buildSubmit("r", "q", s.openOrder, s.choices);
     const failed = replayReduce(s, { type: "submit_failed" });
     const retried = replayReduce(failed, { type: "retry_submit" });
     expect(retried.phase).toBe("submitting");
     expect(buildSubmit("r", "q", retried.openOrder, retried.choices)).toEqual(first);
+  });
+});
+
+describe("hidden page", () => {
+  it("freezes Investigate and Decide until an explicit resume", () => {
+    const inv = run({ type: "loaded", scenario }, { type: "start" });
+    const hid = replayReduce(inv, { type: "pause", reason: "hidden" });
+    expect(hid.paused).toBe(true);
+    expect(hid.pauseReason).toBe("hidden");
+    expect(replayReduce(hid, { type: "investigate_timeout" })).toBe(hid);
+    expect(replayReduce(hid, { type: "resume" }).paused).toBe(false);
+    expect(replayReduce(deciding(), { type: "pause", reason: "hidden" }).paused).toBe(true);
+  });
+
+  it("ignores a hidden page in the untimed Brief", () => {
+    const brief = run({ type: "loaded", scenario });
+    expect(replayReduce(brief, { type: "pause", reason: "hidden" })).toBe(brief);
   });
 });

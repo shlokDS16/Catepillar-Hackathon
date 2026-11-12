@@ -3,7 +3,6 @@
  * the components stay thin renderers. The machine owns the transitions; this file owns what a step
  * records and how the submit is built and retried.
  */
-import type { ReplayDebriefResult, ReplayScenario } from "@cat/shared";
 import type { ReplayChoice } from "@/replay/machine";
 
 /** T5: the chosen plate shows inverted for this long, the step locked, before it advances. */
@@ -59,9 +58,5 @@ export class SubmitRequestIds {
   }
 }
 
-export type SubmitFn = (input: ReturnType<typeof buildSubmit>) => Promise<ReplayDebriefResult>;
-
-/** Total Decide steps, for "Step 2 of 4". */
-export function stepTotal(scenario: ReplayScenario): number {
-  return scenario.decide.steps.length;
-}
+/** A submit with no answer for this long is treated as failed, so a dead link cannot hang "Scoring…". */
+export const SUBMIT_TIMEOUT_MS = 12_000;

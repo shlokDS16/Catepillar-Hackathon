@@ -260,6 +260,7 @@
     "paused": {
       "title": "Practice paused",
       "body": "A safety alert is open. The clock is stopped and costs you nothing.",
+      "hiddenBody": "You left this page. The clock is stopped and costs you nothing.",
       "resume": "Resume practice"
     },
     "leave": {
@@ -300,7 +301,7 @@
       "waiting": "Waiting for signal",
       "waitingBody": "Your answers are kept. Trying again every 5 seconds.",
       "debriefStub": "Debrief opens here",
-      "debriefStubNote": "Your score was saved. The Debrief is built in R4."
+      "debriefStubNote": "Your score was saved. Your debrief is on its way."
     },
     "evidence": {
       "trend": {
