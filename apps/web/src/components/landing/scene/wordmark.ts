@@ -94,7 +94,7 @@ export type Heightfield = { w: number; h: number; heights: Float32Array; letter:
  * the tops are not flat and the contour lines have something to follow.
  */
 export function buildHeightfield(mask: Float32Array, w: number, h: number): Heightfield {
-  const b1 = boxBlur(mask, w, h, 2);
+  const b1 = boxBlur(mask, w, h, 1); // the glyph edge itself: only anti-aliased
   const b2 = boxBlur(boxBlur(mask, w, h, 5), w, h, 5);
   const heights = new Float32Array(w * h);
   const rise = new Float32Array(w * h);
@@ -105,7 +105,9 @@ export function buildHeightfield(mask: Float32Array, w: number, h: number): Heig
       const wx = (i / (w - 1) - 0.5) * GRID.width;
       const wz = (j / (h - 1) - 0.5) * GRID.depth;
       const b = b2[k];
-      const r = RISE[0] * smooth(0.14, 0.22, b) + RISE[1] * smooth(0.4, 0.48, b) + RISE[2] * smooth(0.7, 0.78, b);
+      // The two lower benches are cut from the wide blur, so they fan out beyond the glyph; the top bench follows the
+      // glyph edge, so the letter outline stays crisp and condensed.
+      const r = RISE[0] * smooth(0.08, 0.16, b) + RISE[1] * smooth(0.26, 0.34, b) + RISE[2] * smooth(0.35, 0.65, b1[k]);
       rise[k] = r;
       const ground = Math.max(-0.4, 0.55 * terrainHeight(wx * TERRAIN_K, wz * TERRAIN_K));
       const roll = 3.6 * (fbm(wx * 0.035 + 5, wz * 0.035 - 3) - 0.5) + 1.1 * (fbm(wx * 0.13, wz * 0.13 + 9) - 0.5);
@@ -152,20 +154,73 @@ export type WordmarkPose = { position: [number, number, number]; target: [number
 export const TILT_DONE = 0.6;
 const FOV = 22;
 
-/** Camera for progress p: straight down at 0, a low oblique by TILT_DONE, held to 1. Pure. */
-export function wordmarkPose(p: number, aspect: number): WordmarkPose {
+/** The word's bounding box in world metres: half width, half depth and height of its tallest bench. */
+export type WordBox = { x: number; z: number; h: number };
+export const DEFAULT_BOX: WordBox = { x: 142, z: 36, h: 16 };
+const MARGIN = 0.07; // of the half frame, on every side
+
+/** Bounding box of the glyphs in a mask (world units), or the default when the mask is empty. */
+export function maskBox(mask: Float32Array, w: number, h: number): WordBox {
+  let x0 = w;
+  let x1 = -1;
+  let z0 = h;
+  let z1 = -1;
+  for (let j = 0; j < h; j++) {
+    for (let i = 0; i < w; i++) {
+      if (mask[j * w + i] > 0.5) {
+        if (i < x0) x0 = i;
+        if (i > x1) x1 = i;
+        if (j < z0) z0 = j;
+        if (j > z1) z1 = j;
+      }
+    }
+  }
+  if (x1 < 0) return DEFAULT_BOX;
+  const wx = (i: number) => Math.abs((i / (w - 1) - 0.5) * GRID.width);
+  const wz = (j: number) => Math.abs((j / (h - 1) - 0.5) * GRID.depth);
+  return { x: Math.max(wx(x0), wx(x1)) + 4, z: Math.max(wz(z0), wz(z1)) + 4, h: RISE[0] + RISE[1] + RISE[2] + 3 };
+}
+
+const fitCam = new THREE.PerspectiveCamera(FOV, 1, 1, 5000);
+const fitV = new THREE.Vector3();
+
+/**
+ * Camera for progress p: straight down at 0, a low oblique by TILT_DONE, held to 1. The distance is the smallest
+ * at which the word's box (all eight corners) lies inside the frame with a 7 % margin, at any canvas aspect and
+ * at every progress, so no letter is ever cut off. Pure.
+ */
+export function wordmarkPose(p: number, aspect: number, box: WordBox = DEFAULT_BOX): WordmarkPose {
   const t = smooth(0, TILT_DONE, clamp01(p));
   const e = t * t * (3 - 2 * t);
   const elev = THREE.MathUtils.degToRad(lerp(89, 33, e));
-  // The distance that fits the whole word across the frame, a little closer as it tilts.
-  const fit = 152 / (Math.tan(THREE.MathUtils.degToRad(FOV) / 2) * Math.max(0.6, aspect));
-  const R = fit * lerp(1, 1.08, e);
-  const target: [number, number, number] = [0, lerp(0, 4, e), lerp(0, 5, e)];
-  return {
-    position: [target[0], target[1] + Math.sin(elev) * R, target[2] + Math.cos(elev) * R],
-    target,
-    fov: FOV,
+  const target: [number, number, number] = [0, box.h * 0.35, 0];
+  const at = (R: number): [number, number, number] => [target[0], target[1] + Math.sin(elev) * R, target[2] + Math.cos(elev) * R];
+  fitCam.aspect = Math.max(0.3, aspect);
+  fitCam.fov = FOV;
+  fitCam.updateProjectionMatrix();
+  const inside = (R: number) => {
+    fitCam.position.set(...at(R));
+    fitCam.up.set(0, 1, 0);
+    fitCam.lookAt(target[0], target[1], target[2]);
+    fitCam.updateMatrixWorld(true);
+    for (const sx of [-1, 1]) {
+      for (const sz of [-1, 1]) {
+        for (const y of [-0.5, box.h]) {
+          fitV.set(sx * box.x, y, sz * box.z).project(fitCam);
+          if (Math.abs(fitV.x) > 1 - MARGIN || Math.abs(fitV.y) > 1 - MARGIN) return false;
+        }
+      }
+    }
+    return true;
   };
+  let lo = 40;
+  let hi = 3000;
+  for (let i = 0; i < 36; i++) {
+    const mid = (lo + hi) / 2;
+    if (inside(mid)) hi = mid;
+    else lo = mid;
+  }
+  return { position: at(hi), target, fov: FOV };
 }
 
 /* ------------------------------ DOM: glyph mask ------------------------------ */
@@ -173,9 +228,14 @@ export function wordmarkPose(p: number, aspect: number): WordmarkPose {
 type Mask = { mask: Float32Array; letters: Array<{ ch: string; cx: number }> };
 
 async function drawMask(canvas: HTMLCanvasElement): Promise<Mask> {
-  const fam = getComputedStyle(canvas).getPropertyValue("--font-barlow-condensed").trim() || '"Barlow Condensed"';
+  // The exact face of the landing heading (.l-h1): its computed family and weight. Until the page has one, the
+  // display-font variable, then Barlow Condensed 800.
+  const ref = document.querySelector<HTMLElement>(".l-h1");
+  const css = ref ? getComputedStyle(ref) : null;
+  const fam = css?.fontFamily || getComputedStyle(canvas).getPropertyValue("--font-barlow-condensed").trim() || '"Barlow Condensed"';
+  const weight = css?.fontWeight || "800";
   try {
-    await document.fonts.load(`800 200px ${fam}`, WORD);
+    await document.fonts.load(`${weight} 200px ${fam}`, WORD);
     await document.fonts.ready;
   } catch {
     // The fallback face still draws the word.
@@ -191,12 +251,12 @@ async function drawMask(canvas: HTMLCanvasElement): Promise<Mask> {
   g.fillStyle = "#fff";
   g.textBaseline = "alphabetic";
   const probe = 200;
-  g.font = `800 ${probe}px ${fam}`;
+  g.font = `${weight} ${probe}px ${fam}`;
   const gap = 0.025; // of the em
   const widths = [...WORD].map((c) => g.measureText(c).width);
   const em = (widths.reduce((a, b) => a + b, 0) + gap * probe * (WORD.length - 1)) / probe;
   const size = (w * 0.93) / em;
-  g.font = `800 ${size}px ${fam}`;
+  g.font = `${weight} ${size}px ${fam}`;
   const capH = g.measureText("H").actualBoundingBoxAscent || size * 0.7;
   const baseline = h / 2 + capH / 2;
   let x = (w - em * size) / 2;
@@ -216,8 +276,8 @@ async function drawMask(canvas: HTMLCanvasElement): Promise<Mask> {
 /* ------------------------------ scene ------------------------------ */
 
 const INK = new THREE.Color("#16150F");
-const GROUND = new THREE.Color("#3A372D");
-const TOP = new THREE.Color("#5C584B");
+const GROUND = new THREE.Color("#24221A");
+const TOP = new THREE.Color("#7A715C");
 
 function noopController(): WordmarkController {
   return { setProgress() {}, resize() {}, dispose() {} };
@@ -227,6 +287,7 @@ export async function mountWordmark(canvas: HTMLCanvasElement, opts: WordmarkOpt
   if (opts.reducedMotion || opts.compact) return noopController();
   const { mask, letters } = await drawMask(canvas);
   const hf = buildHeightfield(mask, GRID.w, GRID.h);
+  const box = maskBox(mask, GRID.w, GRID.h);
 
   let renderer: THREE.WebGLRenderer;
   try {
@@ -293,7 +354,7 @@ export async function mountWordmark(canvas: HTMLCanvasElement, opts: WordmarkOpt
         "#include <dithering_fragment>",
         `float lf = clamp(vLetter, 0.0, 1.0);
         float lines = max(max(contour(vH, 8.0, 1.5) * 1.0, contour(vH, 1.6, 0.8) * 0.75), max(contour(vH, 0.4, 0.55) * 0.42, contour(vH, 0.1, 0.5) * 0.24));
-        float amt = lines * mix(0.3, 0.95, lf);
+        float amt = lines * mix(0.2, 1.0, lf);
         // The glyph outline: strongest in the top-down view, where it is the flat wordmark edge.
         float ow = fwidth(vLetter);
         amt = max(amt, (1.0 - smoothstep(0.7, 1.9, abs(vLetter - 0.5) / max(ow, 1e-5))) * 0.55 * uOutline);
@@ -331,12 +392,13 @@ export async function mountWordmark(canvas: HTMLCanvasElement, opts: WordmarkOpt
 
   /* The machine, parked on the O. */
   const exc = buildExcavator();
-  exc.group.scale.setScalar(3);
+  exc.group.scale.setScalar(4.2);
   const oi = WORD.indexOf("O");
   const perch = findPerch(mask, GRID.w, GRID.h, letters[oi].cx);
   if (perch) exc.group.position.set(perch.x, sampleHeight(hf, perch.x, perch.z), perch.z);
   exc.setPose({ boom: 0.55, stick: -1.85, bucket: -0.3 });
-  exc.house.rotation.y = 0.5;
+  exc.house.rotation.y = 0.35;
+  exc.group.rotation.y = -0.7; // three-quarter to the oblique camera
   exc.group.traverse((o) => {
     const m = o as THREE.Mesh;
     if (m.isMesh) m.castShadow = true;
@@ -382,7 +444,7 @@ export async function mountWordmark(canvas: HTMLCanvasElement, opts: WordmarkOpt
     }
     const aspect = w / h;
     camera.aspect = aspect;
-    const pose = wordmarkPose(progress, aspect);
+    const pose = wordmarkPose(progress, aspect, box);
     camera.position.set(...pose.position);
     look.set(...pose.target);
     camera.lookAt(look);
@@ -392,7 +454,7 @@ export async function mountWordmark(canvas: HTMLCanvasElement, opts: WordmarkOpt
     const light = smooth(0.1, TILT_DONE, progress);
     uni.uOutline.value = lerp(1, 0.25, light);
     sun.intensity = lerp(0.0, 3.3, light);
-    hemi.intensity = lerp(1.25, 0.5, light);
+    hemi.intensity = lerp(1.7, 0.55, light);
     // The trail is traced across the letters while the camera settles.
     const drawn = smooth(0.25, 0.95, progress);
     trailGeo.setDrawRange(0, Math.floor(drawn * TUBE) * 5 * 6);

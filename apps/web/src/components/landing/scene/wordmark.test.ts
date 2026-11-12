@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { GRID, RISE, TILT_DONE, boxBlur, buildHeightfield, findPerch, mountWordmark, sampleHeight, wordmarkPose } from "./wordmark";
+import * as THREE from "three";
+import { DEFAULT_BOX, GRID, RISE, TILT_DONE, boxBlur, buildHeightfield, findPerch, mountWordmark, sampleHeight, wordmarkPose } from "./wordmark";
 import { wordmarkTrail } from "./wordmark-path";
 
 /* Pure parts of the 3D footer wordmark: no WebGL, no DOM. */
@@ -136,5 +137,36 @@ describe("mountWordmark API", () => {
       ctl.dispose();
       ctl.dispose(); // idempotent
     }
+  });
+});
+
+describe("camera framing (review: R cut off at the right edge)", () => {
+  it("keeps every corner of the word box inside the frame with at least 6 % margin, at any aspect and progress", () => {
+    const cam = new THREE.PerspectiveCamera();
+    const v = new THREE.Vector3();
+    for (const [cw, ch] of [[1440, 600], [1024, 480], [750, 330], [1920, 600]]) {
+      for (let p = 0; p <= 1.0001; p += 0.1) {
+        const pose = wordmarkPose(p, cw / ch);
+        cam.fov = pose.fov;
+        cam.aspect = cw / ch;
+        cam.position.set(...pose.position);
+        cam.lookAt(...pose.target);
+        cam.updateProjectionMatrix();
+        cam.updateMatrixWorld(true);
+        for (const sx of [-1, 1]) for (const sz of [-1, 1]) for (const y of [0, DEFAULT_BOX.h]) {
+          v.set(sx * DEFAULT_BOX.x, y, sz * DEFAULT_BOX.z).project(cam);
+          expect(Math.abs(v.x)).toBeLessThanOrEqual(0.94);
+          expect(Math.abs(v.y)).toBeLessThanOrEqual(0.94);
+        }
+      }
+    }
+  });
+
+  it("keeps the top bench edge crisp: it follows the glyph edge, not the blur", () => {
+    const hf2 = buildHeightfield(bar(), w, h);
+    // The bar's left edge is at column 270: the top bench is fully up one cell inside it and fully down one cell outside.
+    const row = 125;
+    expect(hf2.rise[row * w + 272]).toBeGreaterThan(RISE[0] + RISE[1] + RISE[2] - 0.5);
+    expect(RISE[0] + RISE[1] + RISE[2] - hf2.rise[row * w + 267]).toBeGreaterThan(RISE[2] - 0.5);
   });
 });
