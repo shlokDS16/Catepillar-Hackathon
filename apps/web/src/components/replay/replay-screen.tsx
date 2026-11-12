@@ -147,11 +147,14 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
 
   return (
     <div className="replay">
-      <header className="replay-head">
-        <p className="t-label tnum">{frameTime ? t("frame", { time: frameTime }) : t("frameLoading")}</p>
-        <PhaseRail phase={phase} />
-        <p className="t-meta text-ink-3">{t("simulatedNote")}</p>
-      </header>
+      {/* The Debrief carries its own frame label and phase segments inside the ink theatre. */}
+      {phase === "debrief" && state.debrief && scenario ? null : (
+        <header className="replay-head">
+          <p className="t-label tnum">{frameTime ? t("frame", { time: frameTime }) : t("frameLoading")}</p>
+          <PhaseRail phase={phase} />
+          <p className="t-meta text-ink-3">{t("simulatedNote")}</p>
+        </header>
+      )}
 
       <p className="replay-announce" role="status">{state.paused ? t("paused.title") : ""}</p>
 

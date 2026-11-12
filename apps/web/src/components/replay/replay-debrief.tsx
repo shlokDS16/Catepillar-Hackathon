@@ -1,9 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { useLocale, useTranslations } from "next-intl";
+import { useFormatter, useLocale, useTranslations } from "next-intl";
 import { useAudio } from "@/audio/use-audio";
 import { localText } from "@/components/alerts/alert-takeover";
+import { RAIL_PHASES } from "@/components/replay/phase-rail";
 import { ReenactmentPlayer } from "@/components/replay/reenactment-player";
 import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/ui/pictogram";
@@ -36,11 +37,14 @@ export function ReplayDebrief({ result, scenario, paused, onPractiseAgain }: Pro
   const t = useTranslations("replay.debrief");
   const lang = useLocale() as Lang;
   const title = localText(scenario.summary, lang);
-  const clip = (section: string) => sectionClipId(result.rule.audio_id, section);
+  const clip = (section: string) => sectionClipId(section);
+  const review = useMemo(() => reviewRows(result, scenario), [result, scenario]);
+  const rightCount = review.filter((r) => r.correct).length;
 
   return (
     <div className="deb">
       <section className="deb-stage" aria-labelledby="deb-what">
+        <StageFrame scenario={scenario} />
         <SectionHead id="deb-what" n="01" title={t("what")} audioId={clip("what")} />
         <p className="deb-headline" lang={title.english ? "en" : undefined}>
           {title.value}
@@ -49,24 +53,53 @@ export function ReplayDebrief({ result, scenario, paused, onPractiseAgain }: Pro
       </section>
 
       <section className="deb-section deb-s-scores" aria-labelledby="deb-scores">
-        <SectionHead id="deb-scores" n="02" title={t("scores")} audioId={clip("scores")} />
+        <SectionHead id="deb-scores" n="02" title={t("scores")} hint={t("forLearning")} audioId={clip("scores")} />
         <Scores scores={result.scores} />
-        <p className="t-meta text-ink-2">{t("scoresNote")}</p>
       </section>
 
       <section className="deb-section deb-s-path" aria-labelledby="deb-trace">
-        <SectionHead id="deb-trace" n="03" title={t("trace")} audioId={clip("path")} />
+        <SectionHead id="deb-trace" n="03" title={t("trace")} hint={t("vsSafest")} audioId={clip("path")} />
         <Trace result={result} scenario={scenario} />
       </section>
 
       <section className="deb-section deb-s-decisions" aria-labelledby="deb-decisions">
-        <SectionHead id="deb-decisions" n="04" title={t("decisions")} audioId={clip("decisions")} />
+        <SectionHead
+          id="deb-decisions"
+          n="04"
+          title={t("decisions")}
+          hint={t("rightCount", { n: rightCount, total: review.length })}
+          audioId={clip("decisions")}
+        />
         <Decisions result={result} scenario={scenario} />
       </section>
 
       <Rule result={result} scenario={scenario} />
 
       <Next lessonCode={result.lesson_code} onPractiseAgain={onPractiseAgain} />
+    </div>
+  );
+}
+
+/** Inside the theatre: "REPLAY · your event 09:40" and the four phase segments (this is phase 4 of 4). */
+function StageFrame({ scenario }: { scenario: ReplayScenario }) {
+  const t = useTranslations("replay");
+  const td = useTranslations("replay.debrief");
+  const format = useFormatter();
+  const time = format.dateTime(new Date(scenario.occurred_sim_ts), "time");
+  const last = RAIL_PHASES.length - 1;
+  return (
+    <div className="deb-frame">
+      <p className="t-caption deb-frame-row">
+        <span>{t("frame", { time })}</span>
+        <span>{td("simulated")}</span>
+      </p>
+      <ol className="deb-segs" role="list" aria-label={t("phasesLabel", { n: RAIL_PHASES.length, total: RAIL_PHASES.length })}>
+        {RAIL_PHASES.map((p, i) => (
+          <li key={p} data-state={i === last ? "current" : "done"} aria-current={i === last ? "step" : undefined}>
+            <span className="sr-only">{t(`phase.${p}`)}</span>
+          </li>
+        ))}
+      </ol>
     </div>
   );
 }
@@ -89,13 +122,26 @@ function SectionListen({ audioId, label }: { audioId: string | null; label: stri
   );
 }
 
-/** The numbered mono section label ("02 — How you did") with its [Listen] on the right. */
-function SectionHead({ id, n, title, audioId }: { id: string; n: string; title: string; audioId: string | null }) {
+/** The numbered mono section label ("02 — How you did"), a right-aligned hint, and [Listen]. */
+function SectionHead({
+  id,
+  n,
+  title,
+  hint,
+  audioId,
+}: {
+  id: string;
+  n: string;
+  title: string;
+  hint?: string;
+  audioId: string | null;
+}) {
   return (
     <div className="deb-lbl">
       <h2 id={id} className="t-caption deb-lbl-text">
         <span className="deb-lbl-n">{n} —</span> {title}
       </h2>
+      {hint ? <span className="t-caption deb-lbl-hint">{hint}</span> : null}
       <SectionListen audioId={audioId} label={title} />
     </div>
   );
@@ -139,7 +185,16 @@ function ScoreRow({ label, value, animate }: { label: string; value: number; ani
 function Trace({ result, scenario }: { result: ReplayDebriefResult; scenario: ReplayScenario }) {
   const t = useTranslations("replay.debrief");
   const lang = useLocale() as Lang;
-  const rows = useMemo(() => traceRows(result), [result]);
+  const traced = useMemo(() => traceRows(result), [result]);
+  // The mockup's shape: "You" holds what was opened; "Safest" holds the ideal path, with the cards
+  // you never opened shown dashed there ("missed"). Empty "You" slots keep the two rows aligned.
+  const rows = useMemo(() => {
+    const you = traced.you.filter((c) => c.kind !== "missed");
+    const missed = traced.you.filter((c) => c.kind === "missed");
+    const ideal = traced.ideal.map((c) => missed.find((m) => m.id === c.id) ?? c);
+    const extra = missed.filter((m) => !traced.ideal.some((c) => c.id === m.id));
+    return { you, ideal: [...ideal, ...extra] };
+  }, [traced]);
   const [open, setOpen] = useState<{ row: "you" | "ideal"; id: string } | null>(null);
 
   const titleOf = (id: string) => {
@@ -192,7 +247,14 @@ function Trace({ result, scenario }: { result: ReplayDebriefResult; scenario: Re
         {rows.you.length === 0 ? (
           <p className="t-body text-ink-2">{t("openedNone")}</p>
         ) : (
-          <ul className="deb-chips">{rows.you.map((c, i) => cell("you", c, i))}</ul>
+          <ul className="deb-chips">
+            {rows.you.map((c, i) => cell("you", c, i))}
+            {Array.from({ length: Math.max(0, rows.ideal.length - rows.you.length) }, (_, i) => (
+              <li key={`empty-${i}`} aria-hidden="true">
+                <span className="deb-chip" data-kind="empty" />
+              </li>
+            ))}
+          </ul>
         )}
       </div>
       <div className="deb-trace-row">
@@ -232,7 +294,7 @@ function Decisions({ result, scenario }: { result: ReplayDebriefResult; scenario
                 {t("stepOf", { n: r.step })}
                 {prompt ? ` · ${prompt.value}` : ""}
               </p>
-              <span className="t-caption deb-verdict">{t(r.correct ? "right" : "notQuite")}</span>
+              <span className="sr-only">{t(r.correct ? "right" : "notQuite")}</span>
             </div>
             <p className="t-body">
               <span className="deb-tag">{t("youSaid")}</span>{" "}
@@ -259,11 +321,10 @@ function Rule({ result, scenario }: { result: ReplayDebriefResult; scenario: Rep
   const source = scenario.investigate.cards.find((c) => c.type === "protocol_card" && c.card_id === result.rule.card_id);
   return (
     <Plate as="section" rule="heavy" className="deb-rule" aria-labelledby="deb-rule-title">
-      <SectionHead id="deb-rule-title" n="05" title={t("rule")} audioId={result.rule.audio_id} />
+      <SectionHead id="deb-rule-title" n="05" title={`${t("rule")} · ${source ? localText(source.title, lang).value : result.rule.card_id}`} audioId={result.rule.audio_id} />
       <blockquote className="deb-rule-text" lang={rule.english ? "en" : undefined}>
         {rule.value}
       </blockquote>
-      <p className="t-meta text-ink-2">{t("ruleSource", { source: source ? localText(source.title, lang).value : result.rule.card_id })}</p>
     </Plate>
   );
 }
@@ -276,11 +337,11 @@ function Next({ lessonCode, onPractiseAgain }: { lessonCode: string | null; onPr
   return (
     <div className="deb-next">
       {lessonCode ? (
-        <Button variant="primary" size="sos" href={`/op/training/lesson/${lessonCode}`} prefetch={false}>
-          {lessonTitle ? t("lessonNamed", { title: lessonTitle }) : t("lesson")}
+        <Button variant="primary" href={`/op/training/lesson/${lessonCode}`} prefetch={false}>
+          {lessonTitle ? t("lessonNamed", { title: lessonTitle }) : t("lesson")} →
         </Button>
       ) : null}
-      <Button variant={lessonCode ? "secondary" : "primary"} size={lessonCode ? "hit" : "sos"} onClick={onPractiseAgain}>
+      <Button variant={lessonCode ? "secondary" : "primary"} size={lessonCode ? "dense" : "hit"} onClick={onPractiseAgain}>
         {t("practiseAgain")}
       </Button>
     </div>

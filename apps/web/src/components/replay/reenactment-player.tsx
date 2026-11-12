@@ -131,14 +131,19 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
         </div>
       </dl>
 
-      <Scrubber
-        model={model}
-        t={s.t}
-        flagPassed={s.flagPassed}
-        responsePassed={s.responsePassed}
-        onSeek={player.seek}
-        onToggle={toggle}
-      />
+      <div className="deb-transport">
+        <Button variant="primary" onClick={toggle}>
+          {player.playing ? t("pause") : player.ended ? t("playAgain") : t("play")}
+        </Button>
+        <Scrubber
+          model={model}
+          t={s.t}
+          flagPassed={s.flagPassed}
+          responsePassed={s.responsePassed}
+          onSeek={player.seek}
+          onToggle={toggle}
+        />
+      </div>
 
       <ul className="deb-legend t-meta">
         <li>
@@ -154,10 +159,7 @@ export function ReenactmentPlayer({ scenario, paused }: Props) {
       </ul>
 
       <div className="deb-controls">
-        <Button variant="primary" onClick={toggle}>
-          {player.playing ? t("pause") : player.ended ? t("playAgain") : t("play")}
-        </Button>
-        <Button onClick={player.restart}>
+        <Button size="dense" onClick={player.restart}>
           {t("restart")}
         </Button>
         <span className="deb-speed t-caption" aria-label={t("speedLabel")}>

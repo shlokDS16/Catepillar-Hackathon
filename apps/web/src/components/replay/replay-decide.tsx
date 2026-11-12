@@ -185,13 +185,14 @@ export function ReplayDecide({
           ) : null}
 
           <ul className="dc-grid" aria-label={t("choicesLabel")}>
-            {def.choices.map((choice, index) => {
+            {def.choices.map((choice) => {
               const label = localText(choice.label, lang);
               const n = isOrder ? orderNumber(sequence, choice.id) : null;
               const chosen = isOrder ? n !== null : picked === choice.id;
-              // D14: a selected plate is outlined with a number badge, never an ink fill, so it
-              // cannot be mistaken for the one primary action. "Single" shows its list position.
-              const badge = isOrder ? n : chosen ? index + 1 : null;
+              // D14: a selected plate is outlined, never an ink fill, so it cannot be mistaken for
+              // the one primary action. Only the order step shows a number badge (tap order); a
+              // single choice shows the outline alone, so no number can be misread as an order.
+              const badge = isOrder ? n : null;
               return (
                 <li key={choice.id}>
                   <Plate

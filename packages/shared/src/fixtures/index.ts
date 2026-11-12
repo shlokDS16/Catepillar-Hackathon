@@ -133,7 +133,7 @@ export const evidenceCards = {
     trail: [pt(0, 21.1462, 79.0881)], machine_track: [pt(0, 21.1463, 79.0882)] },
   fault_code: { type: "fault_code" as const, id: "c_fault", title: i18n("Fault codes", "फ़ॉल्ट कोड"),
     codes: [{ code_type: "j1939_spn_fmi", code: "SPN 100 FMI 1", severity: "caution", description: i18n("Engine oil pressure low", "इंजन तेल दबाव कम") }] },
-  protocol_card: { type: "protocol_card" as const, id: "c_card", title: i18n("Protocol card", "प्रोटोकॉल कार्ड"), card_id: "seatbelt_slopes" },
+  protocol_card: { type: "protocol_card" as const, id: "c_card", title: i18n("Seatbelt on slopes", "ढलान पर सीटबेल्ट"), card_id: "seatbelt_slopes" },
   weather: { type: "weather" as const, id: "c_weather", title: i18n("Weather", "मौसम"), temperature_c: 38.5, wbgt_c: 31.2 },
   shift_hours: { type: "shift_hours" as const, id: "c_shift", title: i18n("Hours on shift", "शिफ्ट के घंटे"), hours_on_shift: 3.7,
     circadian_band: "normal" as const },

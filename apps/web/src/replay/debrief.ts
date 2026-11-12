@@ -72,7 +72,7 @@ export function reviewRows(result: ReplayDebriefResult, scenario: ReplayScenario
   });
 }
 
-/** Clip id for a Debrief section [Listen]: `replay.<area>.<event>.rule` becomes `...<event>.debrief_<section>`. */
-export function sectionClipId(ruleAudioId: string | null, section: string): string | null {
-  return ruleAudioId ? `${ruleAudioId.replace(/\.[^.]+$/, "")}.debrief_${section}` : null;
+/** Clip id for a Debrief section [Listen]: one fixed, generic script per section (clips carry no per-operator numbers). */
+export function sectionClipId(section: string): string {
+  return `replay.debrief.${section}`;
 }

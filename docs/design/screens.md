@@ -163,6 +163,8 @@ An open card is a sheet, with content by `EvidenceCard.type`:
 | L3 | `single`: 2-5 choice plates (pictogram + label, ≥ 80 px). `order`: the same plates, which show the assigned numbers 1..n, plus [Confirm order] |
 
 **Phase 4: Debrief** (untimed; T8, T9). Order: what happened → how you did → how you investigated → your decisions → the one rule → next.
+
+D14 Ink Frame layout: the re-enactment plays on an ink theatre (frame label, four phase segments, headline = `scenario.summary`, compact readouts, play beside the scrubber). Sections are numbered mono rules: 01 What happened, 02 How you did (For learning), 03 How you investigated (You vs safest), 04 Your decisions (n of m right), 05 The rule and its source card. Operator words: Safety, Right steps, Speed; "Safest" for the ideal path. Each section has [Listen] (`replay.debrief.{what,scores,path,decisions}`, hidden until its clip exists). Decide shows no right/wrong per step; a selected choice is outlined (the order step adds a tap-order badge) and [Confirm order] sticks above the dock.
 | Level | Content |
 |---|---|
 | L3 | **Re-enactment player:** the SitePlan with the trail drawing itself, the machine marker moving with its heading, the wind arrow and the operator dot. Readouts: sim time, speed, pitch, seatbelt pictogram. Controls: Play/Pause, a scrubber with markers (⚑ event, ⏱ "you responded after 14 s" from `real_response_ms`), Restart, a "10×" label. Caption: "Re-enactment from your recorded data · simulated" |

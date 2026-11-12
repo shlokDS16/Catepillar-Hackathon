@@ -358,7 +358,7 @@
   position: sticky;
   z-index: 5;
   align-self: stretch;
-  inset-block-end: calc(var(--dock-h) + var(--s-3));
+  inset-block-end: var(--dock-total); /* flush on the dock (incl. the home-indicator inset): no gap for plates to show through */
   padding-block: var(--s-3);
   background: var(--paper);
   border-top: var(--bw-hair) solid var(--ink);
@@ -366,7 +366,141 @@
 @media (min-width: 1024px) {
   /* From 1024 px the dock is the left rail, so nothing sits under the bottom edge. */
   .replay-actions[data-dock-safe="true"] {
-    inset-block-end: var(--s-3);
+    inset-block-end: 0;
+  }
+}
+
+/* =====================================================================================
+   Mockup fit (b-debrief): compact theatre, frame label and phase segments inside the ink,
+   three-column desktop, hint in the section rule, rule and next hierarchy.
+   ===================================================================================== */
+.deb-frame {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.deb-frame-row {
+  display: flex;
+  justify-content: space-between;
+  gap: var(--s-3);
+  margin: 0;
+  color: var(--on-frame-2);
+}
+.deb-segs {
+  display: flex;
+  gap: var(--s-2);
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.deb-segs > li {
+  flex: 1;
+  height: var(--s-2);
+  background: var(--on-frame);
+}
+.deb-segs > li[data-state="current"] {
+  outline: var(--bw) solid var(--on-frame);
+  outline-offset: var(--s-1);
+}
+.deb-lbl-hint {
+  margin-inline-start: auto;
+  color: var(--ink-3);
+  text-align: end;
+}
+.deb-stage .deb-lbl-hint {
+  color: var(--on-frame-2);
+}
+.deb-stage .site-plan-svg {
+  height: clamp(200px, 30vh, 460px);
+}
+/* One compact readout block instead of five boxed tiles. */
+.deb-stage .deb-readouts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-1) var(--s-4);
+}
+.deb-stage .deb-readouts > div {
+  display: flex;
+  align-items: baseline;
+  gap: var(--s-2);
+  border: 0;
+  padding: 0;
+}
+.deb-stage .deb-readouts dd {
+  font-size: var(--t-meta);
+  line-height: var(--lh-meta);
+}
+.deb-stage .deb-belt .picto {
+  width: var(--s-5);
+  height: var(--s-5);
+}
+/* The play control sits beside the scrubber. */
+.deb-transport {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: var(--s-3);
+}
+.deb-transport .btn {
+  min-width: var(--hit);
+}
+.deb-controls {
+  gap: var(--s-3);
+}
+/* The track needs 3:1 against the stage (WCAG 1.4.11). */
+.deb-stage .deb-rail {
+  border: var(--bw-hair) solid var(--on-frame-2);
+}
+.deb-cell-n {
+  font-size: var(--t-meta);
+}
+.deb-chip[data-kind="empty"] {
+  border-color: transparent;
+  background: repeating-linear-gradient(135deg, transparent 0 6px, var(--rule) 6px 7px);
+}
+.deb-rule-text::before {
+  content: "“";
+}
+.deb-rule-text::after {
+  content: "”";
+}
+.deb-next {
+  align-items: center;
+}
+.deb-next > .btn[data-variant="primary"] {
+  min-width: min(100%, 420px);
+}
+.deb-next > .btn:not([data-variant="primary"]) {
+  min-width: 0;
+}
+@media (min-width: 1024px) {
+  .deb {
+    grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr) minmax(0, 1fr);
+    column-gap: var(--s-6);
+  }
+  .deb > .deb-stage,
+  .deb > .deb-rule,
+  .deb > .deb-next {
+    grid-column: 1 / -1;
+  }
+  .deb > .deb-s-scores {
+    grid-column: auto;
+  }
+  .deb-s-scores .deb-scores {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .deb-s-scores .deb-scores > .deb-score + .deb-score {
+    border-left: 0;
+    padding-left: 0;
+  }
+  .deb-stage .deb-readouts {
+    grid-template-columns: none;
+  }
+  .deb-stage > .deb-frame {
+    grid-column: 1 / -1;
+  }
+  .deb-stage .site-plan {
+    grid-row: 3 / span 8;
   }
 }
 
