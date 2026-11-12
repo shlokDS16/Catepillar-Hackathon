@@ -25,25 +25,13 @@
 }
 .inbox-tiers {
   display: flex;
+  flex-wrap: wrap;
+  list-style: none;
+  margin: 0;
   gap: var(--s-2);
   padding: var(--s-3) var(--s-4);
   border-block-end: var(--bw) solid var(--ink);
 }
-.inbox-tier-count {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 48px;
-  min-height: 48px;
-  border: var(--bw) solid var(--ink);
-  background: var(--surface);
-  font-family: var(--ff-display);
-  font-size: var(--t-title);
-  font-weight: var(--fw-title);
-}
-.inbox-tier-count[data-tier="caution"] { background: var(--state-caution); color: var(--on-signal); }
-.inbox-tier-count[data-tier="warning"] { background: var(--state-warning); color: var(--on-signal); }
-.inbox-tier-count[data-tier="critical"] { background: var(--state-critical); color: var(--on-ink); }
 .inbox-new {
   display: flex;
   align-items: center;
@@ -212,25 +200,66 @@
   font-weight: var(--fw-state);
   text-transform: uppercase;
 }
-.inbox-kicker {
+/* Header: the tier plate, then who and where. Colour only while the alert is live. */
+.inbox-head {
   display: flex;
+  flex-wrap: wrap;
   align-items: center;
-  gap: var(--s-2);
+  gap: var(--s-3);
+}
+.inbox-head-meta {
   margin: 0;
+  min-width: 0;
   font-family: var(--ff-mono);
   letter-spacing: var(--ls-caption);
   text-transform: uppercase;
   color: var(--ink-2);
+  overflow-wrap: anywhere;
 }
-.inbox-swatch {
-  width: 14px;
-  height: 14px;
-  background: var(--ink);
-  flex: none;
+:lang(hi) .inbox-head-meta { letter-spacing: 0; text-transform: none; }
+/* The bay stage: the machine drawing with the faulty part marked. A drawing, not a photo. */
+.inbox-stage {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  padding: var(--s-3);
+  border: var(--bw) solid var(--ink);
+  background: var(--bay, var(--surface-sunk));
+  background-image: linear-gradient(var(--bay-grid, transparent) 1px, transparent 1px), linear-gradient(90deg, var(--bay-grid, transparent) 1px, transparent 1px);
+  background-size: 24px 24px;
 }
-.inbox-swatch[data-tier="caution"] { background: var(--state-caution); }
-.inbox-swatch[data-tier="warning"] { background: var(--state-warning); }
-.inbox-swatch[data-tier="critical"] { background: var(--state-critical); }
+.inbox-stage .bay-draw { max-width: 560px; margin-inline: auto; }
+.inbox-stage figcaption { color: var(--ink-2); }
+.inbox-stage-part { color: var(--ink); font-weight: var(--fw-label); }
+.inbox-dry { margin: 0; color: var(--ink-2); }
+/* Ledger seal line: a link, never a button that acts. */
+.inbox-seal {
+  display: flex;
+  align-items: center;
+  min-height: 48px;
+  padding: var(--s-2) var(--s-3);
+  border: var(--bw) dashed var(--ink);
+  color: var(--ink);
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  overflow-wrap: anywhere;
+}
+/* FM band: the ledger cell next to the connectivity caption. */
+.strip-ledger {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-2);
+  min-width: 0;
+  color: var(--on-frame);
+  --mark-bg: var(--frame);
+  overflow-wrap: anywhere;
+}
+.strip-ledger .picto { width: 18px; height: 18px; flex: none; }
+.strip-ledger[data-state="check"] { font-weight: var(--fw-label); }
+@media (max-width: 759px) {
+  .strip-ledger { display: none; }
+}
 .inbox-sentence {
   margin: 0;
   font-size: var(--t-label);
@@ -274,7 +303,7 @@
     row-gap: var(--s-3);
     align-items: start;
   }
-  .inbox-detail[data-variant="pane"] > .inbox-kicker,
+  .inbox-detail[data-variant="pane"] > .inbox-head,
   .inbox-detail[data-variant="pane"] > .inbox-detail-title,
   .inbox-detail[data-variant="pane"] > [role="status"] {
     grid-column: 1 / -1;
