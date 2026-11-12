@@ -27,8 +27,10 @@ export type AppState = {
   ppeMissing: string[];
   /** The live supervisor override from `ppe.override_granted` (15 min from the event's sim time); cleared when the vest is restored or the task completes. */
   ppeOverride: { taskId: string; validUntil: string; missing: string[] } | null;
-  /** Sim time each task was started (first `task.started`), for the elapsed figure. */
-  taskStartedAt: Record<string, string>;
+  /** Working time per task from task.started / task.paused sim times: closed intervals plus the one running now. */
+  taskWork: Record<string, { workedMs: number; runningSince: string | null }>;
+  /** Items named by the last `ppe.restored`, for "Vest detected". */
+  ppeRestored: string[];
   /** Guardian hazards keyed by anomaly id, so the map can draw them and the takeover can explain them. */
   guardian: Record<string, z.infer<typeof GuardianHazard>>;
   /** The same hazards keyed by the alert id their event carried, so the takeover picks its own hazard (F06-F08 review 6). */
@@ -55,7 +57,8 @@ export const initialState: AppState = {
   ledgerSeq: {},
   ppeMissing: [],
   ppeOverride: null,
-  taskStartedAt: {},
+  taskWork: {},
+  ppeRestored: [],
   guardian: {},
   guardianByAlert: {},
   anomalies: {},
@@ -104,6 +107,10 @@ export function reduce(state: AppState, action: Action): AppState {
         machine: s.machine,
         operator: s.operator_state,
         assignments: s.assignments,
+        // A task still blocked on PPE after a reload stays blocked: the items come from the operator's PPE flags.
+        ppeMissing: s.tasks.some((x) => x.status === "blocked_ppe")
+          ? Object.entries(s.operator_state?.ppe ?? {}).filter(([, ok]) => ok === false).map(([k]) => k)
+          : state.ppeMissing,
         clock: s.run ? { sim_now: s.run.sim_now, speed: s.run.speed, status: s.run.status } : state.clock,
         lastFrameMs: action.nowMs,
         seenSeq: s.recent_events.map((e) => e.seq),
@@ -214,12 +221,20 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
     case "task.completed":
     case "task.progress": {
       const t = payload(e, "task.progress");
-      const startedAt = { ...state.taskStartedAt };
-      if (e.type === "task.started" && !startedAt[t.task_id]) startedAt[t.task_id] = e.sim_ts ?? e.recorded_at;
-      if (e.type === "task.completed") delete startedAt[t.task_id];
+      const work = { ...state.taskWork };
+      const at = e.sim_ts ?? e.recorded_at;
+      const cur = work[t.task_id];
+      if (e.type === "task.started") {
+        if (!cur) work[t.task_id] = { workedMs: 0, runningSince: at };
+        else if (!cur.runningSince) work[t.task_id] = { ...cur, runningSince: at };
+      } else if (e.type === "task.paused" && cur?.runningSince) {
+        work[t.task_id] = { workedMs: cur.workedMs + Math.max(0, Date.parse(at) - Date.parse(cur.runningSince)), runningSince: null };
+      } else if (e.type === "task.completed") {
+        delete work[t.task_id];
+      }
       return {
         ...base,
-        taskStartedAt: startedAt,
+        taskWork: work,
         ppeOverride: e.type === "task.completed" && state.ppeOverride?.taskId === t.task_id ? null : state.ppeOverride,
         tasks: patchTask(state.tasks, t.task_id, {
           status: t.status,
@@ -246,6 +261,7 @@ function applyEvent(state: AppState, raw: AppEvent, nowMs: number): AppState {
         ...base,
         ppeMissing: state.ppeMissing.filter((i) => !restored.has(i)),
         ppeOverride: null,
+        ppeRestored: items,
         operator: state.operator
           ? { ...state.operator, ppe: { ...state.operator.ppe, ...Object.fromEntries(items.map((i) => [i, true])) } }
           : state.operator,

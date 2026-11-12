@@ -622,7 +622,7 @@
     "needsPpe": "Needs {items}",
     "progressLabel": "Progress",
     "elapsed": "{min} min so far",
-    "elapsedNone": "Elapsed: not started",
+    "elapsedNone": "—",
     "plannedStart": "planned {time}",
     "completed": "{task} completed",
     "confirmTitle": "Complete {task}?",
@@ -642,16 +642,18 @@
       "notified": "Supervisor notified",
       "detected": "{items} detected",
       "allItems": "Vest",
-      "override": "Override by {name} · until {time}",
+      "override": "Override by your supervisor · until {time}",
       "overrideNote": "Allowed without: {items}. Recorded in the ledger.",
       "expired": "Override expired",
-      "supervisorName": "Anita",
       "item": {
         "helmet": "helmet",
         "vest": "vest",
         "boots": "boots",
         "gloves": "gloves"
-      }
+      },
+      "overrideLapsed": "Override ended {time}",
+      "lapsedNote": "Start checks protective equipment again.",
+      "notifiedDryRun": "Supervisor alert: test run, not sent"
     },
     "why": {
       "title": "Why this estimate",

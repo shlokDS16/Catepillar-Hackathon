@@ -622,7 +622,7 @@
     "needsPpe": "{items} चाहिए",
     "progressLabel": "प्रगति",
     "elapsed": "अब तक {min} मिनट",
-    "elapsedNone": "बीता समय: शुरू नहीं",
+    "elapsedNone": "—",
     "plannedStart": "तय समय {time}",
     "completed": "{task} पूरा हुआ",
     "confirmTitle": "{task} पूरा करें?",
@@ -642,16 +642,18 @@
       "notified": "सुपरवाइज़र को सूचना दी गई",
       "detected": "{items} दिखा",
       "allItems": "वेस्ट",
-      "override": "{name} की छूट · {time} तक",
+      "override": "सुपरवाइज़र की छूट · {time} तक",
       "overrideNote": "इनके बिना अनुमति: {items}। लेजर में दर्ज।",
       "expired": "छूट खत्म हो गई",
-      "supervisorName": "अनीता",
       "item": {
         "helmet": "हेलमेट",
         "vest": "वेस्ट",
         "boots": "जूते",
         "gloves": "दस्ताने"
-      }
+      },
+      "overrideLapsed": "छूट {time} पर खत्म हुई",
+      "lapsedNote": "शुरू करने पर सुरक्षा उपकरण फिर जाँचे जाएँगे।",
+      "notifiedDryRun": "सुपरवाइज़र अलर्ट: परीक्षण, भेजा नहीं गया"
     },
     "why": {
       "title": "यह अनुमान क्यों",

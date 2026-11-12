@@ -175,12 +175,16 @@ describe("task + PPE override state (F10)", () => {
     s = reduce(s, { type: "event", event: ev("ppe.restored", 402), nowMs: NOW });
     expect(s.ppeOverride).toBeNull();
   });
-  it("remembers the first start per task and forgets it on completion", () => {
+  it("adds up working time across pauses and forgets it on completion", () => {
     let s = reduce(boot(), { type: "event", event: ev("task.started", 410, { sim_ts: "2026-09-24T13:21:00.000+05:30" }), nowMs: NOW });
     s = reduce(s, { type: "event", event: ev("task.paused", 411, { sim_ts: "2026-09-24T13:30:00.000+05:30" }), nowMs: NOW });
     s = reduce(s, { type: "event", event: ev("task.started", 412, { sim_ts: "2026-09-24T13:40:00.000+05:30" }), nowMs: NOW });
-    expect(s.taskStartedAt[IDS.task]).toBe("2026-09-24T13:21:00.000+05:30");
+    expect(s.taskWork[IDS.task]).toEqual({ workedMs: 9 * 60_000, runningSince: "2026-09-24T13:40:00.000+05:30" });
     s = reduce(s, { type: "event", event: ev("task.completed", 413), nowMs: NOW });
-    expect(s.taskStartedAt[IDS.task]).toBeUndefined();
+    expect(s.taskWork[IDS.task]).toBeUndefined();
+  });
+  it("a snapshot with a blocked_ppe task refills ppeMissing from the PPE flags", () => {
+    const blocked = MySnapshotOut.parse({ ...mySnapshot, tasks: [{ ...mySnapshot.tasks[0], status: "blocked_ppe" }], operator_state: { ...mySnapshot.operator_state, ppe: { vest: false, helmet: true } } });
+    expect(reduce(initialState, { type: "snapshot", snapshot: blocked, nowMs: NOW }).ppeMissing).toEqual(["vest"]);
   });
 });

@@ -1,10 +1,10 @@
 "use client";
 
-import Link from "next/link";
 import { useFormatter, useTranslations } from "next-intl";
 import { useEffect, useRef, useState } from "react";
 import { FactorRows } from "@/components/task/factor-rows";
 import { PpePlate } from "@/components/task/ppe-plate";
+import { ProvenanceChip } from "@/components/ui/provenance";
 import { Button, type ButtonStatus } from "@/components/ui/button";
 import { Chip } from "@/components/ui/chip";
 import { Plate } from "@/components/ui/plate";
@@ -33,7 +33,9 @@ export function TaskScreen() {
   const tasks = useAppState((s) => s.tasks);
   const ppeMissing = useAppState((s) => s.ppeMissing);
   const override = useAppState((s) => s.ppeOverride);
-  const startedAt = useAppState((s) => s.taskStartedAt);
+  const work = useAppState((s) => s.taskWork);
+  const restored = useAppState((s) => s.ppeRestored);
+  const dryRun = useAppState((s) => s.connectivity.kind === "fixture");
   const clock = useAppState((s) => s.clock);
   const offline = useAppState((s) => s.connectivity.kind === "nosignal");
   const detailed = mode === "detailed";
@@ -43,7 +45,7 @@ export function TaskScreen() {
   const [serverExpired, setServerExpired] = useState<string | null>(null);
   const [confirming, setConfirming] = useState(false);
   const [completed, setCompleted] = useState<string | null>(null);
-  const ids = useRef<Partial<Record<Intent, string>>>({});
+  const ids = useRef<Record<string, string>>({});
   const timers = useRef<number[]>([]);
   useEffect(() => () => timers.current.forEach((x) => window.clearTimeout(x)), []);
 
@@ -78,16 +80,18 @@ export function TaskScreen() {
     missing: ppeMissing,
     override,
     nowMs,
-    serverExpired: serverExpired === task.id,
+    serverExpiredFor: serverExpired,
+    restored,
   });
   const actions = taskActions(task.status, ppe);
   const state = workState(machine, task);
   const taskName = tc(`enums.task.${task.task_type}`);
-  const elapsed = elapsedMin(startedAt[task.id], nowMs);
+  const elapsed = elapsedMin(work[task.id], nowMs);
   const missingItems = ppe.kind === "blocked" || ppe.kind === "expired" ? ppe.missing.map((i) => (tc.has(`task.ppe.item.${i}`) ? tc(`task.ppe.item.${i}`) : i)).join(", ") : "";
 
   const setIntent = (intent: Intent, s: ButtonStatus) => setStatus((prev) => ({ ...prev, [intent]: s }));
-  const idFor = (intent: Intent) => (ids.current[intent] ??= newRequestId());
+  const idFor = (intent: Intent) => (ids.current[`${intent}:${task.id}`] ??= newRequestId());
+  const clearId = (intent: Intent) => delete ids.current[`${intent}:${task.id}`];
   const flashSuccess = (intent: Intent) => {
     setIntent(intent, "success");
     timers.current.push(window.setTimeout(() => setIntent(intent, "idle"), 1200));
@@ -99,6 +103,7 @@ export function TaskScreen() {
 
   async function start() {
     setError(null);
+    setCompleted(null);
     setIntent("start", "loading");
     try {
       const out = await port.taskStart({
@@ -109,7 +114,7 @@ export function TaskScreen() {
         p_eta_factors: task!.eta_factors,
         p_eta_model_version: null,
       });
-      delete ids.current.start;
+      clearId("start");
       if (out.status === "blocked") {
         // The plate arrives from the task.start_blocked and ppe.missing events; the button just rests.
         setServerExpired(null);
@@ -121,8 +126,8 @@ export function TaskScreen() {
     } catch (e) {
       if (e instanceof RpcError && e.code === "override_expired") {
         // The server is the authority on the expiry; the plate switches to "Override expired".
-        delete ids.current.start;
-        setServerExpired(task!.id);
+        clearId("start");
+        setServerExpired(override?.taskId === task!.id ? override.validUntil : null);
         setIntent("start", "idle");
         return;
       }
@@ -132,10 +137,11 @@ export function TaskScreen() {
 
   async function pause() {
     setError(null);
+    setCompleted(null);
     setIntent("pause", "loading");
     try {
       await port.taskPause({ p_task_id: task!.id, p_request_id: idFor("pause") });
-      delete ids.current.pause;
+      clearId("pause");
       flashSuccess("pause");
     } catch (e) {
       fail("pause", e);
@@ -147,7 +153,7 @@ export function TaskScreen() {
     setIntent("complete", "loading");
     try {
       await port.taskComplete({ p_task_id: task!.id, p_request_id: idFor("complete") });
-      delete ids.current.complete;
+      clearId("complete");
       setCompleted(taskName);
       setConfirming(false);
       setIntent("complete", "idle");
@@ -171,7 +177,7 @@ export function TaskScreen() {
   return (
     <div className="task-screen">
       <div className="task-main">
-        <PpePlate view={ppe} />
+        <PpePlate view={ppe} dryRun={dryRun} />
 
         <header className="flex flex-wrap items-baseline justify-between gap-3">
           <h1 className="t-title">{taskName}</h1>
@@ -207,11 +213,7 @@ export function TaskScreen() {
               {t("complete")}
             </Button>
           ) : null}
-          {error?.code === "not_paired" ? (
-            <Link href="/" className="t-label underline underline-offset-4">
-              {t("errors.pairLink")}
-            </Link>
-          ) : null}
+          {error?.code === "not_paired" ? <Button href="/">{t("errors.pairLink")}</Button> : null}
           {completed ? (
             <p className="t-label" role="status">
               {t("completed", { task: completed })}
@@ -234,6 +236,7 @@ export function TaskScreen() {
             {elapsed != null ? t("elapsed", { min: elapsed }) : t("elapsedNone")}
             {detailed && eta90 != null ? ` · ${tc("hero.etaUpTo", { min: eta90 })}` : ""}
             {detailed ? ` · ${t("plannedStart", { time: format.dateTime(new Date(task.planned_start), "time") })}` : ""}
+            {detailed ? <> <ProvenanceChip table="tasks" field="planned_start" /></> : null}
           </p>
         </Plate>
 
@@ -245,7 +248,7 @@ export function TaskScreen() {
           <p className="t-body">
             {elapsed != null ? t("confirmBody", { pct: progress, min: elapsed }) : t("confirmBodyNoTime", { pct: progress })}
           </p>
-          <Button variant="primary" status={status.complete} note={errorLine("complete")} onClick={complete}>
+          <Button variant="primary" status={status.complete} disabled={offline} note={offline ? tc("chrome.needsSignal") : errorLine("complete")} onClick={complete}>
             {t("confirm")}
           </Button>
           <Button onClick={() => setConfirming(false)}>{t("back")}</Button>

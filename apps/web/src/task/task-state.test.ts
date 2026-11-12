@@ -16,32 +16,33 @@ describe("PPE state machine", () => {
     expect(blocked).toEqual({ kind: "blocked", missing: ["vest"] });
     expect(taskActions("blocked_ppe", blocked)).toMatchObject({ primary: "start", needsPpe: true });
     const restored = derivePpe({ ...base, status: "blocked_ppe", missing: [] });
-    expect(restored).toEqual({ kind: "restored" });
+    expect(restored).toEqual({ kind: "restored", items: [] });
+    expect(derivePpe({ ...base, status: "blocked_ppe", restored: ["vest"] })).toEqual({ kind: "restored", items: ["vest"] });
     expect(taskActions("blocked_ppe", restored).needsPpe).toBe(false);
   });
 
   it("override path: live until the expiry, Start allowed", () => {
     const v = derivePpe({ ...base, status: "blocked_ppe", override, nowMs: T0 });
-    expect(v).toMatchObject({ kind: "override", validUntil: UNTIL });
+    expect(v).toMatchObject({ kind: "override", validUntil: UNTIL, lapsed: false });
     expect(taskActions("blocked_ppe", v).needsPpe).toBe(false);
   });
 
-  it("expired path: at and after valid_until the plate re-blocks and Start is disabled", () => {
-    for (const now of [Date.parse(UNTIL), Date.parse(UNTIL) + 60_000]) {
-      const v = derivePpe({ ...base, status: "blocked_ppe", override, nowMs: now });
-      expect(v).toEqual({ kind: "expired", missing: ["vest"] });
-      expect(taskActions("blocked_ppe", v)).toMatchObject({ primary: "start", needsPpe: true });
-    }
+  it("local expiry keeps Start usable (lapsed) so task_start can run and the server re-sends ppe.missing", () => {
+    const v = derivePpe({ ...base, status: "blocked_ppe", override, nowMs: Date.parse(UNTIL) + 60_000 });
+    expect(v).toMatchObject({ kind: "override", lapsed: true });
+    expect(taskActions("blocked_ppe", v)).toMatchObject({ primary: "start", needsPpe: false });
   });
 
-  it("expired re-blocks a paused task too: Resume is disabled", () => {
-    const v = derivePpe({ ...base, status: "paused", override, nowMs: Date.parse(UNTIL) + 1 });
-    expect(v.kind).toBe("expired");
+  it("expired path: after the server answers override_expired the plate re-blocks and Start is disabled", () => {
+    const v = derivePpe({ ...base, status: "blocked_ppe", override, serverExpiredFor: UNTIL });
+    expect(v).toEqual({ kind: "expired", missing: ["vest"] });
+    expect(taskActions("blocked_ppe", v)).toMatchObject({ primary: "start", needsPpe: true });
     expect(taskActions("paused", v)).toMatchObject({ primary: "resume", needsPpe: true });
   });
 
-  it("a server answer of override_expired wins over a local clock that still says live", () => {
-    expect(derivePpe({ ...base, status: "blocked_ppe", override, serverExpired: true }).kind).toBe("expired");
+  it("a new override (new valid_until) clears an earlier server expiry", () => {
+    const next = { ...override, validUntil: "2026-09-24T14:40:00.000+05:30" };
+    expect(derivePpe({ ...base, status: "blocked_ppe", override: next, serverExpiredFor: UNTIL }).kind).toBe("override");
   });
 
   it("ppe.restored clears the override record, so the plate becomes Vest detected", () => {
@@ -69,10 +70,10 @@ describe("A06 start / resume, A07 pause, A08 complete", () => {
     expect(taskActions("completed", clear)).toEqual({ primary: null, needsPpe: false, canComplete: false });
     expect(taskActions("cancelled", clear).primary).toBeNull();
   });
-  it("elapsed counts whole sim minutes since the first start", () => {
-    expect(elapsedMin("2026-09-24T13:21:00.000+05:30", T0)).toBe(41);
+  it("elapsed is working time: closed intervals plus the running one, pauses excluded", () => {
+    expect(elapsedMin({ workedMs: 10 * 60_000, runningSince: "2026-09-24T13:41:00.000+05:30" }, T0)).toBe(31);
+    expect(elapsedMin({ workedMs: 9 * 60_000, runningSince: null }, T0)).toBe(9);
     expect(elapsedMin(undefined, T0)).toBeNull();
-    expect(elapsedMin("2026-09-24T15:00:00.000+05:30", T0)).toBe(0);
   });
 });
 

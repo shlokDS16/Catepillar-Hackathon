@@ -11,7 +11,7 @@ import type { PpeView } from "@/task/task-state";
  * until 14:17" (override), "Override expired" (blocked again). It is a sign, not an alarm: no motion
  * beyond the one-shot border stamp, no sound, and the live region is polite.
  */
-export function PpePlate({ view }: { view: PpeView }) {
+export function PpePlate({ view, dryRun }: { view: PpeView; dryRun: boolean }) {
   const t = useTranslations("task.ppe");
   const format = useFormatter();
   if (view.kind === "clear") return null;
@@ -20,10 +20,10 @@ export function PpePlate({ view }: { view: PpeView }) {
 
   if (view.kind === "restored") {
     return (
-      <Plate key="restored" tone="clear" rule="heavy" stamp role="status" aria-label={t("label")} className="ppe-plate">
+      <Plate key="restored" tone="clear" rule="heavy" role="status" aria-label={t("label")} className="ppe-plate">
         <p className="t-title flex items-center gap-3">
           <Mark kind="check" />
-          {t("detected", { items: t("allItems") })}
+          {t("detected", { items: view.items.length > 0 ? view.items.map(item).join(", ") : t("allItems") })}
         </p>
       </Plate>
     );
@@ -31,9 +31,9 @@ export function PpePlate({ view }: { view: PpeView }) {
 
   if (view.kind === "override") {
     return (
-      <Plate key="override" tone="caution" rule="heavy" stamp role="status" aria-label={t("label")} className="ppe-plate">
-        <p className="t-title">{t("override", { name: t("supervisorName"), time: format.dateTime(new Date(view.validUntil), "time") })}</p>
-        <p className="t-meta">{t("overrideNote", { items: view.missing.map(item).join(", ") })}</p>
+      <Plate key="override" tone="caution" rule="heavy" role="status" aria-label={t("label")} className="ppe-plate">
+        <p className="t-title">{t(view.lapsed ? "overrideLapsed" : "override", { time: format.dateTime(new Date(view.validUntil), "time") })}</p>
+        <p className="t-meta">{view.lapsed ? t("lapsedNote") : t("overrideNote", { items: view.missing.map(item).join(", ") })}</p>
       </Plate>
     );
   }
@@ -45,12 +45,12 @@ export function PpePlate({ view }: { view: PpeView }) {
       <ul className="ppe-items">
         {view.missing.map((i) => (
           <li key={i} className="ppe-item">
-            <Pictogram name="vest" size="lg" />
+            {i === "vest" ? <Pictogram name="vest" size="lg" /> : <Mark kind="info" />}
             <span className="t-title">{t("wear", { item: item(i) })}</span>
           </li>
         ))}
       </ul>
-      <p className="t-label">{t("notified")}</p>
+      <p className="t-label">{dryRun ? t("notifiedDryRun") : t("notified")}</p>
     </Plate>
   );
 }

@@ -13,8 +13,10 @@ export type PpeOverrideRecord = { taskId: string; validUntil: string; missing: r
 export type PpeView =
   | { kind: "clear" }
   | { kind: "blocked"; missing: readonly string[] }
-  | { kind: "restored" }
-  | { kind: "override"; validUntil: string; missing: readonly string[] }
+  | { kind: "restored"; items: readonly string[] }
+  /** `lapsed`: the local clock is past the expiry but the server has not said so yet; Start stays usable so it can. */
+  | { kind: "override"; validUntil: string; missing: readonly string[]; lapsed: boolean }
+  /** The server answered `override_expired`: blocked again until the vest is seen or a new override is granted. */
   | { kind: "expired"; missing: readonly string[] };
 
 export type PpeInput = {
@@ -24,8 +26,10 @@ export type PpeInput = {
   missing: readonly string[];
   override: PpeOverrideRecord | null;
   nowMs: number;
-  /** task_start answered `override_expired` although the local clock still says the override is live. */
-  serverExpired?: boolean;
+  /** The `validUntil` of the override that task_start last answered `override_expired` for. */
+  serverExpiredFor?: string | null;
+  /** Items named by the last ppe.restored. */
+  restored?: readonly string[];
 };
 
 /** The three paths (restored / override / expired) plus the block itself. PPE is re-checked on every Start and Resume (UI-12). */
@@ -35,12 +39,11 @@ export function derivePpe(i: PpeInput): PpeView {
   if (!gated) return { kind: "clear" };
   const o = i.override && i.override.taskId === i.taskId ? i.override : null;
   if (o) {
-    const live = Date.parse(o.validUntil) > i.nowMs && !i.serverExpired;
-    if (live) return { kind: "override", validUntil: o.validUntil, missing: o.missing };
-    return { kind: "expired", missing: i.missing.length > 0 ? i.missing : o.missing };
+    if (i.serverExpiredFor === o.validUntil) return { kind: "expired", missing: i.missing.length > 0 ? i.missing : o.missing };
+    return { kind: "override", validUntil: o.validUntil, missing: o.missing, lapsed: Date.parse(o.validUntil) <= i.nowMs };
   }
   if (i.missing.length > 0) return { kind: "blocked", missing: i.missing };
-  if (i.status === "blocked_ppe") return { kind: "restored" };
+  if (i.status === "blocked_ppe") return { kind: "restored", items: i.restored ?? [] };
   return { kind: "clear" };
 }
 
@@ -70,11 +73,12 @@ export function taskActions(status: Task["status"], ppe: PpeView): TaskActions {
   }
 }
 
-/** Whole minutes from the first start to the sim clock; null when the start was not seen. */
-export function elapsedMin(startedAt: string | undefined, nowMs: number): number | null {
-  if (!startedAt) return null;
-  const ms = nowMs - Date.parse(startedAt);
-  return Number.isFinite(ms) ? Math.max(0, Math.floor(ms / 60_000)) : null;
+/** Working minutes (pauses excluded) from task.started / task.paused times; null when the start was not seen. */
+export function elapsedMin(work: { workedMs: number; runningSince: string | null } | undefined, nowMs: number): number | null {
+  if (!work) return null;
+  const live = work.runningSince ? Math.max(0, nowMs - Date.parse(work.runningSince)) : 0;
+  const ms = work.workedMs + live;
+  return Number.isFinite(ms) ? Math.floor(ms / 60_000) : null;
 }
 
 /** Where each factor's input comes from (api-contracts §11), so its chip comes from the one registry. */
