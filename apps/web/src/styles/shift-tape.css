@@ -70,14 +70,6 @@
 .tape-now[data-edge="end"] > span {
   transform: translateX(-100%);
 }
-.tape-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
 .tape-pin {
   position: absolute;
   top: 0;

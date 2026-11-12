@@ -59,7 +59,7 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
         </span>
         {syncText ? (
           <span className="strip-sync t-caption" data-state={sync.kind}>
-            <span className="tape-sr">{t("chrome.syncLabel")}: </span>
+            <span className="sr-only">{t("chrome.syncLabel")}: </span>
             {syncText}
           </span>
         ) : null}

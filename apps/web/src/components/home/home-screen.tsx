@@ -5,6 +5,7 @@ import { useSafetyState } from "@/alerts/use-safety-state";
 import { HeroCard } from "@/components/hero/hero-card";
 import { LoopCard } from "@/components/home/loop-card";
 import { ShiftTape } from "@/components/home/shift-tape";
+import { MachineBay } from "@/components/machine/machine-bay";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
@@ -68,6 +69,8 @@ export function HomeScreen() {
             {detailed ? <span className="t-meta text-ink-3">{weather.source_label}</span> : null}
           </Plate>
         ) : null}
+
+        <MachineBay />
 
         <LoopCard />
 

@@ -25,6 +25,12 @@
   --on-ink: #ffffff;
   --on-signal: #16150f;
 
+  /* 1c. Machine Bay (D17, interior-revamp study (c)): the drafting stage under the machine drawing.
+     Ink on --bay is about 14:1. --bay-grid is decorative only. */
+  --bay: #e7e4db;
+  --bay-grid: rgba(22, 21, 15, 0.07);
+  --bay-grid-step: 24px;
+
   /* 1b. Ink Frame (D14, portal-redesign-study §3 B): the status band, the dock and the FM rail.
      --frame is the landing's ink, so the landing's circle wipe ends in this frame. Working content
      never sits on it; the only colour allowed in the frame is the live state plate and SOS. */

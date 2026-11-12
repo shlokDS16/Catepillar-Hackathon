@@ -26,8 +26,6 @@
     "sosHold": "SOS: hold for 1.5 seconds to send",
     "sosOpen": "Tap to open",
     "fixtureStatus": "Demo data · {time} · {speed}× speed",
-    "syncSaved": "Saved",
-    "syncQueued": "{n, plural, =0 {Waiting to send} other {{n} queued}}",
     "syncOffline": "{n, plural, =0 {Offline} other {Offline, {n} queued}}",
     "syncLabel": "Sync"
   },
@@ -162,6 +160,35 @@
     "notUpdated": "Not updated",
     "asOf": "as of {time}",
     "stopMachine": "Stop the machine to use Spotter"
+  },
+  "bay": {
+    "title": "Your machine",
+    "partsTitle": "Machine parts",
+    "drawingLabel": "Side view of the excavator, a drawing",
+    "drawingLabelNumbered": "Side view of the excavator, a drawing with six numbered parts",
+    "drawingNote": "A drawing, not a photo. Readings simulated (SIM).",
+    "sim": "SIM · simulated reading",
+    "part": {
+      "boom_ram": "Boom and ram",
+      "tracks": "Tracks",
+      "engine": "Engine",
+      "cab": "Cab",
+      "bucket": "Bucket",
+      "rear_sensor": "Rear sensor"
+    },
+    "state": {
+      "ok": "OK",
+      "caution": "Caution",
+      "warning": "Warning",
+      "critical": "Critical"
+    },
+    "note": {
+      "ok": "Nothing to report",
+      "generic": "Check at the next stop",
+      "boom_ram_drift": "Boom ram drifts down slowly when held. Tell the technician.",
+      "cab_belt_moving": "Seatbelt is off while the machine moves",
+      "cab_belt_off": "Seatbelt is off"
+    }
   },
   "home": {
     "tape": {

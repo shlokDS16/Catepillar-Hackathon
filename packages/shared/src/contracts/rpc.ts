@@ -84,9 +84,13 @@ export const ProtocolCard = z.object({ id: z.string(), title: I18nText, steps: z
 export const SnapshotTask = z.object({ id: Id, task_type: TaskType, status: TaskStatus, planned_start: Ts,
   progress_pct: z.number(), eta_p50_min: z.number().nullable(), eta_p90_min: z.number().nullable(),
   eta_factors: z.array(EtaFactor).nullable() });                                                  // G2-9: array everywhere
+export const MachinePartId = z.enum(["boom_ram", "tracks", "engine", "cab", "bucket", "rear_sensor"]);
+export const MachinePartState = z.enum(["ok", "caution", "warning", "critical"]);
+export const MachinePart = z.object({ id: MachinePartId, state: MachinePartState, note_key: z.string() });
 export const SnapshotMachine = z.object({ id: Id, code: z.string(), model_name: z.string().nullable(), moving: z.boolean(),
   speed_kmh: z.number(), health: MachineHealth, location: LatLon,
-  seatbelt_fastened: z.boolean().nullable(), parking_brake: z.boolean().nullable() });            // UI-6
+  seatbelt_fastened: z.boolean().nullable(), parking_brake: z.boolean().nullable(),               // UI-6
+  parts: z.array(MachinePart).optional() });                                                       // D17: optional, additive; every reading is simulated (SIM)
 export const SnapshotOperatorState = z.object({ on_foot: z.boolean().nullable(), ppe: z.partialRecord(PpeItem, z.boolean()),
   location: LatLon.nullable(), ts: Ts,
   motion_locked: z.boolean(), call_allowed: z.boolean(),                                         // UI-5 (server-computed)
