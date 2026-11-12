@@ -210,8 +210,14 @@ export function ReplayScreen({ replayId }: { replayId: string }) {
         {phase === "submitting" ? (
           <ReplaySubmitting failed={state.submitFailed} onRetry={retrySubmit} />
         ) : null}
-        {/* R4 replaces ReplayDebrief's body; it already receives the scored result. */}
-        {phase === "debrief" && state.debrief ? <ReplayDebrief result={state.debrief} /> : null}
+                {phase === "debrief" && state.debrief && scenario ? (
+          <ReplayDebrief
+            result={state.debrief}
+            scenario={scenario}
+            paused={state.paused}
+            onPractiseAgain={() => dispatch({ type: "practise_again" })}
+          />
+        ) : null}
       </div>
 
       <Button onClick={askLeave}>{t("backToTraining")}</Button>

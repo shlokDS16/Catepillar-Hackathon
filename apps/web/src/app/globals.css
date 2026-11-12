@@ -9,6 +9,7 @@
 @import "../styles/base.css" layer(base);
 @import "../styles/components.css" layer(components);
 @import "../styles/guide.css" layer(components);
+@import "../styles/debrief.css" layer(components);
 
 /*
  * Tailwind 4 theme map. The default palette, type scale, radii and shadows are cleared so a

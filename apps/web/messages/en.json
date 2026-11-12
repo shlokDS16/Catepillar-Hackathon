@@ -299,9 +299,7 @@
       "scoring": "Scoring…",
       "notSaved": "Score not saved. Try again.",
       "waiting": "Waiting for signal",
-      "waitingBody": "Your answers are kept. Trying again every 5 seconds.",
-      "debriefStub": "Debrief opens here",
-      "debriefStubNote": "Your score was saved. Your debrief is on its way."
+      "waitingBody": "Your answers are kept. Trying again every 5 seconds."
     },
     "evidence": {
       "trend": {
@@ -365,6 +363,66 @@
           "post_lunch_dip": "After-lunch dip",
           "night_trough": "Night trough"
         }
+      }
+    },
+    "debrief": {
+      "what": "What happened",
+      "scores": "How you did",
+      "trace": "How you investigated",
+      "decisions": "Your decisions",
+      "rule": "The rule to remember",
+      "ruleSource": "From protocol card: {source}",
+      "outOf": "/ 100",
+      "scoreSpoken": "{label}: {v} out of 100",
+      "score": {
+        "safety": "Safety",
+        "procedure": "Procedure",
+        "efficiency": "Efficiency"
+      },
+      "you": "You",
+      "ideal": "Ideal",
+      "missed": "missed",
+      "openedNone": "You opened no cards.",
+      "traceHint": "Tap a card to see why it mattered, or did not.",
+      "kind": {
+        "relevant": "opened, it mattered",
+        "irrelevant": "opened, it did not matter",
+        "missed": "missed, it mattered",
+        "ideal": "on the ideal path"
+      },
+      "stepOf": "Step {n}",
+      "youSaid": "You:",
+      "safer": "Safer:",
+      "noAnswer": "No answer. Time ran out.",
+      "lesson": "Open the lesson",
+      "lessonNamed": "Lesson: {title}",
+      "practiseAgain": "Practise again",
+      "player": {
+        "caption": "Re-enactment from your recorded data · simulated",
+        "mapLabel": "Re-enactment on the site plan",
+        "readoutsLabel": "Readouts at this moment",
+        "time": "Time",
+        "timeValue": "{now} of {total}",
+        "speed": "Speed",
+        "speedValue": "{v} km/h",
+        "pitch": "Pitch",
+        "pitchValue": "{v}°",
+        "seatbelt": "Seatbelt",
+        "beltOn": "On",
+        "beltOff": "Off",
+        "wind": "Wind",
+        "windValue": "{kmh} km/h from {deg}°",
+        "none": "No reading",
+        "scrubber": "Re-enactment time. Arrow keys step 1 second.",
+        "legendEvent": "Event at {time}",
+        "legendResponse": "You responded after {s} s",
+        "play": "Play",
+        "pause": "Pause",
+        "playAgain": "Play again",
+        "restart": "Restart",
+        "tenX": "10×",
+        "speedLabel": "Playback speed 10 times",
+        "ended": "Re-enactment finished"
       }
     }
   },
