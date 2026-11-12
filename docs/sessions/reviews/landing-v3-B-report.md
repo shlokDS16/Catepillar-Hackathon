@@ -1,47 +1,53 @@
 # Landing v3, implementer B report (page, engine, copy)
 
-Branch `lane/l2-landing-v3-b`, A (`origin/lane/l2-landing-v3-a`, e29e014) merged in. Audits run on a production build with A merged.
+Branch `lane/l2-landing-v3-b`. A merged at 9a1d778 (polished 3D wordmark), docs at e7688db (HEADED audit). Round 2 after the Opus review (CHANGES REQUIRED, 2 High, 9 Medium, 11 Low).
 
-## Audit results (spec §12.1, §12.2)
+## Audit results (round 2, production build, A merged)
 
-| Run | Frames | Dead / thin / flat |
-|---|---|---|
-| 1440 x 900, step 450, tape counted as chrome | 30 | 0 |
-| 375 x 812, step 406, tape counted as chrome | 25 | 0 |
-| 1440, `CHROME` plus `.l-tape` (tape excluded) | 30 | 0 |
-| 375, `CHROME` plus `.l-tape` (tape excluded) | 25 | 0 |
+| Run | Frames | Dead / thin / flat | Path audited |
+|---|---|---|---|
+| 1440 x 900 / 450 | 30 | 0 | poster fallback (headless, no WebGL) |
+| 375 x 812 / 406 | 25 | 0 | poster fallback |
+| 1440 x 900 / 450, `HEADED=1` | 30 | 0 | **live WebGL: true** |
+| 375 x 812 / 406, `HEADED=1` | 25 | 0 | see its report.md for the WebGL line |
+| 1440 and 375, tape excluded (§12.2) | 30 / 25 | 0 / 0 | poster fallback, outputs not committed |
 
-Reports and contact sheets: `docs/design/qa/landing-v3/B-1440/` and `B-375/` (frames deleted). The tape-excluded runs were not saved (same counts).
-Lowest word counts at 375: frames 20-21 (14 and 12 words, the phone proof blocks), still above the 10 threshold.
+Reports and contact sheets: `docs/design/qa/landing-v3/B2-1440/`, `B2-375/`, `B2-1440-headed/`, `B2-375-headed/`. Wordmark screenshots (headed, 1440): `B2-wordmark-top.png` (plate arriving, near top-down) and `B2-wordmark-oblique.png` (end of the page, oblique). In both the 3D letters are Barlow Condensed (the canvas resolves `--font-barlow-condensed` to "Barlow Condensed" and the face is loaded).
+
+What the audit does not prove (review finding 11): the probe ignores overlays and text-on-text overlap. The overlay case is now fixed structurally (the dim sits under the card), and I looked at every contact sheet frame by eye, but there is no automated overlap check.
+
+## Review findings
+
+High
+1. Replay card dim: `.l-dim` moved inside stage 5, under the card, so it darkens the scene only. Fixed.
+2. Footer collision at 375: legend and closing line are in flow on phones. Fixed.
+
+Medium
+3. Headings behind the tape: ledger heading smaller and higher; tape hides before the proof heading (0.85 of the viewport) and on phones as soon as the paper rises. Fixed.
+4. Phone readouts keep their label and the SIM mark. Fixed.
+5. No-JS page: `NOSCRIPT` now mirrors the reduced-motion rules (proof sheets, callouts, notes, ledger end state). Fixed.
+6. Honesty of the proof copy: title "The same product, in the app.", tag "demo data, captured from a production build", caption "captured from a production build of the app, on demo data" (en and hi). Fixed.
+7. Joint angles: the plate shows magnitudes (no sign). The convention is still not agreed with A; open.
+8. Layout reads per frame: label and plate offsets are cached in `measure()`; canvas and stage rects are no longer read (anchors are already in block coordinates). Fixed.
+9. First-paint assets: `contours.svg` is no longer referenced (the footer plate is the 3D wordmark with stills); stage stills are `display:none` until current or next stage and only without WebGL, so they do not load with WebGL on. Fixed.
+10. Accessibility tree: inactive stage blocks are now `opacity:0` + `pointer-events:none` (not `visibility:hidden`), so the h1, h2s and bodies stay readable; stage 1 (links) is `inert` when not current. Fixed.
+11. Report overstated the audit: stated above; headed runs added.
+
+Low: 12 nav hides at the footer (fixed); 13 caption has a z-index and shows on phones (fixed); 14 phone bar wraps (fixed); 15 `width`/`height` on the `<source>`s (fixed); 16 WebP before AVIF (fixed); 17 op alt no longer mentions the status band (fixed); 18 ledger annotation tag sits inside the box (fixed); 19 tick targets read from `ENTRIES` (fixed); 20 S2 plate over the machine (not changed, camera is A's); 21 units are catalogue strings (`ro.tonnesFmt`, `ro.pctFmt`; fixed); 22 for A.
+
+Also fixed: the pinned proof squashed its role rows on short or narrow screens (found in a headed run); the grid rows are `max-content` and short screens get tighter spacing.
+
+## 3D footer wordmark
+
+`landing-footer.tsx` holds a canvas plus two stills. The engine mounts `mountWordmark` through a dynamic import when the plate is within 700 px of the viewport (desktop, WebGL, motion allowed), drives `setProgress` with the footer's scroll-in progress (0 when the plate reaches the bottom edge, 1 a little after it has fully arrived), calls `resize()` on resize and disposes it when the plate leaves. Stills: `wordmark-top` is the no-script picture; `wordmark-3d` is shown on phones, with reduced motion and when WebGL is off or fails. The legend says "Contour lines of the simulated terrain", "Haul road" and "Today's trail", and "How it is made" says the lettering is built in code from the terrain function.
 
 ## Checks
 
-typecheck, lint, `pnpm --filter web test` (556 tests, 53 files, including the new `shift-tape.test.ts` with 11 tests and 1 added `ledger-demo` test) and `pnpm --filter web build` are green on the merged branch.
+typecheck and lint clean; `pnpm --filter web test` 570 passed (all files); `pnpm --filter web build` green. The 375 headed run has 26 frames (the headed window scrolls a little differently) and 0 dead/thin/flat; an earlier headed 375 run showed 2 thin frames caused by the language sheet being opened by a stray pointer event, plus a real overlap of the caption on the last S2 callout, which is fixed.
 
-## §12 checklist
+## Deviations
 
-1. Audit 0/0 at both sizes: done (above).
-2. Tape excluded 0/0: done.
-3. Reduced motion and no JS: reduced motion emulated, screenshots `docs/design/qa/landing-v3/reduced-1440.png` and `reduced-375.png` (stack of stills, each with copy, readout and a static tape strip; S6 end state; S7 stack). No-JS uses the same rules through the `<noscript>` block (not screenshotted separately).
-4. Sync check, run in `next dev`: `?still=4:0.45&ui=1` gives state Warning, nearest 12.0 m, tape 10:44, tick 4 stamped, "10:44 · LEDGER ENTRY 4". `?still=5:0.3&ui=1` gives clock 10:51 with Replay mode. See deviation 1 for the `&ui=1`.
-5. Keyboard: tab walk confirmed the §10 order (skip link, language, hero actions, six tape ticks, three role links, footer links), a 3 px outline on each stop, no focus inside hidden stage blocks (they are `visibility:hidden`). **axe was not run**: there is no axe dependency and none was allowed.
-6. Contrast: all pairs are the §4 tokens. hi at 375 was only checked through the audit (no clipped text seen in the contact sheet); no separate hi pass.
-7. Build green, three.js stays a dynamic import (unchanged). LCP element not measured separately.
-8. No calls, SMS, Telegram or SOS; the captures were made by navigation and screenshot only.
-
-## Deviations and decisions
-
-1. **`?still=` posters vs the sync check.** Posters must be clean scenes, so `?still=s:p` still hides all page UI. The §12.4 sync check needs the tape and readouts, so it uses `?still=s:p&ui=1` (non-production only).
-2. **Tape rounds to whole minutes.** The frozen `shiftClock` gives 643.5 at S4 p .45; `tapeState` rounds, so that frame reads 10:44 with entry 4 stamped (a unit test covers it).
-3. **Tape position in the DOM.** It is `position:fixed` and sits after the scene in DOM order so the tab order matches §10.
-4. **Proof captures** were recaptured from the local production build after the brand fix (`capture-proof.sh`). They are cropped (rail removed; on /op the yellow status band is removed too) so no large caution-yellow surface is in frame. Sizes: desktop 1320 x 825, phone 390 x 520, all at most 90 KB. Hi screens: not captured; `LOCALIZED_CAPTURES` in `proof.tsx` is empty, so hi reuses the en captures (Q3 rule: the app screens were not checked for English fallbacks). The script supports a locale argument.
-5. **Footer legend** says "Bench contours, every 1.6 m (3.2 m on steep faces)" in en and hi, per the lead.
-6. **Added keys** (en and hi): `ro.trail`, `ro.pending`, `s6.sevLabel`, `s7.*.alt` rewritten for the new crops (no figures that the fixtures could change). The auditor row says it opens the ledger check in the fleet view (Q2). Dead keys removed: `scrollHint`, `s1b`, `rail.*`.
-7. **Phone S6 and S7** show their end state (no per-row IntersectionObserver stamping): rows are simply static.
-8. **Settled values** (reduced motion, no scene): boom 34, stick 61, bucket 22 degrees, labelled SIM; they are replaced by `getReadout()` when the scene provides it.
-9. I did not edit `shift.ts` (A's copy is used) or `scene/**`.
-
-## Open
-
-- Hindi copy still needs Shlok's read (Q4).
-- axe and a no-JS screenshot were not run.
+- `?still=s:p&ui=1` keeps the UI for the sync check (plain `?still=` hides it so posters stay clean).
+- The tape rounds to whole minutes (stage 4 p .45 reads 10:44, entry 4 stamped).
+- Hi screens are not captured; hi reuses the en captures.
+- Hindi copy still needs Shlok's read.

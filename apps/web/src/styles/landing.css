@@ -1946,7 +1946,7 @@ li[data-role="3"] > .l-role {
   .l-caption {
     left: 16px;
     right: 16px;
-    bottom: 6px;
+    bottom: 8px;
     font-size: 11.5px;
     line-height: 16px;
   }
@@ -1960,8 +1960,8 @@ li[data-role="3"] > .l-role {
     display: flex;
     flex-direction: column;
     justify-content: flex-end;
-    gap: 14px;
-    padding: 0 16px 24px;
+    gap: 12px;
+    padding: 0 16px 40px;
   }
 
   .l-scrim {
@@ -2041,8 +2041,12 @@ li[data-role="3"] > .l-role {
     display: none;
   }
 
+  .callout {
+    padding-top: 6px;
+  }
+
   .callout-t {
-    font-size: 18px;
+    font-size: 17px;
   }
 
   .l-leaders {
