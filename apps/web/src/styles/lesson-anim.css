@@ -1,0 +1,235 @@
+/* ---------- Lesson animations (S5c; motion carve-out visual-language §5.1) ---------- */
+.lesson-anim {
+  grid-column: 1 / -1;
+  min-width: 0;
+  max-width: 540px;
+}
+@media (min-width: 900px) {
+  .lesson-card-anim {
+    grid-template-columns: minmax(0, 540px) minmax(0, 1fr);
+    column-gap: var(--s-6);
+    align-items: start;
+  }
+  .lesson-card-anim > .lesson-anim {
+    grid-column: 1;
+  }
+  .lesson-card-anim > .lesson-text {
+    grid-column: 2;
+  }
+}
+.dg {
+  display: grid;
+  gap: var(--s-3);
+  margin: 0;
+}
+.dg-stage {
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+}
+.dg-svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+.dg-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+}
+.dg-heavy {
+  stroke-width: 5;
+}
+.dg-thin {
+  stroke-width: 2;
+}
+.dg-limb {
+  stroke-width: 4;
+}
+.dg-needle {
+  stroke-width: 5;
+}
+.dg-boom {
+  stroke-width: 9;
+}
+.dg-fill {
+  fill: var(--surface);
+}
+.dg-solid {
+  fill: var(--ink);
+}
+.dg-danger {
+  stroke: var(--state-critical);
+  --cone-stroke: var(--state-critical);
+}
+.dg-text {
+  font-family: var(--ff-body);
+  font-weight: 700;
+  font-size: 18px;
+  fill: var(--ink);
+  /* a paper-coloured outline keeps the words legible over lines and hatching */
+  stroke: var(--surface);
+  stroke-width: 5px;
+  stroke-linejoin: round;
+  paint-order: stroke fill;
+}
+.dg-text.dg-danger-fill {
+  fill: var(--state-critical);
+}
+.dg-num {
+  font-family: var(--ff-mono);
+  font-size: 22px;
+}
+.dg-ring {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-dasharray: 9 7;
+}
+.dg-cone {
+  stroke: var(--cone-stroke, var(--ink));
+  stroke-width: 2;
+  stroke-dasharray: 5 4;
+}
+.dg-hatch {
+  stroke: var(--ink);
+  stroke-width: 1.5;
+}
+.dg-halo {
+  fill: none;
+  stroke: var(--state-critical);
+  stroke-width: 3;
+}
+.dg-pair {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: var(--s-3);
+}
+.dg-panel {
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+}
+.dg-panel-label {
+  margin: 0;
+  padding: var(--s-2) var(--s-3);
+  border-top: var(--bw) solid var(--ink);
+}
+.dg-panel[data-mark="check"] .dg-panel-label {
+  background: var(--ink);
+  color: var(--on-ink);
+}
+.dg-panel[data-mark="check"] .dg-panel-label::before {
+  content: "✓ ";
+}
+.dg-panel[data-mark="cross"] .dg-panel-label::before {
+  content: "✕ ";
+}
+.dg-caption {
+  margin: 0;
+  display: grid;
+}
+.dg-caption > span {
+  grid-area: 1 / 1;
+  visibility: hidden;
+}
+.dg-caption > span[data-on="true"] {
+  visibility: visible;
+}
+.dg-controls {
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+}
+.dg-play {
+  flex: none;
+  min-width: 128px;
+}
+.dg-scrub {
+  flex: 1;
+  min-width: 0;
+  height: var(--hit);
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  appearance: none;
+  -webkit-appearance: none;
+  cursor: pointer;
+  touch-action: pan-y;
+}
+.dg-scrub::-webkit-slider-runnable-track {
+  height: var(--s-4);
+  border: var(--bw) solid var(--ink);
+  background: linear-gradient(to right, var(--ink) var(--p, 0%), var(--surface) var(--p, 0%));
+}
+.dg-scrub::-moz-range-track {
+  height: var(--s-4);
+  box-sizing: border-box;
+  border: var(--bw) solid var(--ink);
+  background: linear-gradient(to right, var(--ink) var(--p, 0%), var(--surface) var(--p, 0%));
+}
+.dg-scrub::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  width: var(--s-3);
+  height: var(--s-6);
+  margin-top: calc((var(--s-4) - var(--s-6)) / 2);
+  box-sizing: border-box;
+  border: var(--bw) solid var(--paper);
+  border-radius: 0;
+  background: var(--ink);
+}
+.dg-scrub::-moz-range-thumb {
+  width: var(--s-3);
+  height: var(--s-6);
+  box-sizing: border-box;
+  border: var(--bw) solid var(--paper);
+  border-radius: 0;
+  background: var(--ink);
+}
+.dg-scrub:focus-visible {
+  outline: var(--focus-w) solid var(--ink);
+  outline-offset: calc(var(--focus-offset) * -1);
+}
+/* Reduced motion: three stepped stills, no clock. */
+.dg-stills {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: var(--s-5);
+}
+.dg-still {
+  display: grid;
+  gap: var(--s-2);
+}
+.dg-still > p {
+  margin: 0;
+}
+.dg-step {
+  color: var(--ink-2);
+  letter-spacing: var(--ls-caption);
+}
+:lang(hi) .dg-step {
+  letter-spacing: 0;
+}
+@media (prefers-reduced-motion: no-preference) {
+  /* the quiz tick or cross: a 240 ms reveal, no bounce */
+  .lesson-mark-in {
+    transform-box: fill-box;
+    transform-origin: center;
+    animation: lesson-mark-in var(--dur-phase) var(--ease) both;
+  }
+}
+@keyframes lesson-mark-in {
+  from {
+    opacity: 0;
+    transform: scale(0.4);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}

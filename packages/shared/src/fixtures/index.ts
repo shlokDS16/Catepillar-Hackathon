@@ -192,7 +192,11 @@ export const lessonContent = {
       pictogram: "belt", image_path: null, audio_id: "lesson.seatbelt_slopes.k1" },
     { id: "k2", kind: "why" as const, title: i18n("Why", "क्यों"), body: i18n("On a slope a machine can roll over. Without a belt you are thrown out.", "ढलान पर मशीन पलट सकती है। बिना बेल्ट आप बाहर गिर जाते हैं।"),
       pictogram: "rollover", image_path: null, audio_id: null },
-    { id: "k3", kind: "check" as const, title: i18n("Check", "जाँच"), body: i18n("Click, tug, go.", "क्लिक, खींचो, चलो।"),
+    { id: "k3", kind: "example" as const, title: i18n("With and without", "बेल्ट के साथ और बिना"), body: i18n("Same slope, same rollover. Only the belt is different.", "वही ढलान, वही पलटना। फ़र्क़ सिर्फ़ बेल्ट का है।"),
+      pictogram: "belt_compare", image_path: null, audio_id: null },
+    { id: "k4", kind: "how" as const, title: i18n("Watch the swing", "घूमने का ध्यान रखें"), body: i18n("Stay outside the swing ring. If the operator cannot see you, you are not safe.", "घूमने के घेरे के बाहर रहें। ऑपरेटर को आप न दिखें तो आप सुरक्षित नहीं हैं।"),
+      pictogram: "blindspot", image_path: null, audio_id: null },
+    { id: "k5", kind: "check" as const, title: i18n("Check", "जाँच"), body: i18n("Click, tug, go.", "क्लिक, खींचो, चलो।"),
       pictogram: "check", image_path: null, audio_id: null },
   ],
   quiz: [

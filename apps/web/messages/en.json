@@ -840,6 +840,38 @@
     "choicesLabel": "Choose one answer",
     "notFound": "This lesson is not available.",
     "reviewNote": "You finished this lesson before. This is a review: no score is saved.",
-    "secLesson": "LESSON"
+    "secLesson": "LESSON",
+    "anim": {
+      "play": "Play",
+      "pause": "Pause",
+      "replay": "Replay",
+      "scrubber": "Move through the animation",
+      "step": "Step {n} of {total}",
+      "limit": "LIMIT",
+      "swingRadius": "Swing radius",
+      "notSeen": "Not seen",
+      "beltOn": "Belt on",
+      "beltOff": "No belt",
+      "rollover": {
+        "c1": "The machine works on a slope.",
+        "c2": "The slope gets steeper. The needle climbs.",
+        "c3": "The needle passes the limit. The machine starts to tip.",
+        "c4": "No belt: the operator is thrown out of the seat.",
+        "c5": "The operator lands in the path of the machine."
+      },
+      "compare": {
+        "c1": "Same slope, same rollover. Left: belt on. Right: no belt.",
+        "c2": "The machine tips over.",
+        "c3": "Belt on: the operator stays in the seat, inside the cab frame.",
+        "c4": "No belt: the operator is thrown out and lands in the machine's path."
+      },
+      "blindspot": {
+        "c1": "An excavator, seen from above.",
+        "c2": "The dashed ring is the swing radius. The back of the machine sweeps it.",
+        "c3": "The shaded wedges are blind spots. The operator cannot see here.",
+        "c4": "The machine swings. The blind spots swing with it.",
+        "c5": "A person inside the ring and a blind spot is not seen. Stay outside the ring."
+      }
+    }
   }
 }
