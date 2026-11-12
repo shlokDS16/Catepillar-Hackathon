@@ -1341,5 +1341,30 @@
     "verdictPop": "The banner uses {n} of those {total} tasks: groups with 10 or more tasks and both estimates.",
     "demoChip": "Simulated demo data",
     "sourceDemo": "Simulated demo data: these rows are generated for the demo, not organiser task times. Weather labels follow Open-Meteo categories."
+  },
+  "wait": {
+    "title": "While you wait",
+    "why": "The machine is parked. Practise while nothing moves.",
+    "stops": "Stops the moment the machine moves"
+  },
+  "fleet": {
+    "title": "Fleet",
+    "note": "Demo roster · LDR-001 and DMP-005 are invented; operators, tasks and movement simulated",
+    "who": "{operator} · {task}",
+    "task": {
+      "excavation": "Excavation",
+      "trenching": "Trenching",
+      "material_loading": "Loading",
+      "grading": "Grading"
+    },
+    "state": {
+      "critical": "Critical",
+      "warning": "Warning",
+      "caution": "Caution",
+      "working": "Working",
+      "parked": "Parked"
+    },
+    "more": "+{n} more",
+    "less": "Show fewer"
   }
 }

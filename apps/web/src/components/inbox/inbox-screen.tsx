@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { KIND_PICTO } from "@/alerts/kinds";
 import { safetyTone } from "@/alerts/selectors";
+import { FleetStrip } from "@/components/inbox/fleet-strip";
 import { InboxDetail, useRowMeta, useShortAge } from "@/components/inbox/inbox-detail";
 import { OverrideSheet } from "@/components/inbox/override-sheet";
 import { Button } from "@/components/ui/button";
@@ -222,6 +223,7 @@ export function InboxScreen() {
     return (
       <div className="inbox-desktop">
         {banner}
+        <FleetStrip items={items} selectedId={selectedId} />
         <div className="inbox-split">
           <div className="inbox-list-col">
             {tiers}
@@ -290,6 +292,7 @@ export function InboxScreen() {
       ) : (
         <div ref={leadRef}>{detail(lead, "lead", leadIndex >= 0 ? t("ofN", { i: leadIndex + 1, n: groups.needsAction.length }) : undefined)}</div>
       )}
+      <FleetStrip items={items} selectedId={lead?.id ?? null} />
       {queued.length > 0 ? (
         <section aria-label={t("queueLabel", { n: queued.length })} className="inbox-queue">
           <h2 className="t-label">{t("queueLabel", { n: queued.length })}</h2>
