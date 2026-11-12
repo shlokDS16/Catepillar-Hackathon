@@ -8,6 +8,14 @@
 > Wave 1 (started): L1 ledger_export privacy migration (new 003d), L3 landing (dossier), L2 R3 Decide,
 > L2 F14 Inbox. Queue next: L1 B10 → B10b/B11 → B15; L2 R4 → F15 → F10/F11 → F17/F20/F19;
 > L3 Replay re-enactment polish → demo video. Supabase ACTIVE_HEALTHY.
+> Progress: R3 Decide merged (ebedff0), F14 Inbox merged (69f6141), both after Opus review fixes; web
+> 194 tests, build green, deployed. Running: L3 landing, L2 R4 Debrief (stateAt(t) design), L2 F10 Task,
+> F15 Ledger in review, L1 privacy rework. PRIVACY FINDING (Opus backend review, proven live then rolled
+> back): near-miss operator ids reach the FM via (1) ledger_export field brute force, (2) a PRE-EXISTING
+> leak in events_read RLS + sup: broadcast + incident.logged, (3) browser verify says ok on edited sealed
+> rows. Fix in progress as migration 003e on lane/l1-ledger-privacy; nothing of it on main yet (003d is
+> applied to the DB). Realtime partitions created through 2026-11-15 (re-run scripts/b0/realtime-wake.ts
+> after that).
 
 > **RESUMED 2026-10-11 (Shlok: "continue building").** Single-folder mode per AGENTS.md (work on
 > branch tracks in this repo; old ../spotter-track-* worktrees are read-only history). Supabase
