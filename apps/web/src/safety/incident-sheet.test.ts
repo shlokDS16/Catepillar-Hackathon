@@ -2,6 +2,7 @@ import { IncidentLogIn } from "@cat/shared";
 import { describe, expect, it } from "vitest";
 import {
   buildPayload,
+  canSeal,
   clearDraft,
   cleanNote,
   DRAFT_KEY,
@@ -88,6 +89,25 @@ describe("an injury is never sealed", () => {
       if (kind === "near_miss") expect(() => buildPayload(s, null)).toThrow();
       else expect(buildPayload(s, null).p_non_punitive).toBe(false);
     }
+  });
+  it("harm is never sealed: first_aid, sos and severity 5 all refuse non_punitive", () => {
+    for (const kind of ["first_aid", "sos"] as const)
+      for (const severity of [1, 3, 5] as const) {
+        expect(canSeal(kind, severity)).toBe(false);
+        const s = { ...initialIncident(ID), kind, severity } as unknown as IncidentState;
+        expect(buildPayload(s, null).p_non_punitive).toBe(false);
+      }
+    for (const severity of [1, 3] as const) expect(canSeal("near_miss", severity)).toBe(true);
+    expect(canSeal("near_miss", 5)).toBe(false);
+    expect(buildPayload(run([{ type: "kind", kind: "near_miss" }, { type: "severity", severity: 3 }]), null).p_non_punitive).toBe(true);
+  });
+  it("a near miss with first_aid or sos hand-built into the state is refused by the reducer path and the payload", () => {
+    // The reducer cannot hold two kinds: choosing first_aid replaces near_miss, so it is never sealed.
+    const swapped = run([{ type: "kind", kind: "near_miss" }, { type: "severity", severity: 1 }, { type: "kind", kind: "first_aid" }]);
+    expect(swapped.kind).toBe("first_aid");
+    expect(buildPayload(swapped, null).p_non_punitive).toBe(false);
+    const forged = { ...initialIncident(ID), kind: "near_miss", severity: 5 } as IncidentState;
+    expect(() => buildPayload(forged, null)).toThrow();
   });
   it("a restored near-miss draft at level 5 loses its severity", () => {
     const s = run([{ type: "restore", draft: { kind: "near_miss", severity: 5, note: "", requestId: ID } }]);
