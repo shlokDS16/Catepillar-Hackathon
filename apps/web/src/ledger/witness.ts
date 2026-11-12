@@ -155,6 +155,46 @@ export async function runCompare(
   }
 }
 
+/** ledger_export refuses ranges over 5000 rows. */
+export const EXPORT_PAGE = 5000;
+
+/** Export 1..head in pages of at most EXPORT_PAGE rows and join them. Each page retries once on ledger_busy. */
+export async function exportAll(
+  port: Pick<DataPort, "ledgerExport">,
+  head: number,
+  sleep?: (ms: number) => Promise<void>,
+): Promise<ExportRow[]> {
+  const all: ExportRow[] = [];
+  for (let first = 1; first <= head; first += EXPORT_PAGE) {
+    const last = Math.min(head, first + EXPORT_PAGE - 1);
+    const page = (await withBusyRetry(() => port.ledgerExport({ p_first_seq: first, p_last_seq: last }), sleep)) as ExportRow[];
+    all.push(...page);
+  }
+  return all;
+}
+
+export type InternalJudgement = "clean" | "partial" | "failed" | "unchecked";
+
+/**
+ * The Internal check verdict. A tick ("clean") needs this browser's own full recompute: status `verified`,
+ * covering exactly seq 1..head, with the same count and head hash the server reports. A short, empty,
+ * late-starting or head-mismatched export is `failed`, never a tick. `unchecked`: no local recompute.
+ */
+export function judgeInternal(
+  out: { ok: boolean; head_seq: number; head_hash: string },
+  local: LedgerVerifyResult | null,
+): InternalJudgement {
+  if (!out.ok) return "failed";
+  if (local === null) return "unchecked";
+  if (local.status === "failed") return "failed";
+  const covers =
+    out.head_seq === 0
+      ? local.checked === 0
+      : local.first_seq === 1 && local.last_seq === out.head_seq && local.checked === out.head_seq && local.head_hash === out.head_hash;
+  if (!covers) return "failed";
+  return local.status === "verified" ? "clean" : "partial";
+}
+
 /** Rows the table asks for: the newest N, or a window around the broken row so #N is on screen. */
 export function tableWindow(head: number, badSeq: number | null, size = 25): { first: number; last: number } {
   if (badSeq === null || badSeq > head || badSeq < 1) return { first: Math.max(1, head - size + 1), last: head };

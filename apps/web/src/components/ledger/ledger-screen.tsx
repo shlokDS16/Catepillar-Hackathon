@@ -8,7 +8,7 @@ import { Plate } from "@/components/ui/plate";
 import { verifyLedger, type LedgerVerifyResult } from "@cat/shared/ledger";
 import { useDataPort } from "@/data/store";
 import {
-  LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, isCleanMatch, isPartialMatch, parsePaste, rowView, runCompare, tableWindow,
+  LedgerBusyError, checkRange, countSealed, diffAt, exportAll, groupsOf4, isCleanMatch, isPartialMatch, judgeInternal, parsePaste, rowView, runCompare, tableWindow,
   verifiedCount, withBusyRetry,
   type CompareOutcome, type ExportRow,
 } from "@/ledger/witness";
@@ -111,18 +111,22 @@ export function LedgerScreen() {
     setVerify({ s: "loading" });
     try {
       const out = await withBusyRetry(() => port.ledgerVerify({ p_from: 1, p_to: null }));
-      let rows: ExportRow[] = [];
+      // A failed re-check never clears the entries already on screen.
+      let rows: ExportRow[] = verify.s === "done" ? verify.rows : [];
       let local: LedgerVerifyResult | null = null;
       if (out.head_seq > 0) {
         try {
-          // The browser re-checks the whole chain itself; the server's verdict is not taken on trust.
-          const all = (await withBusyRetry(() => port.ledgerExport({ p_first_seq: 1, p_last_seq: out.head_seq }))) as ExportRow[];
+          // The browser re-checks the whole chain itself (in export pages); the server's verdict is not taken on trust.
+          const all = await exportAll(port, out.head_seq);
           local = await verifyLedger(all);
           const w = tableWindow(out.head_seq, out.first_bad_seq ?? local.first_bad_seq, TABLE_ROWS);
           rows = all.filter((r) => Number(r.seq) >= w.first && Number(r.seq) <= w.last);
         } catch {
-          rows = [];
+          local = null;
         }
+      } else {
+        local = await verifyLedger([]);
+        rows = [];
       }
       if (alive.current) setVerify({ s: "done", out, rows, local });
     } catch (e) {
@@ -256,21 +260,24 @@ function InternalPlate({ state }: { state: VerifyState }) {
   }
   const o = state.out;
   const local = state.local;
-  const failed = !o.ok || local?.status === "failed";
-  const badSeq = o.first_bad_seq ?? local?.first_bad_seq ?? null;
-  const queueOnly = failed && badSeq === null;
-  // A tick only when this browser recomputed every row. Sealed rows (or no local check) never get one.
-  const clean = !failed && local?.status === "verified";
+  // A tick only when this browser recomputed every row and covered exactly 1..head. Every count shown
+  // comes from `local`, never from the server's own number.
+  const verdict = judgeInternal(o, local);
+  const failed = verdict === "failed";
+  const clean = verdict === "clean";
   const partial = !failed && !clean;
+  const badSeq = o.first_bad_seq ?? local?.first_bad_seq ?? null;
   return (
-    <Plate as="section" className="ledger-plate" tone={failed ? "critical" : clean ? "clear" : "surface"} stamp aria-label={t("internalLabel")} key={failed ? "bad" : clean ? "ok" : "partial"}>
+    <Plate as="section" className="ledger-plate" tone={failed ? "critical" : clean ? "clear" : "surface"} stamp aria-label={t("internalLabel")} key={verdict}>
       {base}
       <Verdict ok={!failed} partial={partial}>
         {failed
-          ? queueOnly ? t("queueIncomplete") : t("breaks", { seq: badSeq ?? 0 })
-          : local?.status === "verified_with_sealed"
-            ? t("verifiedSealed", { v: local.verified_in_full, s: local.sealed })
-            : t("intact", { n: o.checked })}
+          ? badSeq !== null ? t("breaks", { seq: badSeq }) : !o.ok ? t("queueIncomplete") : t("chainIncomplete")
+          : verdict === "unchecked" || !local
+            ? t("notRechecked")
+            : verdict === "partial"
+              ? t("verifiedSealed", { v: local.verified_in_full, s: local.sealed })
+              : t("intact", { n: local.checked })}
       </Verdict>
       {failed && o.reason ? <p className="t-meta">{t(`reason_${o.reason}`)}</p> : null}
       {failed && o.expected && o.stored ? (
