@@ -15,6 +15,37 @@ Paste this into a fresh Claude Code session (model Opus, never Fable) opened in 
 > Note: subagents in worktrees cannot write to the main folder (write guard); ask them to write reports in their own
 > worktree and give the absolute path.
 
+## Session 4 (lead L0, 68 % -> 70 % weekly): status at handoff (main 8522211, nothing in flight)
+- MERGED (each with an Opus review APPROVE after one fix round; reviews in docs/sessions/reviews/):
+  ccfbd3b lane/l3-wait-fleet (T6 While-you-wait card, pure `showWhileYouWait`; T8 fleet strip, 6 cells, LDR-001 and
+  DMP-005 invented and captioned, phone strip below the triage lead), 590b442 lane/l2-fm-detail (T7 inbox detail with
+  dry-run dispatch timeline and "next entry #n" seal line; T9 band ledger cell fed by a shared last-verify store, one
+  visibilitychange verify with in-flight guard and 5 s throttle; Live fixture fallback shows "unavailable"),
+  8522211 lane/l2-bay-home (T5 Bay layout; Lows: tag overlap, per-kind tape pictograms, operator-only inert incl. the
+  strip via InertRegion; SOS never inert, live-checked under Beat 2/3/5 at 375 and 1440).
+- Production: main pushes 6668dd1..f47f124 produced no Vercel deployment (lane previews did); the next push e23dcfa
+  deployed and later ones too. An agent-triggered production deploy is refused by auto mode: never retry it.
+- Lead session 2 (local_320a868c) owns the landing revamp: apps/web/src/components/landing/**, styles/landing.css,
+  public/landing/**, `landing.*` keys (lanes lane/l2-landing-v3-*). Phase 4 may only IMPORT landing/scene/excavator.ts
+  and parts.ts; they were asked to keep those exports stable.
+- Open Lows (non-blocking): FM strip goes inert during the operator's motion lock with no overlay (status-strip.tsx
+  ~45, pre-existing, owner: whoever next touches the strip); phone parts rows < 80 px (machine-parts.tsx); no
+  render-level inert test (vitest is node-only); fleet focus hand-off untested; phone FM queue ~590 px down; fleet
+  caption hard-codes machine codes; reducer `pausedSince` for the wait card (now measured from first sight, ~18 s late
+  after reload at 10x); no person tag on the FM stage; Drawing/3D segmented control not rendered yet (phase 4);
+  Listen hidden until audio clips exist; web test ledger/witness.test.ts flakes under full-suite load (12000-row export
+  timeouts; passes in isolation).
+
+## Queue after session 4 (priority order)
+1. D17 phase 4: T10 paper-model 3D stage on desktop Home + T11 perf/a11y gate (study.md (e) phase 4; D17 rules: no
+   WebGL on phones, reduced motion, Save-Data, or while moving; render on demand; no auto-rotate; parts list is the
+   text twin). Add the Drawing/3D segmented control to the Bay stage then. One L3 lane; Opus review.
+2. Fix the FM-strip-inert-during-motion-lock Low (one small L2 lane, can run beside 1).
+3. Phase 5 QA (study.md (e)): en/hi parity, 360/375/768/1440 shots, --bay contrast, axe, reduced motion, no FIXTURE,
+   no brand marks; then judge-simulator re-score (Opus) and a Haiku production pass.
+4. Demo video (video-studio skill), never SOS.
+5. Session 3/2 open items below.
+
 ## Session 3 (lead L0, 66 % -> ~68 % weekly): status at handoff
 - Judge-content (17aac73) and F19 (6668dd1) were already merged; their review files are now in docs/sessions/reviews/.
 - MERGED: lane/l3-bay-machine (D17 T2+T3) at 0389806: optional `machine.parts`, machine drawing, parts list. Review: reviews/bay-machine-review.md (APPROVE; open Low: Engine and Rear-sensor tags overlap ~29x24 px at 1440, move one tag's `ty`).
