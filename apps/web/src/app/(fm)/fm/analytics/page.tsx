@@ -1,5 +1,5 @@
-import { Stub } from "@/components/ui/stub";
+import { AnalyticsScreen } from "@/components/analytics/analytics-screen";
 
 export default function Page() {
-  return <Stub task="F20" />;
+  return <AnalyticsScreen />;
 }
