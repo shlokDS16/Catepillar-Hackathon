@@ -1,0 +1,139 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bay · Operator Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="kit.css">
+<style>
+  .home { display: grid; grid-template-columns: minmax(0,1fr) 400px; gap: 20px; align-items: start; }
+  .stage { position: relative; background: var(--bay); border: 2px solid var(--ink); overflow: hidden;
+    background-image: linear-gradient(var(--bay-grid) 1px, transparent 1px), linear-gradient(90deg, var(--bay-grid) 1px, transparent 1px); background-size: 32px 32px; }
+  .stage .word { position: absolute; left: 24px; top: 20px; z-index: 2; }
+  .stage .word .disp { font-size: 104px; }
+  .stage .word p { margin: 6px 0 0; font: 700 22px/1.2 var(--f-body); }
+  .stage .word p span { font-weight: 500; color: var(--ink-2); }
+  .stage .mach { margin: 70px 90px 4px 190px; }
+  .stage .bar { display: flex; gap: 10px; align-items: center; padding: 12px 16px; border-top: 2px solid var(--ink); background: var(--surface); }
+  .seg { display: inline-flex; border: 2px solid var(--ink); }
+  .seg b { display: grid; place-items: center; min-height: 52px; padding: 0 18px; font: 700 17px/1 var(--f-body); }
+  .seg b.on { background: var(--ink); color: #fff; }
+  .stage .bar .note { margin-left: auto; }
+  .tapecard { margin-top: 20px; }
+  .rail { display: grid; gap: 14px; } .rail .pad { padding: 14px 18px; } .rail .sec { margin-bottom: 10px; }
+  .now .t { display: flex; justify-content: space-between; align-items: baseline; }
+  .now .t b { font: 700 26px/1.15 var(--f-body); }
+  .now .fig { font: 700 48px/1 var(--f-disp); }
+  .now .eta { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; border-top: 1px solid var(--rule-soft); padding-top: 10px; }
+  .now .why { margin-top: 10px; display: flex; flex-wrap: wrap; gap: 8px; }
+  .wait { border: 3px solid var(--ink); background: var(--surface); }
+  .wait .h { display: flex; align-items: center; gap: 10px; background: var(--ink); color: #fff; padding: 10px 16px; font: 600 15px/1 var(--f-mono); letter-spacing: .04em; text-transform: uppercase; }
+  .wait .h svg { width: 20px; height: 20px; }
+  .wait .h em { margin-left: auto; font-style: normal; }
+  .wait .b { display: grid; grid-template-columns: 72px 1fr; gap: 14px; padding: 12px 16px; align-items: center; }
+  .thumb { aspect-ratio: 1; border: 2px solid var(--ink); background: var(--paper); display: grid; place-items: center; }
+  .thumb svg { width: 40px; height: 40px; }
+  .wait h3 { margin: 0; font: 700 22px/1.2 var(--f-body); }
+  .wait .a { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 0 16px 16px; }
+  .loop h3 { margin: 4px 0 12px; font: 700 22px/1.2 var(--f-body); }
+  .loop .a { display: grid; grid-template-columns: 1fr auto; gap: 10px; }
+  .partslist { display: none; }
+  @media (max-width: 760px) {
+    .home { display: flex; flex-direction: column; }
+    .home > div:first-child { display: contents; }
+    .stage { order: 1; } .rail { order: 2; } .tapecard { order: 3; }
+    .stage .word { left: 16px; top: 14px; }
+    .stage .word .disp { font-size: 76px; }
+    .stage .word p { font-size: 19px; }
+    .stage .mach { margin: 112px 8px 0 0; }
+    .tag { display: none; }
+    .stage .bar .note { display: none; }
+    .partslist { display: block; border-top: 2px solid var(--ink); background: var(--surface); padding: 0 16px; }
+    .stage .bar { border-top: 1px solid var(--rule-soft); }
+    .rail { margin-top: 16px; }
+    .tape .pin b { display: none; }
+    .tape .hours span:nth-child(even) { display: none; }
+    .tapecard { margin-top: 16px; }
+  }
+</style></head>
+<body>
+<header class="band">
+  <div class="stateplate caution"><i data-i="tri"></i>Caution</div>
+  <div class="who"><b>Ravi · EXC-007</b><span>Nagpur quarry · Bay 3</span></div>
+  <div class="spacer"></div>
+  <div class="cell hide-sm">Demo data<b class="num">10:42 · 10× speed</b></div>
+  <div class="cell hide-sm">Sync<b><i data-i="check"></i>Saved</b></div>
+  <div class="cell hide-sm">Heat<b class="num">WBGT 31 °C</b></div>
+  <button class="iconbtn"><i data-i="globe"></i><small>En · हि</small></button>
+  <button class="iconbtn"><i data-i="ask"></i><small>Ask</small></button>
+</header>
+<div class="shell">
+  <nav class="dock">
+    <a class="on"><i data-i="home"></i>Home</a>
+    <a><i data-i="task"></i>Task</a>
+    <a><i data-i="shield"></i>Safety</a>
+    <a><i data-i="cap"></i>Practice<span class="badge">1</span></a>
+    <div class="grow"></div>
+    <a class="sos" style="color:#fff"><i data-i="sos"></i>SOS<small>Hold 3 s</small></a>
+  </nav>
+  <main>
+    <div class="home">
+      <div>
+        <section class="stage" aria-label="Your machine">
+          <div class="word"><div class="disp">Paused</div><p>Excavation · 35 %</p></div>
+          <div class="mach" data-hl="ram" data-tier="caution">
+            <button class="tag" data-ax="306" data-ay="182" data-tx="440" data-ty="34"><span class="n">1</span><span>Seatbelt<small>On · since 10:36</small></span></button>
+            <button class="tag caution keep" data-ax="352" data-ay="206" data-tx="470" data-ty="196"><span class="n">2</span><span>Boom ram<small>Pressure rising · check at break</small></span></button>
+            <button class="tag" data-ax="250" data-ay="300" data-tx="250" data-ty="352"><span class="n">3</span><span>Tracks<small>OK</small></span></button>
+            <button class="tag" data-ax="80" data-ay="204" data-tx="40" data-ty="120"><span class="n">4</span><span>Rear sensor<small>No one in your rings</small></span></button>
+          </div>
+          <div class="partslist rows" aria-label="Parts list">
+            <div class="kv"><i data-i="belt"></i><span>1 · Seatbelt</span><b>On ✓</b></div>
+            <div class="kv"><i data-i="wrench"></i><span>2 · Boom ram</span><span class="plate caution" style="flex:none">Check</span></div>
+            <div class="kv"><i data-i="fleet"></i><span>3 · Tracks</span><b>OK ✓</b></div>
+            <div class="kv"><i data-i="person"></i><span>4 · Rear sensor</span><b>Clear ✓</b></div>
+          </div>
+          <div class="bar">
+            <span class="seg"><b class="on">Drawing</b><b>3D</b></span>
+            <button class="btn sm"><i data-i="speak"></i>Listen</button>
+            <span class="note">Machine readings are simulated (SIM)</span>
+          </div>
+        </section>
+        <section class="card pad tapecard" aria-label="Today's shift">
+          <h2 class="sec"><b>03</b> — Your shift today <span class="r">tap a mark to practise it</span></h2>
+          <div class="tape">
+            <div class="lane"><i class="w" style="width:10%"></i><i class="brk" style="width:2%"></i><i class="w" style="width:11%"></i><i class="p" style="width:2%"></i><i class="w" style="width:2%"></i><i class="p" style="width:1%"></i><i class="f" style="width:72%"></i></div>
+            <div class="now" style="left:27%"><span class="num">10:42</span></div>
+            <div class="pin" style="left:19%"><i data-i="belt"></i><b>09:52 Belt off on slope</b></div>
+            <div class="pin" style="left:62%"><i data-i="clock"></i><b>14:00 heat peak</b></div>
+            <div class="hours"><span style="left:0%">08</span><span style="left:20%">10</span><span style="left:40%">12</span><span style="left:60%">14</span><span style="left:80%">16</span><span style="left:99%">18</span></div>
+          </div>
+          <div class="tape-key"><span><i style="background:var(--ink)"></i>Working</span><span><i style="background-color:var(--surface);background-image:radial-gradient(circle,var(--ink) 1.3px,transparent 1.6px);background-size:7px 7px"></i>Waiting</span><span><i style="background:var(--paper)"></i>Break</span><span><i style="background:var(--sunk)"></i>Planned</span></div>
+        </section>
+      </div>
+      <aside class="rail">
+        <section class="card pad now" aria-label="Now">
+          <h2 class="sec"><b>01</b> — Now</h2>
+          <div class="t"><b>Excavation · Bay 3</b></div><div class="meta">Paused · waiting for truck since 10:36</div>
+          <div class="row" style="margin-top:8px"><span class="fig num">35 %</span><div class="prog" style="flex:1"><i style="width:35%"></i></div></div>
+          <div class="eta"><div><div class="meta">Time left</div><div class="fig num" style="font-size:44px">18 min</div><div class="meta">up to 24</div></div>
+            <div><div class="meta">Next</div><div style="font:700 22px/1.2 var(--f-body);margin-top:6px">Trenching</div><div class="meta">11:00 · Bay 5</div></div></div>
+          <div class="why"><span class="chip"><i data-i="heat"></i>Heat +22 %</span><span class="chip">New site +15 %</span></div>
+        </section>
+        <section class="wait" aria-label="While you wait">
+          <div class="h"><i data-i="clock"></i>While you wait<em class="num">6 min</em></div>
+          <div class="b"><div class="thumb"><i data-i="belt"></i></div><div><h3>Seatbelt on slopes</h3><div class="meta">2-minute picture lesson · no network needed</div></div></div>
+          <div class="a"><button class="btn pri sm"><i data-i="play"></i>Start lesson</button><button class="btn sm">Not now</button></div>
+          <div class="note" style="padding:0 16px 14px">Stops the moment the machine moves.</div>
+        </section>
+        <section class="card pad loop" aria-label="Practice">
+          <h2 class="sec"><b>02</b> — Practice</h2>
+          <div class="meta">Because of today 09:52</div>
+          <h3>Seatbelt off on a slope</h3>
+          <div class="a"><button class="btn pri sm"><i data-i="play"></i>Replay it · 3 min</button><button class="btn sm"><i data-i="speak"></i>Listen</button></div>
+        </section>
+      </aside>
+    </div>
+  </main>
+</div>
+<script src="machine.js"></script>
+</body></html>

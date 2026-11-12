@@ -107,3 +107,13 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 
 ## 2026-11-12 — D14 amendment (portal chrome review): dock cell widths
 - Operator dock = four destination cells plus the 108 x 96 SOS slot. At 360 px a destination cell is 63 px wide (96 px tall), below the 80 px both-ways rule of visual-language §118; the SOS slot is 96 px tall, below the 108 token. Accepted: four labelled destinations plus SOS cannot be wider on a 360 px phone. Language and Ask in the band are 64 x 56 (above the 48 px minimum); the state plate stays 100 x 80. Safe-area insets are added to the dock and SOS heights.
+
+## 2026-11-12 — D17: Interior revamp "Machine Bay" (Shlok, AskUserQuestion)
+- Supersedes D14's portal layout (keeps its ink frame tokens, plain-word labels, SOS dock): build docs/design/interior-revamp/study.md Direction 1 "Machine Bay", Sheet-first (phases 1-3 = 2D machine drawing as the Home hub; Field Sheet is the automatic fallback), then phase 4: the existing unbranded landing excavator as a 3D stage on DESKTOP Home only. Amends D14 "no WebGL in the portal": WebGL allowed on desktop Home only, never on phones, under reduced motion, Save-Data, or while the machine moves; no auto-rotate; render on demand.
+- Pace: no race against a personal best; Home shows "longer than usual because of …" from the ETA factors.
+- Part data: simulated per-part machine states (boom, tracks, engine, cab, bucket, sensors) may be added to fixtures and contracts (additive only), every reading captioned SIM.
+- Reference studied: aayushvz.github.io/cat-operator-assistant (another entry). Ideas only; no code, art, text, Cat logo or yellow-and-black livery.
+- Shlok is unavailable (final exam 2026-11-13): build autonomously to the 92 % soft stop; no new questions to Shlok.
+
+## 2026-11-12 — D18: Thin live path (Shlok, AskUserQuestion), answering the P4 FAIL
+- Phase validator (docs/gates/P4P5-final-validation.md): P4 FAIL because apps/web reads fixtures only (providers.tsx:13). Decision: wire the real backend for the most visible flows (operator snapshot, replay_get/replay_submit, ledger_verify) behind a Live switch; fixtures stay the default so the demo cannot break. Analytics evidence numbers were typed constants: re-captioned "illustrative, not measured" (lane/l2-judge-content).

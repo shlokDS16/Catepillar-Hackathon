@@ -1,0 +1,151 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Bay · FM Inbox</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="kit.css">
+<style>
+  main { padding: 20px 28px 28px; }
+  .fleet { display: grid; grid-template-columns: repeat(6, 1fr); border: 2px solid var(--ink); background: var(--surface); margin-bottom: 18px; }
+  .fleet > div { padding: 10px 14px; border-right: 1px solid var(--rule-soft); min-width: 0; }
+  .fleet > div:last-child { border-right: 0; }
+  .fleet b { display: block; font: 800 22px/1 var(--f-disp); letter-spacing: -.01em; }
+  .fleet span { display: block; font: 500 15px/1.3 var(--f-body); color: var(--ink-2); margin: 4px 0 6px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .fleet .plate { display: inline-flex; font: 800 16px/1 var(--f-disp); color: var(--ink); padding: 5px 8px; margin: 0; }
+  .fleet .plate svg { width: 16px; height: 16px; }
+  .fleet .sel { box-shadow: inset 0 -6px 0 var(--ink); }
+  .grid { display: grid; grid-template-columns: 380px minmax(0,1fr); gap: 18px; align-items: start; }
+  .queue .tiers { display: flex; gap: 8px; margin-bottom: 12px; flex-wrap: wrap; }
+  .queue .tiers .plate { font-size: 16px; padding: 6px 10px; }
+  .q { display: grid; grid-template-columns: 1fr auto; gap: 4px 10px; padding: 12px 14px; min-height: 80px; background: var(--surface); border: 2px solid var(--ink); border-top-width: 0; align-items: center; }
+  .q:first-of-type { border-top-width: 2px; }
+  .q .plate { font-size: 15px; padding: 4px 8px; justify-self: start; }
+  .q h4 { margin: 0; font: 700 18px/1.2 var(--f-body); grid-column: 1; }
+  .q small { grid-column: 1; font: 500 15px/1.3 var(--f-body); color: var(--ink-2); }
+  .q time { grid-row: 1; grid-column: 2; font: 500 14px/1 var(--f-mono); color: var(--ink-2); }
+  .q.sel { outline: 4px solid var(--ink); outline-offset: -4px; position: relative; }
+  .q.sel::after { content: ""; position: absolute; right: -14px; top: 50%; width: 12px; height: 12px; background: var(--ink); transform: translateY(-50%) rotate(45deg); }
+  .q.done { opacity: 1; background: var(--paper); }
+  .focus { background: var(--surface); border: 2px solid var(--ink); }
+  .focus .hd { display: flex; align-items: center; gap: 14px; padding: 16px 20px; border-bottom: 2px solid var(--ink); flex-wrap: wrap; }
+  .focus .hd h2 { margin: 0; font: 800 34px/1 var(--f-disp); text-transform: uppercase; letter-spacing: -.02em; }
+  .focus .hd .meta { width: 100%; }
+  .focus .bd { display: grid; grid-template-columns: minmax(0,1.25fr) minmax(0,1fr); }
+  .fstage { overflow: hidden; position: relative; border-right: 2px solid var(--ink); background: var(--bay); background-image: linear-gradient(var(--bay-grid) 1px, transparent 1px), linear-gradient(90deg, var(--bay-grid) 1px, transparent 1px); background-size: 28px 28px; }
+  .fstage .mach { margin: 84px 28px 64px 28px; }
+  .fstage .cap { padding: 10px 16px; border-top: 1px solid var(--ink); background: var(--surface); }
+  .facts { padding: 16px 20px; }
+  .facts p.why { margin: 0 0 14px; font: 500 18px/1.45 var(--f-body); }
+  .tl { list-style: none; margin: 0 0 14px; padding: 0; }
+  .tl li { display: grid; grid-template-columns: 58px 26px 1fr; gap: 8px; align-items: start; padding: 7px 0; font: 500 16px/1.3 var(--f-body); }
+  .tl time { font: 500 14px/1.5 var(--f-mono); color: var(--ink-2); }
+  .tl .dot { width: 18px; height: 18px; border: 2px solid var(--ink); margin-top: 1px; display: grid; place-items: center; }
+  .tl .dot.f { background: var(--ink); color: #fff; }
+  .tl .dot svg { width: 12px; height: 12px; }
+  .count { height: 10px; border: 1.5px solid var(--ink); margin-top: 6px; position: relative; } .count i { position: absolute; inset: 0 45% 0 0; background: var(--ink); }
+  .seal { display: flex; align-items: center; gap: 10px; padding: 10px 12px; border: 1.5px dashed var(--ink); font: 500 15px/1.3 var(--f-body); }
+  .seal svg { width: 22px; height: 22px; flex: none; }
+  .acts { display: flex; gap: 10px; flex-wrap: wrap; padding: 14px 20px; border-top: 2px solid var(--ink); }
+  .later { margin-top: 14px; }
+  .m-only { display: none; }
+  @media (max-width: 760px) {
+    main { padding: 14px 14px 120px; }
+    .fleet { grid-template-columns: repeat(3, 1fr); }
+    .fleet > div:nth-child(n+4) { display: none; }
+    .fleet > div { padding: 8px 10px; }
+    .fleet b { font-size: 19px; }
+    .fleet span { font-size: 14px; }
+    .grid { display: block; }
+    .d-only { display: none !important; }
+    .m-only { display: block; }
+    .focus .hd h2 { font-size: 30px; }
+    .q.sel { outline: 0; }
+    .q.sel::after { display: none; }
+    .acts .btn { flex: 1 1 100%; }
+    .queue { margin-top: 16px; }
+  }
+</style></head>
+<body>
+<header class="band">
+  <div class="stateplate" style="background:var(--critical);color:#fff;box-shadow:inset 0 0 0 3px var(--ink)"><i data-i="tri"></i>1 critical</div>
+  <div class="who"><b>Anita · Fleet</b><span>Nagpur quarry · 6 machines</span></div>
+  <div class="spacer"></div>
+  <div class="cell hide-sm">Demo data<b class="num">10:42 · 10× speed</b></div>
+  <div class="cell hide-sm">Dispatch<b>Dry run · no calls</b></div>
+  <div class="cell hide-sm">Ledger<b>214 entries · check needed</b></div>
+  <button class="iconbtn"><i data-i="globe"></i><small>En · हि</small></button>
+  <button class="iconbtn"><i data-i="ask"></i><small>Ask</small></button>
+</header>
+<div class="shell">
+  <nav class="dock">
+    <a class="on"><i data-i="inbox"></i>Inbox<span class="badge">6</span></a>
+    <a><i data-i="map"></i>Fleet map</a>
+    <a><i data-i="chart"></i>Analytics</a>
+    <a><i data-i="ledger"></i>Ledger</a>
+    <div class="grow"></div>
+  </nav>
+  <main>
+    <section class="fleet" aria-label="Fleet now">
+      <div><b>EXC-007</b><span>Ravi · Excavation</span><span class="plate out">Paused</span></div>
+      <div class="sel"><b>EXC-012</b><span>Mohan · Trenching</span><span class="plate warning"><i data-i="tri"></i>Warning</span></div>
+      <div><b>LDR-05</b><span>Imran · Loading</span><span class="plate caution">Idle 22 min</span></div>
+      <div><b>DOZ-03</b><span>Kiran · Grading</span><span class="plate out">Working</span></div>
+      <div><b>EXC-009</b><span>Not paired</span><span class="plate out">Parked</span></div>
+      <div><b>TRK-21</b><span>Suresh · Haul road</span><span class="plate out">Moving</span></div>
+    </section>
+
+    <div class="grid">
+      <!-- phone: triage focus first (from D14/C) -->
+      <section class="focus m-only" aria-label="Most urgent">
+        <div class="hd"><span class="plate critical"><i data-i="tri"></i>Critical</span><time class="note">Just now</time>
+          <h2>Ledger changed</h2>
+          <div class="meta">Entry #187 no longer matches what was sealed. Someone or something edited a sealed record.</div></div>
+        <div class="facts">
+          <div class="seal"><i data-i="ledger"></i><span>Internal check: chain breaks at #187 of 214. Telegram witness: not compared yet.</span></div>
+        </div>
+        <div class="acts"><button class="btn pri sm"><i data-i="ledger"></i>Open ledger · verify</button><button class="btn sm"><i data-i="link"></i>Compare with Telegram copy</button></div>
+      </section>
+
+      <section class="queue" aria-label="Needs action">
+        <h2 class="sec"><b>01</b> — Needs action · 6 <span class="r d-only">tier, then age</span></h2>
+        <div class="tiers d-only"><span class="plate critical">Critical 1</span><span class="plate warning">Warning 1</span><span class="plate caution">Caution 4</span></div>
+        <div class="q d-only"><span class="plate critical">Critical</span><time>now</time><h4>Ledger changed</h4><small>Entry #187 edited after sealing</small></div>
+        <div class="q sel"><span class="plate warning">Warning</span><time>2 min</time><h4>Faulty machine near a person</h4><small>EXC-012 · Bay 5 · person 9 m</small></div>
+        <div class="q"><span class="plate caution">Caution</span><time>8 min</time><h4>Near-miss reported</h4><small>No name shown · trainer sees counts only</small></div>
+        <div class="q"><span class="plate caution">Caution ×3</span><time>22 min</time><h4>Idling too long</h4><small>LDR-05 · Imran</small></div>
+        <div class="q"><span class="plate caution">Caution ×12</span><time>31 min</time><h4>Too many alerts</h4><small>12 belt alerts in 10 min · grouped</small></div>
+        <div class="q"><span class="plate caution">Caution</span><time>40 min</time><h4>PPE missing</h4><small>Suresh · vest · task blocked</small></div>
+        <h2 class="sec later"><b>02</b> — Acknowledged · 1</h2>
+        <div class="q done" style="border-top-width:2px"><span class="plate out">Done</span><time>09:52</time><h4>Seatbelt off on a slope</h4><small>EXC-007 · Ravi · practice assigned</small></div>
+      </section>
+
+      <section class="focus d-only" aria-label="Selected alert">
+        <div class="hd"><span class="plate warning"><i data-i="tri"></i>Warning</span>
+          <h2>Faulty machine near a person</h2><span class="note" style="margin-left:auto">raised 10:40 · 2 min ago</span>
+          <div class="meta">EXC-012 · Mohan · Trenching, Bay 5</div></div>
+        <div class="bd">
+          <div class="fstage">
+            <div class="mach" data-hl="ram" data-tier="warning">
+              <button class="tag warning" data-ax="352" data-ay="206" data-tx="452" data-ty="-44"><span class="n">!</span><span>Boom ram<small>Pressure −38 % in 40 s</small></span></button>
+              <button class="tag" data-ax="80" data-ay="204" data-tx="200" data-ty="392"><span class="n"><i data-i="person"></i></span><span>Worker tag<small>9 m behind · inside 10 m ring</small></span></button>
+            </div>
+            <div class="cap note">Readings simulated (SIM) · drawing, not a photo</div>
+          </div>
+          <div class="facts">
+            <p class="why">The boom ram lost pressure fast while a worker was inside the stop ring. The boom could drop.</p>
+            <ol class="tl">
+              <li><time>10:40</time><span class="dot f"><i data-i="check"></i></span><span>Mohan told on his cab screen</span></li>
+              <li><time>10:40</time><span class="dot f"><i data-i="check"></i></span><span>Protocol card sent to the worker: stay clear, move upwind, radio</span></li>
+              <li><time>10:41</time><span class="dot"></span><span>Telegram to site supervisor · <b>dry run, nothing sent</b></span></li>
+              <li><time>10:45</time><span class="dot"></span><span>Comes back to you if not acknowledged<div class="count"><i></i></div></span></li>
+            </ol>
+            <div class="seal"><i data-i="lock"></i><span>Sealed into the ledger when you act (entry #215). Near-miss names are never sealed.</span></div>
+          </div>
+        </div>
+        <div class="acts"><button class="btn pri"><i data-i="check"></i>Acknowledge</button><button class="btn"><i data-i="map"></i>Show on map</button><button class="btn"><i data-i="wrench"></i>Machine history</button></div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="machine.js"></script>
+</body></html>
