@@ -4,7 +4,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { KIND_PICTO } from "@/alerts/kinds";
 import { safetyTone } from "@/alerts/selectors";
 import { useSafetyState } from "@/alerts/use-safety-state";
-import { Chip, type ChipTone } from "@/components/ui/chip";
+import { Chip } from "@/components/ui/chip";
 import { Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { useAppState } from "@/data/store";
 import { useMotionLock } from "@/hero/use-motion-lock";
@@ -29,22 +29,18 @@ export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
   const safetyWord = t(`enums.safety.${safety}`);
   const picto: PictogramName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? FALLBACK_PICTO.nosignal : FALLBACK_PICTO.clear;
 
-  let connTone: ChipTone = "outline";
   let connText: string;
   switch (connectivity.kind) {
     case "live":
-      connTone = "ink";
       connText = clock ? t("chrome.simStatus", { time: format.dateTime(new Date(clock.sim_now), "time"), speed: clock.speed }) : t("chrome.live");
       break;
     case "reconnecting":
       connText = t("chrome.reconnecting");
       break;
     case "nosignal":
-      connTone = "nosignal";
       connText = t("chrome.noSignalStatus", { time: format.dateTime(new Date(connectivity.syncedAtMs), "time") });
       break;
     default:
-      connTone = "sunk";
       connText = clock ? t("chrome.fixtureStatus", { time: format.dateTime(new Date(clock.sim_now), "time"), speed: clock.speed }) : t("chrome.fixture");
   }
 
@@ -62,9 +58,10 @@ export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
           {safetyWord}
         </Chip>
       ) : null}
-      <Chip tone={connTone} word dashed={connectivity.kind === "nosignal"} className="ms-auto">
+      {showSafety ? null : <span className="strip-name t-caption">{t("chrome.appName")}</span>}
+      <span className="strip-cap t-caption" data-conn={connectivity.kind}>
         {connText}
-      </Chip>
+      </span>
     </header>
   );
 }

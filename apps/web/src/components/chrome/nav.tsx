@@ -13,7 +13,10 @@ type NavProps = {
   badges?: Partial<Record<NavItem["key"], string>>;
 };
 
-/** Bottom bar below 1024 px, left rail from 1024 px. Icon + label always, 80 px targets. */
+/**
+ * The dock: an ink bar below 1024 px, the left rail from 1024 px. Icon + label always, 96 px tall.
+ * The operator's last dock slot is the SOS plate (SosControl), fixed over the reserved cell.
+ */
 export function Nav({ role, badges }: NavProps) {
   const items = navFor(role);
   const pathname = usePathname();
@@ -22,7 +25,7 @@ export function Nav({ role, badges }: NavProps) {
   const serverLocked = useAppState((s) => s.operator?.motion_locked ?? false);
   const shown = useMotionLock(serverLocked);
   return (
-    <nav className="nav" aria-label={t("primary")} inert={shown || undefined}>
+    <nav className="nav" data-sos={role === "operator" || undefined} aria-label={t("primary")} inert={shown || undefined}>
       {items.map(({ key, href, icon: Icon }) => {
         const badge = badges?.[key];
         return (

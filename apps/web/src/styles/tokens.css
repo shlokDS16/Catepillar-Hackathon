@@ -25,6 +25,14 @@
   --on-ink: #ffffff;
   --on-signal: #16150f;
 
+  /* 1b. Ink Frame (D14, portal-redesign-study §3 B): the status band, the dock and the FM rail.
+     --frame is the landing's ink, so the landing's circle wipe ends in this frame. Working content
+     never sits on it; the only colour allowed in the frame is the live state plate and SOS. */
+  --frame: #16150f;
+  --on-frame: #f2f0ea; /* 16:1 on --frame */
+  --on-frame-2: #b9b5aa; /* about 9:1 on --frame: captions and idle dock labels */
+  --frame-rule: #3a382f;
+
   /* 2. Type. Families arrive as next/font variables on <html>. */
   --ff-body: var(--font-barlow), var(--font-devanagari), var(--font-tamil), system-ui, sans-serif;
   --ff-display: var(--font-barlow-condensed), var(--font-devanagari), var(--font-tamil), system-ui,
@@ -37,6 +45,7 @@
   --t-body: 18px;
   --t-label: 18px;
   --t-meta: 15px;
+  --t-caption: 15px; /* mono captions: provenance, section labels. Never below 15 px. */
 
   --lh-state: 0.95;
   --lh-figure: 1;
@@ -51,6 +60,8 @@
   --fw-body: 500;
   --fw-label: 600;
   --fw-meta: 500;
+  --ls-display: -0.03em; /* Latin display words only; Indic scripts reset it to 0 */
+  --ls-caption: 0.04em;
 
   /* 3. Space, shape, size (4 px base) */
   --s-1: 4px;
@@ -116,6 +127,7 @@
   /* Chrome */
   --strip-h: 80px;
   --nav-h: 80px;
+  --dock-h: 96px; /* phone dock: 4 destinations + the fixed SOS slot */
   --rail-w: 120px;
 }
 
@@ -145,6 +157,7 @@
 :lang(ta) {
   --t-state: clamp(48px, 12vw, 82px);
   --lh-state: 1.25;
+  --ls-display: 0;
   --lh-title: 1.45;
   --lh-body: 1.6;
   --lh-label: 1.45;
