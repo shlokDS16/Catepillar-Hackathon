@@ -612,5 +612,101 @@
     },
     "today": "आज",
     "overrideGranted": "छूट दी गई"
+  },
+  "task": {
+    "noTask": "अभी कोई काम नहीं सौंपा गया।",
+    "start": "काम शुरू करें",
+    "resume": "फिर शुरू करें",
+    "pause": "रोकें",
+    "complete": "पूरा करें",
+    "needsPpe": "{items} चाहिए",
+    "progressLabel": "प्रगति",
+    "elapsed": "अब तक {min} मिनट",
+    "elapsedNone": "—",
+    "plannedStart": "तय समय {time}",
+    "completed": "{task} पूरा हुआ",
+    "confirmTitle": "{task} पूरा करें?",
+    "confirmBody": "{pct} % हो चुका, अब तक {min} मिनट।",
+    "confirmBodyNoTime": "{pct} % हो चुका।",
+    "confirm": "काम पूरा करें",
+    "back": "वापस",
+    "errors": {
+      "notSent": "भेजा नहीं गया। फिर कोशिश करें।",
+      "notPaired": "पहले अपनी मशीन जोड़ें।",
+      "pairLink": "शुरुआत पर जाएँ",
+      "invalidState": "काम बदल गया है। जाँचकर फिर कोशिश करें।"
+    },
+    "ppe": {
+      "label": "सुरक्षा उपकरण",
+      "wear": "{item} पहनें",
+      "notified": "सुपरवाइज़र को सूचना दी गई",
+      "detected": "{items} दिखा",
+      "allItems": "वेस्ट",
+      "override": "सुपरवाइज़र की छूट · {time} तक",
+      "overrideNote": "इनके बिना अनुमति: {items}। लेजर में दर्ज।",
+      "expired": "छूट खत्म हो गई",
+      "item": {
+        "helmet": "हेलमेट",
+        "vest": "वेस्ट",
+        "boots": "जूते",
+        "gloves": "दस्ताने"
+      },
+      "overrideLapsed": "छूट {time} पर खत्म हुई",
+      "lapsedNote": "शुरू करने पर सुरक्षा उपकरण फिर जाँचे जाएँगे।",
+      "notifiedDryRun": "सुपरवाइज़र अलर्ट: परीक्षण, भेजा नहीं गया"
+    },
+    "why": {
+      "title": "यह अनुमान क्यों",
+      "none": "अभी कोई अनुमान नहीं।",
+      "pct": "{sign}{pct} %",
+      "noChange": "कोई बदलाव नहीं",
+      "group": {
+        "weather": "मौसम",
+        "skill": "ऑपरेटर का कौशल",
+        "age": "मशीन की उम्र",
+        "heat": "गर्मी",
+        "wind": "हवा",
+        "circadian": "शिफ्ट का घंटा"
+      },
+      "value": {
+        "weather": {
+          "clear": "साफ",
+          "hot": "गर्म",
+          "rain": "बारिश",
+          "windy": "तेज़ हवा",
+          "cold": "ठंडा",
+          "fog": "कोहरा",
+          "dust": "धूल"
+        },
+        "skill": {
+          "novice": "नया",
+          "intermediate": "मध्यम",
+          "expert": "निपुण"
+        },
+        "age": {
+          "lt5": "5 साल से कम",
+          "5to10": "5 से 10 साल",
+          "10to20": "10 से 20 साल",
+          "20plus": "20 साल से ज़्यादा"
+        },
+        "heat": {
+          "cold": "ठंडा",
+          "normal": "सामान्य",
+          "warm": "गुनगुना",
+          "high": "ज़्यादा",
+          "extreme": "बहुत ज़्यादा"
+        },
+        "wind": {
+          "calm": "शांत",
+          "fresh": "तेज़",
+          "strong": "बहुत तेज़"
+        },
+        "circadian": {
+          "normal": "सामान्य",
+          "night_trough": "रात की सुस्ती",
+          "post_lunch_dip": "खाने के बाद की सुस्ती"
+        }
+      }
+    }
   }
 }
