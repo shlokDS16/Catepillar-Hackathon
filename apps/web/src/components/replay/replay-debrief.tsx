@@ -9,7 +9,7 @@ import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import type { I18nText, Lang } from "@/data/types";
-import { reviewRows, traceRows, type TraceChip } from "@/replay/debrief";
+import { reviewRows, sectionClipId, traceRows, type TraceChip } from "@/replay/debrief";
 import { useCountUp, useReducedMotion } from "@/replay/use-reenactment";
 import type { ReplayDebriefResult, ReplayScenario } from "@cat/shared";
 
@@ -24,11 +24,6 @@ type Props = {
 /** The count-up never takes longer than --dur-count (visual-language §5.1). */
 const COUNT_MS = 1200;
 
-/** Clip ids for the per-section [Listen]: `replay.<area>.<event>.rule` becomes `...<event>.debrief_<section>`. */
-export function sectionClipId(ruleAudioId: string | null, section: string): string | null {
-  return ruleAudioId ? `${ruleAudioId.replace(/\.[^.]+$/, "")}.debrief_${section}` : null;
-}
-
 /**
  * Phase 4 Debrief (S5b, T8-T10), untimed, direction B "Ink Frame" (D14). The re-enactment plays on an
  * ink theatre (the one dark work surface, visual-language §5.1); everything after it is ink on paper
@@ -40,7 +35,7 @@ export function sectionClipId(ruleAudioId: string | null, section: string): stri
 export function ReplayDebrief({ result, scenario, paused, onPractiseAgain }: Props) {
   const t = useTranslations("replay.debrief");
   const lang = useLocale() as Lang;
-  const title = localText(scenario.brief.title, lang);
+  const title = localText(scenario.summary, lang);
   const clip = (section: string) => sectionClipId(result.rule.audio_id, section);
 
   return (
