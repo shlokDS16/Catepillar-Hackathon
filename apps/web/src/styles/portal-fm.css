@@ -1,0 +1,238 @@
+/* Phase 4 (D14 Ink Frame): FM Inbox split view and triage, Ledger result plate.
+   Safety colour only on a live row's tier stripe and chip; resolved and handled rows stay ink and outline.
+   No motion beyond the one-shot border stamp the Plate already has, so nothing needs a reduced-motion branch. */
+
+/* ---------- Inbox: desktop split (1024 px and up) ---------- */
+.inbox-split {
+  display: grid;
+  grid-template-columns: minmax(320px, 400px) minmax(0, 1fr);
+  border: var(--bw-heavy) solid var(--ink);
+  background: var(--surface);
+  min-height: 60dvh;
+}
+.inbox-list-col {
+  display: flex;
+  flex-direction: column;
+  background: var(--surface-sunk);
+  border-inline-end: var(--bw-heavy) solid var(--ink);
+  min-width: 0;
+}
+.inbox-keys {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-block-end: var(--bw) solid var(--ink);
+  color: var(--ink-2);
+}
+.inbox-list {
+  max-height: calc(100dvh - 220px);
+  overflow-y: auto;
+}
+.inbox-list:focus-visible {
+  outline-offset: -4px;
+}
+.inbox-group-head {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-block-end: var(--bw-hair) solid var(--ink);
+  background: var(--paper);
+}
+.inbox-empty {
+  padding: var(--s-4);
+}
+.inbox-pane {
+  padding: var(--s-5);
+  min-width: 0;
+}
+
+/* One compact row (desktop option and mobile queue button): 80 px high, tier stripe on the leading edge. */
+.inbox-row-compact {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-2);
+  box-sizing: border-box;
+  width: 100%;
+  min-height: var(--hit);
+  padding: var(--s-3) var(--s-4);
+  border: 0;
+  border-block-end: var(--bw-hair) solid var(--ink);
+  border-inline-start: 10px solid var(--ink);
+  background: transparent;
+  color: var(--ink);
+  font: inherit;
+  text-align: start;
+  cursor: pointer;
+}
+.inbox-row-compact[data-live][data-tier="caution"] { border-inline-start-color: var(--state-caution); }
+.inbox-row-compact[data-live][data-tier="warning"] { border-inline-start-color: var(--state-warning); }
+.inbox-row-compact[data-live][data-tier="critical"] { border-inline-start-color: var(--state-critical); }
+.inbox-row-compact:not([data-live]) { border-inline-start-color: var(--rule-soft); }
+.inbox-row-compact[data-selected] {
+  background: var(--surface);
+  outline: var(--bw-heavy) solid var(--ink);
+  outline-offset: -3px;
+}
+.inbox-row-compact:hover { text-decoration: underline; }
+.inbox-row-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.inbox-row-title {
+  overflow-wrap: anywhere;
+}
+
+/* ---------- Inbox: the alert in full (pane and lead card) ---------- */
+.inbox-detail {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.inbox-detail-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.inbox-detail-meta {
+  margin: 0;
+  color: var(--ink-2);
+}
+.inbox-detail-title {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-size: clamp(32px, 5vw, 44px);
+  font-weight: var(--fw-state);
+  line-height: 1;
+  letter-spacing: var(--ls-display);
+  text-transform: uppercase;
+  overflow-wrap: anywhere;
+}
+:lang(hi) .inbox-detail-title,
+:lang(ta) .inbox-detail-title {
+  letter-spacing: 0;
+  text-transform: none;
+}
+.inbox-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  margin: 0;
+}
+.inbox-section h3,
+.inbox-section figcaption {
+  margin: 0;
+}
+.inbox-sim {
+  display: inline-block;
+  margin-inline-start: var(--s-2);
+  padding: 0 var(--s-2);
+  border: var(--bw) dashed var(--ink);
+  font-family: var(--ff-mono);
+  font-size: var(--t-caption);
+  letter-spacing: var(--ls-caption);
+  text-transform: uppercase;
+}
+.inbox-spark svg {
+  display: block;
+  width: 100%;
+  max-width: 480px;
+  height: auto;
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+}
+.spark-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 3;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+  vector-effect: non-scaling-stroke;
+}
+.spark-normal {
+  stroke: var(--ink-2);
+  stroke-width: 2;
+  stroke-dasharray: 6 5;
+  vector-effect: non-scaling-stroke;
+}
+.spark-dot {
+  fill: var(--ink);
+}
+.inbox-spark-legend {
+  display: flex;
+  justify-content: space-between;
+  max-width: 480px;
+  margin: 0;
+  color: var(--ink-2);
+}
+.inbox-timeline {
+  list-style: none;
+  margin: 0;
+  padding: 0 0 0 var(--s-4);
+  border-inline-start: var(--bw-heavy) solid var(--ink);
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+  font-size: var(--t-body);
+}
+.inbox-timeline li[data-dry] {
+  font-style: italic;
+  color: var(--ink-2);
+}
+
+/* Mobile lead card: a plate with the tier on its top rule (tier colour only while live). */
+.inbox-detail[data-variant="lead"] {
+  padding: var(--s-4);
+  border: var(--bw-heavy) solid var(--ink);
+  border-block-start-width: 10px;
+  background: var(--surface);
+}
+.inbox-detail[data-variant="lead"][data-live][data-tier="caution"] { border-block-start-color: var(--state-caution); }
+.inbox-detail[data-variant="lead"][data-live][data-tier="warning"] { border-block-start-color: var(--state-warning); }
+.inbox-detail[data-variant="lead"][data-live][data-tier="critical"] { border-block-start-color: var(--state-critical); }
+.inbox-detail[data-variant="lead"] .inbox-actions > * {
+  flex: 1 1 100%;
+}
+
+/* ---------- Inbox: mobile triage ---------- */
+.inbox-triage {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+.inbox-count {
+  margin: 0;
+}
+.inbox-queue {
+  display: flex;
+  flex-direction: column;
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+}
+.inbox-queue > h2 {
+  margin: 0;
+  padding: var(--s-3) var(--s-4);
+  border-block-end: var(--bw) solid var(--ink);
+  background: var(--paper);
+}
+.inbox-queue > .inbox-row-compact:last-child {
+  border-block-end: 0;
+}
+
+/* ---------- Ledger: result plate first, then the witness compare ---------- */
+.ledger-result {
+  padding-block: var(--s-5);
+}
+.ledger-result .ledger-plate-verdict {
+  font-size: clamp(32px, 6vw, 48px);
+}
+.ledger-recheck {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-3);
+}
+.ledger-recheck > p {
+  margin: 0;
+}

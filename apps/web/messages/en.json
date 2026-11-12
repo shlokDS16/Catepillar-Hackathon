@@ -539,7 +539,13 @@
     "noEntries": "No entries yet",
     "verifyToList": "Verify the ledger to list entries.",
     "showing": "Latest {n} entries",
-    "footer": "Tamper-evident, not tamper-proof: any change after a checkpoint shows up here. Externally witnessed: the Telegram side is only what you pasted."
+    "footer": "Tamper-evident, not tamper-proof: any change after a checkpoint shows up here. Externally witnessed: the Telegram side is only what you pasted.",
+    "verifying": "Checking the whole ledger now",
+    "cancel": "Stop checking",
+    "cancelled": "Check stopped. Nothing was changed.",
+    "checkNow": "Check now",
+    "checkAgain": "Check again",
+    "stepWitness": "Then compare with the copy outside our system"
   },
   "inbox": {
     "title": "Inbox",
@@ -592,7 +598,7 @@
       "no_answer": "no answer",
       "failed": "failed",
       "suppressed": "suppressed",
-      "dry_run": "test run (not sent)"
+      "dry_run": "dry run (not sent)"
     },
     "acknowledge": "Acknowledge",
     "grantOverride": "Grant override",
@@ -621,7 +627,21 @@
       "anyone": "this operator"
     },
     "today": "Today",
-    "overrideGranted": "Override granted"
+    "overrideGranted": "Override granted",
+    "keysHint": "Up and Down choose an alert. Enter opens its actions.",
+    "timeline": "What happened",
+    "raised": "Raised",
+    "raisedNow": "Raised just now",
+    "raisedAgo": "Raised {m} min ago",
+    "raisedToday": "Raised today",
+    "noDispatch": "No message sent yet.",
+    "signal": "Signal around the event",
+    "simulated": "Simulated",
+    "signalSr": "Simulated line: normal level {normal}, now {value}.",
+    "normalLevel": "Normal {v}",
+    "nowLevel": "Now {v}",
+    "queueLabel": "Then {n} more",
+    "promote": "Open {kind}"
   },
   "task": {
     "noTask": "No task assigned right now.",
