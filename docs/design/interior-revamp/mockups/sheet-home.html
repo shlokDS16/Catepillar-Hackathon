@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sheet · Operator Home</title>
+<link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow:wght@400;500;600;700&family=Barlow+Condensed:wght@600;700;800&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="kit.css">
+<style>
+  .g { display: grid; grid-template-columns: repeat(12, minmax(0,1fr)); gap: 20px; }
+  .s5 { grid-column: span 5; } .s7 { grid-column: span 7; } .s12 { grid-column: span 12; } .s4 { grid-column: span 4; }
+  .hero { border: 3px solid var(--ink); background: var(--surface); }
+  .hero > div { padding: 14px 20px; }
+  .hero > div + div { border-top: 1px solid var(--rule-soft); }
+  .hero .word { font-size: 112px; margin: 4px 0 2px; }
+  .hero .fig { font: 700 52px/1 var(--f-disp); }
+  .hero .split { display: grid; grid-template-columns: 1fr 1fr; padding: 0 !important; }
+  .hero .split > div { padding: 14px 20px; }
+  .hero .split > div + div { border-left: 1px solid var(--rule-soft); }
+  .hero .safety { display: flex; flex-direction: column; gap: 8px; }
+  .hero .safety .plate { font-size: 22px; padding: 10px 12px; white-space: normal; line-height: 1.05; }
+  .hero .whyline svg { width: 22px; height: 22px; }
+  .hero .whyline { display: flex; justify-content: space-between; align-items: center; font: 600 17px/1.2 var(--f-body); }
+  .s7 .card { height: calc(100% - 37px); }
+  .mcard .draw .mach { flex: 1; }
+  .mcard { display: grid; grid-template-rows: 1fr auto; grid-template-columns: minmax(0,1.2fr) minmax(0,1fr); }
+  .mcard .draw { display: flex; align-items: center; padding: 26px 18px 12px; border-right: 1px solid var(--ink); background: var(--surface); }
+  .tag.mini { padding: 0; min-height: 0; gap: 0; border: 0; background: none; }
+  .tag.mini .n { width: 32px; height: 32px; }
+  .tag.mini.caution .n { background: var(--caution); color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+  .callouts { list-style: none; margin: 0; padding: 4px 18px; }
+  .callouts li { display: grid; grid-template-columns: 34px 1fr auto; gap: 10px; align-items: center; min-height: 64px; }
+  .callouts li + li { border-top: 1px solid var(--rule-soft); }
+  .callouts .n { display: grid; place-items: center; width: 30px; height: 30px; background: var(--ink); color: #fff; font: 800 18px/1 var(--f-disp); }
+  .callouts .n.c { background: var(--caution); color: var(--ink); box-shadow: 0 0 0 2px var(--ink); }
+  .callouts b { font: 700 18px/1.2 var(--f-body); display: block; }
+  .callouts small { font: 500 15px/1.3 var(--f-body); color: var(--ink-2); }
+  .callouts em { font-style: normal; font: 700 17px/1 var(--f-body); }
+  .mfoot { grid-column: span 2; display: flex; justify-content: space-between; align-items: center; padding: 10px 18px; border-top: 1px solid var(--ink); }
+  .c3 h3 { margin: 4px 0 6px; font: 700 22px/1.2 var(--f-body); }
+  .c3 .acts { display: flex; gap: 10px; margin-top: 12px; flex-wrap: wrap; }
+  .c3 .acts .btn { flex: 1; }
+  .waitbar { display: flex; align-items: center; gap: 8px; font: 600 15px/1 var(--f-mono); letter-spacing: .04em; text-transform: uppercase; }
+  .waitbar svg { width: 18px; height: 18px; }
+  .cond .kv { min-height: 48px; }
+  @media (max-width: 1200px) and (min-width: 761px) { .s5, .s7 { grid-column: span 12; } .s4 { grid-column: span 6; } }
+  @media (max-width: 760px) {
+    .g { display: block; } .g > * + * { margin-top: 16px; }
+    .hero .word { font-size: 84px; }
+    .mcard { display: block; }
+    .mcard .draw { border-right: 0; border-bottom: 1px solid var(--ink); }
+    .tape .pin b { display: none; }
+    .tape .hours span:nth-child(even) { display: none; }
+  }
+</style></head>
+<body>
+<header class="band">
+  <div class="stateplate caution"><i data-i="tri"></i>Caution</div>
+  <div class="who"><b>Ravi · EXC-007</b><span>Nagpur quarry · Bay 3</span></div>
+  <div class="spacer"></div>
+  <div class="cell hide-sm">Demo data<b class="num">10:42 · 10× speed</b></div>
+  <div class="cell hide-sm">Sync<b><i data-i="check"></i>Saved</b></div>
+  <button class="iconbtn"><i data-i="globe"></i><small>En · हि</small></button>
+  <button class="iconbtn"><i data-i="ask"></i><small>Ask</small></button>
+</header>
+<div class="shell">
+  <nav class="dock">
+    <a class="on"><i data-i="home"></i>Home</a>
+    <a><i data-i="task"></i>Task</a>
+    <a><i data-i="shield"></i>Safety</a>
+    <a><i data-i="cap"></i>Practice<span class="badge">1</span></a>
+    <div class="grow"></div>
+    <a class="sos" style="color:#fff"><i data-i="sos"></i>SOS<small>Hold 3 s</small></a>
+  </nav>
+  <main>
+    <div class="g">
+      <section class="s5" aria-label="Now">
+        <h2 class="sec"><b>01</b> — Now</h2>
+        <div class="hero">
+          <div><div class="meta">EXC-007 · parked · belt on</div><div class="disp word">Paused</div><div class="meta">Waiting for truck since 10:36</div></div>
+          <div><div style="font:700 26px/1.2 var(--f-body)">Excavation · Bay 3</div>
+            <div class="row" style="margin-top:6px"><span class="fig num">35 %</span><div class="prog" style="flex:1"><i style="width:35%"></i></div></div></div>
+          <div class="split"><div><div class="meta">Time left</div><div class="fig num">18 min</div><div class="meta">up to 24</div></div>
+            <div class="safety"><div class="meta">Safety</div><span class="plate caution"><i data-i="tri"></i>Check boom ram</span><div class="meta">at your next break</div></div></div>
+          <div class="whyline"><span>Why longer: heat +22 % · new site +15 %</span><i data-i="chev" style="width:22px"></i></div>
+        </div>
+      </section>
+      <section class="s7" aria-label="Your machine">
+        <h2 class="sec"><b>02</b> — Your machine <span class="r">readings simulated (SIM)</span></h2>
+        <div class="card mcard">
+          <div class="draw"><div class="mach" data-hl="ram" data-tier="caution">
+            <span class="tag mini" data-ax="306" data-ay="182" data-tx="306" data-ty="182"><span class="n">1</span></span>
+            <span class="tag mini caution" data-ax="346" data-ay="208" data-tx="346" data-ty="208"><span class="n">2</span></span>
+            <span class="tag mini" data-ax="250" data-ay="291" data-tx="250" data-ty="291"><span class="n">3</span></span>
+            <span class="tag mini" data-ax="81" data-ay="205" data-tx="81" data-ty="205"><span class="n">4</span></span>
+          </div></div>
+          <ol class="callouts">
+            <li><span class="n">1</span><span><b>Seatbelt</b><small>On since 10:36</small></span><em>On ✓</em></li>
+            <li><span class="n c">2</span><span><b>Boom ram</b><small>Pressure rising slowly</small></span><span class="plate caution">Check</span></li>
+            <li><span class="n">3</span><span><b>Tracks</b><small>Tension normal</small></span><em>OK ✓</em></li>
+            <li><span class="n">4</span><span><b>Rear sensor</b><small>No one in your rings</small></span><em>Clear ✓</em></li>
+          </ol>
+          <div class="mfoot"><span class="meta">A drawing of your machine, not a photo</span><button class="listen"><i data-i="speak"></i>Listen</button></div>
+        </div>
+      </section>
+      <section class="s12 card pad" aria-label="Shift">
+        <h2 class="sec"><b>03</b> — Your shift today <span class="r">tap a mark to practise it</span></h2>
+        <div class="tape">
+          <div class="lane"><i class="w" style="width:10%"></i><i class="brk" style="width:2%"></i><i class="w" style="width:11%"></i><i class="p" style="width:2%"></i><i class="w" style="width:2%"></i><i class="p" style="width:1%"></i><i class="f" style="width:72%"></i></div>
+          <div class="now" style="left:27%"><span class="num">10:42</span></div>
+          <div class="pin" style="left:19%"><i data-i="belt"></i><b>09:52 Belt off</b></div>
+          <div class="pin" style="left:34%"><i data-i="truck"></i><b>Truck due 10:48</b></div>
+          <div class="pin" style="left:62%"><i data-i="heat"></i><b>14:00 heat peak 44 °C</b></div>
+          <div class="hours"><span style="left:0%">08</span><span style="left:20%">10</span><span style="left:40%">12</span><span style="left:60%">14</span><span style="left:80%">16</span><span style="left:99%">18</span></div>
+        </div>
+        <div class="tape-key"><span><i style="background:var(--ink)"></i>Working</span><span><i style="background-color:var(--surface);background-image:radial-gradient(circle,var(--ink) 1.3px,transparent 1.6px);background-size:7px 7px"></i>Waiting</span><span><i style="background:var(--paper)"></i>Break</span><span><i style="background:var(--sunk)"></i>Planned</span></div>
+      </section>
+      <section class="s4 card pad c3" aria-label="While you wait">
+        <h2 class="sec"><b>04</b> — While you wait <span class="r num">6 min</span></h2>
+        <h3>Seatbelt on slopes</h3><div class="meta">2-minute picture lesson. Stops the moment you move.</div>
+        <div class="acts"><button class="btn pri sm"><i data-i="play"></i>Start</button><button class="btn sm">Not now</button></div>
+      </section>
+      <section class="s4 card pad c3" aria-label="Practice">
+        <h2 class="sec"><b>05</b> — Practice</h2>
+        <div class="meta">Because of today 09:52</div><h3>Seatbelt off on a slope</h3>
+        <div class="acts"><button class="btn pri sm"><i data-i="play"></i>Replay · 3 min</button><button class="btn sm"><i data-i="speak"></i>Listen</button></div>
+      </section>
+      <section class="s4 card pad c3 cond" aria-label="Conditions">
+        <h2 class="sec"><b>06</b> — Conditions</h2>
+        <div class="rows">
+          <div class="kv"><i data-i="heat"></i><span>Heat now</span><b class="num">WBGT 31 °C</b></div>
+          <div class="kv"><i data-i="clock"></i><span>Peak 14:00</span><b class="num">44 °C</b></div>
+        </div>
+        <div class="note">Scenario forecast · Open-Meteo archive, CC BY 4.0</div>
+      </section>
+    </div>
+  </main>
+</div>
+<script src="machine.js"></script>
+</body></html>
