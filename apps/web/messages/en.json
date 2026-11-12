@@ -285,6 +285,23 @@
       "cardTitle": "Evidence",
       "cardNote": "From your recorded event · simulated"
     },
+    "decide": {
+      "stepOf": "Step {n} of {total}",
+      "choicesLabel": "Your choices",
+      "orderHint": "Tap the actions in the order you would do them. Tap the last number to take it back.",
+      "orderNumber": "Number {n}",
+      "chosen": "Chosen",
+      "confirm": "Confirm order",
+      "numberAll": "Number every action first",
+      "timesUp": "Time's up",
+      "timesUpBody": "This step is skipped. Moving on.",
+      "scoring": "Scoring…",
+      "notSaved": "Score not saved. Try again.",
+      "waiting": "Waiting for signal",
+      "waitingBody": "Your answers are kept. Trying again every 5 seconds.",
+      "debriefStub": "Debrief opens here",
+      "debriefStubNote": "Your score was saved. The Debrief is built in R4."
+    },
     "evidence": {
       "trend": {
         "before": "{s} s before",
