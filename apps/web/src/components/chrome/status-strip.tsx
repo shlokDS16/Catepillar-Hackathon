@@ -9,6 +9,7 @@ import { Chip } from "@/components/ui/chip";
 import { Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { useAppState } from "@/data/store";
 import { dataLabel } from "@/chrome/data-label";
+import { useDataSource } from "@/data/use-data-source";
 import { syncState } from "@/chrome/sync-state";
 import { useMotionLock } from "@/hero/use-motion-lock";
 
@@ -33,7 +34,9 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
   const safetyWord = t(`enums.safety.${safety}`);
   const picto: PictogramName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? FALLBACK_PICTO.nosignal : FALLBACK_PICTO.clear;
 
-  const connText = dataLabel({ connectivity, clock, t, formatTime: (ms) => format.dateTime(new Date(ms), "time") });
+  const source = useDataSource();
+  const runStatus = useAppState((s) => s.snapshot?.run?.status ?? null);
+  const connText = dataLabel({ connectivity, clock, t, formatTime: (ms) => format.dateTime(new Date(ms), "time"), source, runStatus });
   const sync = syncState(connectivity);
   // No outbox exists yet, so "Saved" or "n queued" would claim something nothing measured: the cell shows only when offline.
   const syncText = sync.kind === "offline" ? t("chrome.syncOffline", { n: sync.n }) : null;
@@ -54,7 +57,7 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
       ) : null}
       {title}
       <div className="strip-cells">
-        <span className="strip-cap t-caption" data-conn={connectivity.kind}>
+        <span className="strip-cap t-caption" data-conn={connectivity.kind} title={source === "live" ? t("chrome.source.liveParts") : undefined}>
           {connText}
         </span>
         {syncText ? (

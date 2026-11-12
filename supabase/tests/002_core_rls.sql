@@ -113,15 +113,15 @@ select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_a
 do $$
 begin
   assert (select private.app_role()) = 'fleet_manager', 'app_role fm';
-  assert (select count(*) from public.profiles) = 3, 'FM sees all profiles';
-  assert (select count(*) from public.tasks) = 2, 'FM sees all tasks';
-  assert (select count(*) from public.telemetry_readings) = 2, 'FM sees all telemetry';
-  assert (select count(*) from public.operator_state) = 2, 'FM sees all operator state';
+  assert (select count(*) from public.profiles where site_id = pg_temp.id('site')) = 3, 'FM sees all profiles of the site (the seeded demo profiles are outside it)';
+  assert (select count(*) from public.tasks where site_id = pg_temp.id('site')) = 2, 'FM sees all tasks';
+  assert (select count(*) from public.telemetry_readings where operator_id in (select id from public.operators where site_id = pg_temp.id('site'))) = 2, 'FM sees all telemetry';
+  assert (select count(*) from public.operator_state where operator_id in (select id from public.operators where site_id = pg_temp.id('site'))) = 2, 'FM sees all operator state';
   assert (select count(*) from public.app_config) = 1, 'FM reads app_config';
-  assert (select count(*) from public.operator_gps_trail) = 2, 'FM sees all trails';
-  assert (select count(*) from public.shifts) = 2, 'FM sees all shifts';
-  assert (select count(*) from public.ppe_overrides) = 1, 'FM sees overrides';
-  assert (select count(*) from public.consents) = 2, 'FM sees consents';
+  assert (select count(*) from public.operator_gps_trail where operator_id in (select id from public.operators where site_id = pg_temp.id('site'))) = 2, 'FM sees all trails';
+  assert (select count(*) from public.shifts where operator_id in (select id from public.operators where site_id = pg_temp.id('site'))) = 2, 'FM sees all shifts';
+  assert (select count(*) from public.ppe_overrides where operator_id in (select id from public.operators where site_id = pg_temp.id('site'))) = 1, 'FM sees overrides';
+  assert (select count(*) from public.consents where operator_id in (select id from public.operators where site_id = pg_temp.id('site'))) = 2, 'FM sees consents';
   assert (select n from public.v_task_analytics where task_type = 'excavation' and condition = 'hot') = 6, 'analytics row for FM';
 end $$;
 do $$

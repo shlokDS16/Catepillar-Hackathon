@@ -2,6 +2,10 @@
 -- append-only enforcement, export/verify/recompute, the checkpoint witness line, both tamper modes and
 -- the advisory lock 4210001 that every mutator and the verify snapshot take. Runs inside begin … rollback.
 
+-- The shared project holds the seeded demo ledger entry, so this file's three entries are seq base+1..base+3, not 1..3.
+create temp table seqbase (b bigint not null) on commit drop;
+insert into seqbase select coalesce(max(seq), 0) from public.incidents;
+grant select on seqbase to authenticated;
 -- ── 1. Golden vector 1 (data-model §4.3): canonical bytes, length and hash ────────────────────────
 create temp table gv (k text primary key, j jsonb, t text) on commit drop;
 insert into gv (k, j) values ('v1_input', '{"v":"1","seq":"1","prev_hash":"0000000000000000000000000000000000000000000000000000000000000000","run_id":null,"occurred_at":"2026-09-23T08:15:02.123456Z","recorded_at":"2026-09-23T08:15:03.000001Z","incident_type":"seatbelt_breach","severity":"4","site_id":"11111111-1111-4111-8111-111111111111","operator_id":"22222222-2222-4222-8222-222222222222","machine_id":"33333333-3333-4333-8333-333333333333","lat":"21.146300","lon":"79.088200","description":"सीटबेल्ट नहीं लगा, ढलान 17.4° \"B3\"","context":{"speed_kmh":"6.2","pitch_deg":"17.4","zone":{"name":"Bench 3","max_slope_deg":"15"},"ppe":["helmet","vest"]},"reported_by":null,"reporter_kind":"detector","source_event_id":"44444444-4444-4444-8444-444444444444","supersedes_seq":null,"non_punitive":false}'::jsonb);
@@ -134,7 +138,7 @@ begin
   assert (select count(*) from private.ledger_queue where written_incident_id is null) = 0, 'every queue row written';
   assert (select count(*) from private.ledger_queue where error is not null) = 0, 'no drain errors';
   assert private.ledger_drain() = 0, 'a second drain writes nothing (idempotent)';
-  assert (select count(*) from public.events where type = 'incident.logged') = 3, 'one incident.logged per entry';
+  assert (select count(*) from public.events where type = 'incident.logged' and site_id = pg_temp.id('site')) = 3, 'one incident.logged per entry';
 end $$;
 
 -- chain shape: gap-free seq, genesis anchored at 64 zeros, every link and every hash recomputes
@@ -193,7 +197,7 @@ end $$;
 do $$
 declare v_first bigint; v_last bigint; res jsonb; rec jsonb; n int; keys text[];
 begin
-  select min(seq), max(seq) into v_first, v_last from public.incidents;
+  select min(seq), max(seq) into v_first, v_last from public.incidents where site_id = pg_temp.id('site');
   select count(*) into n from public.ledger_export(v_first, v_last);
   assert n = 3, 'export returns the range';
   select array_agg(k order by k collate "C") into keys
@@ -211,13 +215,13 @@ begin
     if sqlerrm <> 'validation' then raise; end if;
   end;
 
-  res := public.ledger_verify(1, null);
+  res := public.ledger_verify(v_first, v_last);
   assert (res ->> 'ok')::boolean, 'internal verify passes: ' || res::text;
   assert (res ->> 'checked')::int = 3, 'verify checked three rows';
   assert (res ->> 'head_seq')::bigint = v_last, 'head seq';
   assert exists (select 1 from pg_locks where locktype = 'advisory' and classid = 0 and objid = 4210001
                    and objsubid = 1 and pid = pg_backend_pid()), 'verify takes lock 4210001';
-  assert (select count(*) from public.events where type = 'ledger.verified') = 1, 'verify emits ledger.verified';
+  assert (select count(*) from public.events where type = 'ledger.verified' and recorded_at = now()) = 1, 'verify emits ledger.verified';
 
   rec := public.ledger_recompute(v_first, v_last);
   assert rec ->> 'root_hex' = encode(private.ledger_merkle_root(v_first, v_last), 'hex'), 'recompute root';
@@ -359,9 +363,9 @@ do $$
 declare e_nm uuid; e_log uuid; e_belt uuid;
 begin
   select id into e_nm from public.events where idempotency_key = 'inc:ledger:1';
-  select id into e_log from public.events where type = 'incident.logged' and payload ->> 'non_punitive' = 'true';
+  select id into e_log from public.events where type = 'incident.logged' and payload ->> 'non_punitive' = 'true' and site_id = pg_temp.id('site');
   assert e_log is not null, 'incident.logged carries non_punitive for a near miss';
-  assert (select count(*) from public.events where type = 'incident.logged' and payload ->> 'non_punitive' = 'false') = 2,
+  assert (select count(*) from public.events where type = 'incident.logged' and payload ->> 'non_punitive' = 'false' and site_id = pg_temp.id('site')) = 2,
     'and false for the other incidents';
   assert exists (select 1 from pg_inherits where inhparent = 'realtime.messages'::regclass),
     'realtime.messages has no partitions: run scripts/b0/realtime-wake.ts first';
@@ -384,7 +388,7 @@ begin
   assert has_column_privilege('authenticated', 'public.incidents', 'entry_hash', 'SELECT'), 'hashes are readable';
   assert (select count(*) from public.ledger_roots) = 0, 'OP sees no checkpoints';
   begin
-    perform public.ledger_export(1, 3);
+    perform public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase));
     raise exception 'an operator exported the ledger';
   exception when raise_exception then
     if sqlerrm <> 'forbidden' then raise; end if;
@@ -396,24 +400,24 @@ begin
   assert (select count(*) from public.incidents) = 2, 'FM sees the site except the non-punitive row';
   assert (select count(*) from public.incidents where non_punitive) = 0, 'FM never sees a non-punitive row';
   assert (select count(*) from public.ledger_roots) = 1, 'FM sees the checkpoint';
-  assert (select count(*) from public.ledger_export(1, 3)) = 3, 'FM may export the whole range';
+  assert (select count(*) from public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase))) = 3, 'FM may export the whole range';
   -- 003d: near-miss rows are sealed for the FM: no clear operator id, a marker, hashes and links intact
-  assert (select count(*) from public.ledger_export(1, 3) e where (e.canonical_fields ->> 'non_punitive')::boolean) = 1,
+  assert (select count(*) from public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase)) e where (e.canonical_fields ->> 'non_punitive')::boolean) = 1,
     'the range holds one near-miss row';
-  assert not exists (select 1 from public.ledger_export(1, 3) e
+  assert not exists (select 1 from public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase)) e
                      where (e.canonical_fields ->> 'non_punitive')::boolean
                        and (e.canonical_fields -> 'operator_id' <> 'null'::jsonb
                             or e.canonical_fields -> 'reported_by' <> 'null'::jsonb
                             or e.canonical_fields -> 'sealed' is distinct from 'true'::jsonb)),
     'FM export seals operator_id and reported_by on non-punitive rows';
-  assert not exists (select 1 from public.ledger_export(1, 3) e
+  assert not exists (select 1 from public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase)) e
                      where not (e.canonical_fields ->> 'non_punitive')::boolean and e.canonical_fields ? 'sealed'),
     'punitive rows are exported whole, never sealed';
-  assert not exists (select 1 from public.ledger_export(1, 3) e
+  assert not exists (select 1 from public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase)) e
     where (e.canonical_fields ->> 'non_punitive')::boolean
       and (e.canonical_fields ->> 'seq' <> e.seq or e.canonical_fields ->> 'prev_hash' <> e.prev_hash)),
     'sealed rows keep seq and prev_hash for the chain walk';
-  assert not exists (select 1 from public.ledger_export(1, 3) e
+  assert not exists (select 1 from public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase)) e
     where (e.canonical_fields ->> 'non_punitive')::boolean
       and (select array_agg(k order by k collate "C") from jsonb_object_keys(e.canonical_fields) k)
           <> array['non_punitive', 'prev_hash', 'sealed', 'seq', 'v']),
@@ -457,7 +461,7 @@ begin
   assert not exists (select 1 from jsonb_array_elements(public.my_snapshot() -> 'recent_events') x
                      where x ->> 'type' in ('incident.reported', 'incident.logged')), 'TR snapshot carries no incident event';
   begin
-    perform public.ledger_export(1, 3);
+    perform public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase));
     raise exception 'a trainer exported the ledger';
   exception when raise_exception then
     if sqlerrm <> 'forbidden' then raise; end if;
@@ -467,7 +471,7 @@ select set_config('request.jwt.claims', json_build_object('sub', gen_random_uuid
 do $$
 begin
   begin
-    perform public.ledger_export(1, 3);
+    perform public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase));
     raise exception 'a caller with no profile exported the ledger';
   exception when raise_exception then
     if sqlerrm <> 'forbidden' then raise; end if;
@@ -479,7 +483,7 @@ select set_config('request.jwt.claims', json_build_object('role', 'anon')::text,
 do $$
 begin
   begin
-    perform public.ledger_export(1, 3);
+    perform public.ledger_export((select b + 1 from seqbase), (select b + 3 from seqbase));
     raise exception 'anon exported the ledger';
   exception when insufficient_privilege then null;
   end;

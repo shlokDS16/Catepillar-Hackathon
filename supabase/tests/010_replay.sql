@@ -104,7 +104,7 @@ begin
   select * into ev from public.events where run_id = pg_temp.id('run') and type = 'safety.seatbelt_breach' and machine_id = pg_temp.id('ma');
   assert ev.id is not null and ev.operator_id = pg_temp.id('op_ravi'), 'A: one breach, Ravi at the controls';
   assert (select count(*) from private.loop_queue where event_id = ev.id and done_at is null and error is null) = 1, 'one loop_queue row, pending';
-  assert (select count(*) from public.replay_scenarios) = 0, 'nothing is built inside the inserting transaction (N2)';
+  assert (select count(*) from public.replay_scenarios where operator_id in (pg_temp.id('op_ravi'), pg_temp.id('op_other'))) = 0, 'nothing is built inside the inserting transaction (N2)';
   delete from private.loop_queue where event_id not in (select id from public.events where run_id = pg_temp.id('run'));   -- the live project's own rows stay out of this count (rolled back)
 
   n := private.step_loop(20);
@@ -125,16 +125,16 @@ begin
   -- second call: nothing left, nothing duplicated
   assert private.step_loop(20) = 0, 'a drained queue is a no-op';
   assert (select count(*) from public.lesson_assignments where operator_id = pg_temp.id('op_ravi')) = 1, 'still one assignment';
-  assert (select count(*) from public.replay_scenarios) = 1, 'still one replay';
+  assert (select count(*) from public.replay_scenarios where operator_id in (pg_temp.id('op_ravi'), pg_temp.id('op_other'))) = 1, 'still one replay';
   assert private.build_replay(ev.id) = rs.id, 'build_replay is idempotent per event';
-  assert (select count(*) from public.events where type = 'training.replay_ready') = 1, 'and emits once';
+  assert (select count(*) from public.events where type = 'training.replay_ready' and operator_id in (pg_temp.id('op_ravi'), pg_temp.id('op_other'))) = 1, 'and emits once';
 end $$;
 
 -- ── 2. the stored scenario: four phases, built from the frames ───────────────────────────────────
 do $$
 declare sj jsonb; c jsonb; tr jsonb;
 begin
-  select scenario_json into sj from public.replay_scenarios;
+  select scenario_json into sj from public.replay_scenarios where operator_id in (pg_temp.id('op_ravi'), pg_temp.id('op_other'));
   assert sj ->> 'event_type' = 'safety.seatbelt_breach' and sj ->> 'machine_code' = 'EXC-B10B-A', 'header';
   assert sj #>> '{summary,en}' = 'Seatbelt off on a 17° slope', 'summary: ' || (sj #>> '{summary,en}');
   assert sj #>> '{brief,situation,en}' ~ '^At \d\d:\d\d EXC-B10B-A moved at 5 km/h on Bench 3 with the seatbelt off\.$', 'brief: ' || (sj #>> '{brief,situation,en}');
@@ -212,7 +212,7 @@ end $$;
 
 -- ── 5. who may read what ─────────────────────────────────────────────────────────────────────────
 create temp table r (v uuid not null) on commit drop;
-insert into r select id from public.replay_scenarios;
+insert into r select id from public.replay_scenarios where operator_id in (pg_temp.id('op_ravi'), pg_temp.id('op_other'));
 grant select on r to authenticated, anon;
 create or replace function pg_temp.rid() returns uuid language sql as $$ select v from r $$;
 grant execute on function pg_temp.rid() to authenticated, anon;

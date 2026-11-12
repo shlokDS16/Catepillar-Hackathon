@@ -51,6 +51,9 @@ export function DirectorPanel() {
           </Button>
         ))}
       </div>
+      <Button block variant="secondary" href="/director/live">
+        Live switch (sign in to read the real backend)
+      </Button>
       <section aria-label="Reset demo" className="flex flex-col gap-2">
         <h2 className="t-label">Reset</h2>
         <Button block onClick={() => fixtureAdapter().resetDemo()}>

@@ -27,7 +27,13 @@
     "sosOpen": "Tap to open",
     "fixtureStatus": "Demo data · {time} · {speed}× speed",
     "syncOffline": "{n, plural, =0 {Offline} other {Offline, {n} queued}}",
-    "syncLabel": "Sync"
+    "syncLabel": "Sync",
+    "source": {
+      "live": "Live data",
+      "fallback": "Live data unavailable, showing demo data",
+      "liveParts": "Live: snapshot, Replay, ledger check. Demo data: tasks, alerts, map, inbox, lessons, Ask. SOS is always a dry run.",
+      "run": { "ready": "run ready", "playing": "run playing", "paused": "run paused", "finished": "run finished", "none": "no run" }
+    }
   },
   "start": {
     "chooseLanguage": "Choose your language",

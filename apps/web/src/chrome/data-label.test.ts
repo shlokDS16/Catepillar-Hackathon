@@ -16,6 +16,13 @@ describe("dataLabel", () => {
     expect(s.toLowerCase()).not.toContain("fixture");
     expect(dataLabel({ connectivity: { kind: "fixture" }, clock: null, t, formatTime })).toBe("Demo data");
   });
+  it("live shows the run state and never the fixture clock or a second Demo data", () => {
+    const live = dataLabel({ connectivity: { kind: "fixture" }, clock, t, formatTime, source: "live", runStatus: "paused" });
+    expect(live).toBe("Live data · run paused");
+    expect(dataLabel({ connectivity: { kind: "live" }, clock, t, formatTime, source: "live" })).toBe("Live data · no run");
+    const fb = dataLabel({ connectivity: { kind: "fixture" }, clock, t, formatTime, source: "fallback" });
+    expect(fb).toBe("Live data unavailable, showing demo data");
+  });
   it("keeps the other states", () => {
     expect(dataLabel({ connectivity: { kind: "reconnecting" }, clock, t, formatTime })).toBe("Reconnecting…");
     expect(dataLabel({ connectivity: { kind: "nosignal", syncedAtMs: 1 }, clock, t, formatTime })).toBe("No signal · synced 09:40");
