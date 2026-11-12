@@ -5,6 +5,7 @@ import { useFormatter, useTranslations } from "next-intl";
 import { useLessonTitle } from "@/components/training/training-bits";
 import { Pictogram } from "@/components/ui/pictogram";
 import { useAppState } from "@/data/store";
+import { markPictogram } from "@/home/mark-picto";
 import { buildShiftSegments, tapePct, type SegmentKind, type ShiftMark } from "@/home/shift-segments";
 
 const KEY: SegmentKind[] = ["working", "waiting", "break", "planned"];
@@ -89,8 +90,8 @@ function Pin({ mark, time, edge, left }: { mark: ShiftMark; time: string; edge: 
   const name = useMarkName(mark);
   return (
     <span className="tape-pin t-caption" data-kind={mark.kind} data-edge={edge} style={{ insetInlineStart: `${left}%` }} aria-hidden="true">
-      <Pictogram name={mark.kind === "heat" ? "heat" : "seatbelt"} />
-      {mark.kind === "heat" ? t("pinHeat", { time }) : `${name} ${time}`}
+      <Pictogram name={markPictogram(mark)} />
+      <span className="tape-pin-name">{mark.kind === "heat" ? t("pinHeat", { time }) : `${name} ${time}`}</span>
     </span>
   );
 }
@@ -99,7 +100,7 @@ function Row({ mark, time }: { mark: ShiftMark; time: string }) {
   const t = useTranslations("home.tape");
   const name = useMarkName(mark);
   const label = mark.kind === "heat" ? t("heat", { time }) : `${name}, ${time}${mark.href ? `. ${t("openReplay")}` : ""}`;
-  const picto = mark.kind === "heat" ? "heat" : "seatbelt";
+  const picto = markPictogram(mark);
   return mark.href ? (
     <Link href={mark.href} prefetch={false} className="tape-row t-body">
       <Pictogram name={picto} />

@@ -1,0 +1,69 @@
+/* Operator Home, Machine Bay layout (D17 phase 2). Tokens only.
+   Phone: stage, parts list, Now, While you wait / Practice, tape, extras. 768: Now and Practice side by side.
+   From 1024: stage + tape | rail (Now, Practice, parts list, extras), fitted to the viewport. */
+.bayhome { display: flex; flex-direction: column; gap: var(--s-5); min-width: 0; }
+.bayhome > .bay-stage { order: 0; }
+.bay-rail { display: contents; }
+.bay-partslist { order: 1; }
+.bay-now { order: 2; min-width: 0; }
+.bay-loop { order: 3; min-width: 0; }
+.bay-loop:empty { display: none; }
+.bay-tape { order: 4; min-width: 0; }
+.bay-extras { order: 5; display: flex; flex-direction: column; gap: var(--s-5); min-width: 0; }
+.bay-partslist:empty { display: none; }
+
+.bay-head { display: flex; align-items: flex-start; justify-content: space-between; gap: var(--s-3); }
+.bay-word { margin: 0; font-size: clamp(76px, 7.2vw, 104px); line-height: 0.9; letter-spacing: -0.03em; }
+:lang(hi) .bay-word, :lang(ta) .bay-word { letter-spacing: 0; }
+.bay-fit { min-width: 0; }
+/* The state word is the loudest thing on the stage; the Now card below does not repeat it. */
+.bay-now .hero-state { display: none; }
+
+@media (min-width: 768px) {
+  .bayhome { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); align-items: start; }
+  .bayhome > .bay-stage, .bay-partslist, .bay-tape, .bay-extras { grid-column: 1 / -1; }
+  .bay-now { grid-column: 1; }
+  .bay-loop { grid-column: 2; }
+  /* Tablet: the parts list follows Now and Practice (tie with the tape; DOM order puts it first). */
+  .bay-partslist { order: 4; }
+}
+
+@media (min-width: 1024px) {
+  .bayhome { grid-template-columns: minmax(0, 1fr) clamp(340px, 28vw, 400px); gap: var(--s-4) var(--s-5); align-items: start; }
+  .bayhome > .bay-stage { grid-column: 1; grid-row: 1; order: 0; }
+  .bay-tape { grid-column: 1; grid-row: 2; order: 0; }
+  .bay-rail { display: flex; flex-direction: column; gap: var(--s-4); grid-column: 2; grid-row: 1 / span 2; min-width: 0; }
+  .bay-rail > * { grid-column: auto; flex: none; }
+  .bay-now { order: 1; }
+  .bay-loop { order: 2; }
+  .bay-partslist { order: 3; }
+  .bay-extras { order: 4; }
+  /* Shell grid (operator, 1024 px up): the Caution banner sits under the strip (row 2) and the body moves to row 3. Kept here with the layout that depends on it. */
+  .shell[data-role="operator"] { grid-template-rows: auto auto minmax(0, 1fr); }
+  .shell[data-role="operator"] > .shell-body { grid-row: 3; }
+  .shell[data-role="operator"] > .nav { grid-row: 1 / span 3; }
+  .shell[data-role="operator"] > div:has(> .alert-banner) { grid-column: 2; grid-row: 2; }
+}
+
+/* A roomy desktop (1440x950): the cockpit fits the viewport, the page itself never scrolls and only the rail scrolls. */
+@media (min-width: 1280px) and (min-height: 900px) {
+  .bayhome {
+    grid-template-rows: minmax(0, 1fr) auto;
+    align-items: stretch;
+    /* strip above, main padding (16 top, 32 bottom) around */
+    height: calc(100dvh - var(--strip-h) - var(--bw-hair) - var(--s-4) - var(--s-6));
+  }
+  .shell[data-role="operator"]:has(.alert-banner) .bayhome { height: calc(100dvh - var(--strip-h) - var(--bw-hair) - var(--hit) - var(--bw) - var(--s-4) - var(--s-6)); }
+  .bayhome > .bay-stage { display: flex; flex-direction: column; min-height: 0; }
+  .bay-rail { min-height: 0; max-height: 100%; overflow-y: auto; padding: var(--s-1); margin: calc(var(--s-1) * -1); }
+  .bay-fit { flex: 1; min-height: 0; container-type: size; display: grid; place-items: center; }
+  .bay-fit .bay-draw { width: min(100cqw, calc(100cqh * 16 / 9)); aspect-ratio: 16 / 9; }
+  .bay-fit .bay-svg { height: 100%; }
+  /* A short stage (a banner is up): tighter tags so none overlap. */
+  @container (max-height: 400px) {
+    .bay-tag { padding: 2px var(--s-2); gap: var(--s-2); }
+    .bay-tag-name { font-size: var(--t-caption); line-height: 1.1; }
+    .bay-tag-state { display: none; }
+    .bay-tag[data-state] .bay-tag-state { display: block; }
+  }
+}

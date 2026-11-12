@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useTranslations } from "next-intl";
 import { activeItem, navFor, type NavItem, type ShellRole } from "@/components/chrome/nav-items";
+import { shellInert } from "@/components/chrome/inert";
 import { useAppState } from "@/data/store";
 import { useMotionLock } from "@/hero/use-motion-lock";
 
@@ -24,8 +25,9 @@ export function Nav({ role, badges }: NavProps) {
   const active = activeItem(items, pathname);
   const serverLocked = useAppState((s) => s.operator?.motion_locked ?? false);
   const shown = useMotionLock(serverLocked);
+  const alerts = useAppState((s) => s.alerts);
   return (
-    <nav className="nav" data-sos={role === "operator" || undefined} aria-label={t("primary")} inert={shown || undefined}>
+    <nav className="nav" data-sos={role === "operator" || undefined} aria-label={t("primary")} inert={shellInert(role, shown, alerts) || undefined}>
       {items.map(({ key, href, icon: Icon }) => {
         const badge = badges?.[key];
         return (

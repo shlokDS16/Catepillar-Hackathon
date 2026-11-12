@@ -5,14 +5,16 @@ import { useSafetyState } from "@/alerts/use-safety-state";
 import { HeroCard } from "@/components/hero/hero-card";
 import { LoopCard } from "@/components/home/loop-card";
 import { ShiftTape } from "@/components/home/shift-tape";
-import { MachineBay } from "@/components/machine/machine-bay";
+import { BayParts, BayStage } from "@/components/machine/machine-bay";
+import { Button } from "@/components/ui/button";
+import { useAudio } from "@/audio/use-audio";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import { ProvenanceChip, ProvenanceLine } from "@/components/ui/provenance";
 import { useMode } from "@/data/mode";
 import { useAppState } from "@/data/store";
-import { currentTask } from "@/hero/work-state";
+import { currentTask, workState } from "@/hero/work-state";
 import { mergeWeatherHeat } from "@/task/task-state";
 
 /**
@@ -30,10 +32,11 @@ export function HomeScreen() {
   const weather = snapshot?.weather ?? null;
   const detailed = mode === "detailed";
   const current = currentTask(tasks);
+  const audio = useAudio(topAlert ? `alert.${topAlert.kind}.${topAlert.tier}` : null);
 
   if (!snapshot) {
     return (
-      <div className="home">
+      <div className="bayhome">
         <Plate loading className="hero-slot" />
         <Plate loading className="min-h-hit" />
         <Plate loading className="min-h-hit" />
@@ -43,77 +46,101 @@ export function HomeScreen() {
 
   const etaImpact = mergeWeatherHeat(current?.eta_factors).find((f) => (f.key.startsWith("weather_heat:") || f.key.startsWith("heat:") || f.key.startsWith("weather:")) && f.multiplier > 1);
 
+  const word = workState(machine, current);
+
   return (
-    <div className="home">
-      <div className="hero-slot">
-        <HeroCard machine={machine} tasks={tasks} safety={safety} topAlert={topAlert} />
-      </div>
+    <div className="bayhome">
+      <BayStage>
+        <div className="bay-head">
+          <p className="t-state bay-word">
+            <span className="sr-only">{t("home.stageLabel")}: </span>
+            {t(`enums.work.${word}`)}
+          </p>
+          {audio.available ? (
+            <Button variant="secondary" onClick={audio.play} note={audio.blocked ? t("alerts.soundBlocked") : undefined}>
+              {t("alerts.listen")}
+            </Button>
+          ) : null}
+        </div>
+      </BayStage>
 
-      <div className="home-rest">
-        {weather ? (
-          <Plate as="section" className="flex flex-wrap items-center gap-4" aria-label={t("home.conditions")}>
-            <Pictogram name="heat" />
-            {weather.wbgt_c != null ? (
-              <span className="t-label tnum">{t("home.wbgt", { c: format.number(weather.wbgt_c, { maximumFractionDigits: 0 }) })}</span>
-            ) : (
-              <span className="t-label tnum">{t("home.temp", { c: format.number(weather.temperature_c, { maximumFractionDigits: 0 }) })}</span>
-            )}
-            {detailed && weather.forecast_peak_c != null && weather.forecast_peak_at ? (
-              <span className="t-meta text-ink-2 tnum">
-                {t("home.forecast", { c: format.number(weather.forecast_peak_c, { maximumFractionDigits: 0 }), time: format.dateTime(new Date(weather.forecast_peak_at), "time") })}
-              </span>
-            ) : null}
-            {detailed && etaImpact && etaImpact.multiplier > 1 ? (
-              <span className="t-meta text-ink-2 tnum">{t("home.etaImpact", { pct: Math.round((etaImpact.multiplier - 1) * 100) })}</span>
-            ) : null}
-            {detailed ? <span className="t-meta text-ink-3">{weather.source_label}</span> : null}
-          </Plate>
-        ) : null}
-
-        <MachineBay />
-
-        <LoopCard />
-
-        <ShiftTape />
-
-        <section aria-label={t("home.todaysTasks")} className="flex flex-col gap-2">
-          <h2 className="t-title">{t("home.todaysTasks")}</h2>
-          {tasks.length === 0 ? (
-            <p className="t-body text-ink-2">{t("home.noTasks")}</p>
-          ) : (
-            <ul className="list-none p-0 m-0 flex flex-col">
-              {tasks.map((task) => (
-                <li key={task.id} className="task-row" data-current={task.id === current?.id || undefined}>
-                  <span className="t-label tnum">{format.dateTime(new Date(task.planned_start), "time")}</span>
-                  <span className="t-body">{t(`enums.task.${task.task_type}`)}</span>
-                  <Chip tone={task.status === "in_progress" ? "ink" : task.status === "blocked_ppe" ? "caution" : "outline"} word>
-                    {t(`enums.taskStatus.${task.status}`)}
-                  </Chip>
-                  <span className="t-meta text-ink-2 tnum">
-                    {task.eta_p50_min == null
-                      ? ""
-                      : detailed && task.eta_p90_min != null
-                        ? t("hero.etaRange", { min: Math.round(task.eta_p50_min), max: Math.round(task.eta_p90_min) })
-                        : t("hero.etaMin", { min: Math.round(task.eta_p50_min) })}
-                  </span>
-                  <ProvenanceChip table="tasks" field="planned_start" />
-                </li>
-              ))}
-            </ul>
-          )}
+      <div className="bay-rail">
+        <section className="bay-now" aria-label={t("home.nowLabel")}>
+          <HeroCard machine={machine} tasks={tasks} safety={safety} topAlert={topAlert} />
         </section>
 
-        <ProvenanceLine fields={[["machine_state", "speed_kmh"], ["tasks", "planned_start"], ["operator_state", "ppe"]]} />
-
-        <div className="flex items-center gap-4" role="group" aria-label={t("home.modeLabel")}>
-          <Chip tone={mode === "simple" ? "ink" : "outline"} aria-pressed={mode === "simple"} onClick={() => setMode("simple")}>
-            {t("home.simple")}
-          </Chip>
-          <Chip tone={mode === "detailed" ? "ink" : "outline"} aria-pressed={mode === "detailed"} onClick={() => setMode("detailed")}>
-            {t("home.detailed")}
-          </Chip>
-          {persistFailed ? <span className="t-meta text-ink-3">{t("home.modeNotSaved")}</span> : null}
+        <div className="bay-loop">
+          <LoopCard />
         </div>
+
+        <div className="bay-partslist">
+          <BayParts />
+        </div>
+
+        <div className="bay-extras">
+          {weather ? (
+            <Plate as="section" className="flex flex-wrap items-center gap-4" aria-label={t("home.conditions")}>
+              <Pictogram name="heat" />
+              {weather.wbgt_c != null ? (
+                <span className="t-label tnum">{t("home.wbgt", { c: format.number(weather.wbgt_c, { maximumFractionDigits: 0 }) })}</span>
+              ) : (
+                <span className="t-label tnum">{t("home.temp", { c: format.number(weather.temperature_c, { maximumFractionDigits: 0 }) })}</span>
+              )}
+              {detailed && weather.forecast_peak_c != null && weather.forecast_peak_at ? (
+                <span className="t-meta text-ink-2 tnum">
+                  {t("home.forecast", { c: format.number(weather.forecast_peak_c, { maximumFractionDigits: 0 }), time: format.dateTime(new Date(weather.forecast_peak_at), "time") })}
+                </span>
+              ) : null}
+              {detailed && etaImpact && etaImpact.multiplier > 1 ? (
+                <span className="t-meta text-ink-2 tnum">{t("home.etaImpact", { pct: Math.round((etaImpact.multiplier - 1) * 100) })}</span>
+              ) : null}
+              {detailed ? <span className="t-meta text-ink-3">{weather.source_label}</span> : null}
+            </Plate>
+          ) : null}
+
+          <section aria-label={t("home.todaysTasks")} className="flex flex-col gap-2">
+            <h2 className="t-title">{t("home.todaysTasks")}</h2>
+            {tasks.length === 0 ? (
+              <p className="t-body text-ink-2">{t("home.noTasks")}</p>
+            ) : (
+              <ul className="list-none p-0 m-0 flex flex-col">
+                {tasks.map((task) => (
+                  <li key={task.id} className="task-row" data-current={task.id === current?.id || undefined}>
+                    <span className="t-label tnum">{format.dateTime(new Date(task.planned_start), "time")}</span>
+                    <span className="t-body">{t(`enums.task.${task.task_type}`)}</span>
+                    <Chip tone={task.status === "in_progress" ? "ink" : task.status === "blocked_ppe" ? "caution" : "outline"} word>
+                      {t(`enums.taskStatus.${task.status}`)}
+                    </Chip>
+                    <span className="t-meta text-ink-2 tnum">
+                      {task.eta_p50_min == null
+                        ? ""
+                        : detailed && task.eta_p90_min != null
+                          ? t("hero.etaRange", { min: Math.round(task.eta_p50_min), max: Math.round(task.eta_p90_min) })
+                          : t("hero.etaMin", { min: Math.round(task.eta_p50_min) })}
+                    </span>
+                    <ProvenanceChip table="tasks" field="planned_start" />
+                  </li>
+                ))}
+              </ul>
+            )}
+          </section>
+
+          <ProvenanceLine fields={[["machine_state", "speed_kmh"], ["tasks", "planned_start"], ["operator_state", "ppe"]]} />
+
+          <div className="flex items-center gap-4" role="group" aria-label={t("home.modeLabel")}>
+            <Chip tone={mode === "simple" ? "ink" : "outline"} aria-pressed={mode === "simple"} onClick={() => setMode("simple")}>
+              {t("home.simple")}
+            </Chip>
+            <Chip tone={mode === "detailed" ? "ink" : "outline"} aria-pressed={mode === "detailed"} onClick={() => setMode("detailed")}>
+              {t("home.detailed")}
+            </Chip>
+            {persistFailed ? <span className="t-meta text-ink-3">{t("home.modeNotSaved")}</span> : null}
+          </div>
+        </div>
+      </div>
+
+      <div className="bay-tape">
+        <ShiftTape />
       </div>
     </div>
   );

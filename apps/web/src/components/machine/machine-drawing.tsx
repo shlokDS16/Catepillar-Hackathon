@@ -26,7 +26,7 @@ const H = 360;
 
 /** Anchor on the part, and where its tag sits (viewBox units). */
 const CALLOUT: Record<PartId, { ax: number; ay: number; tx: number; ty: number }> = {
-  rear_sensor: { ax: 81, ay: 205, tx: 62, ty: 120 },
+  rear_sensor: { ax: 81, ay: 205, tx: 62, ty: 78 },
   engine: { ax: 150, ay: 222, tx: 150, ty: 146 },
   cab: { ax: 300, ay: 150, tx: 236, ty: 64 },
   boom_ram: { ax: 420, ay: 132, tx: 420, ty: 40 },
