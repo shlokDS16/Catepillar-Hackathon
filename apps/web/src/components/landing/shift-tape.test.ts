@@ -10,7 +10,7 @@ const msgs: TapeMsgs = {
   clock: "Clock",
 };
 const ro: RoMsgs = {
-  metres: "{n} m", held: "held {n}", sent: "sent {n}", online: "Online", written: "Written {n}", pending: "Not yet", none: "None", truck: "Truck",
+  metres: "{n} m", held: "held {n}", sent: "sent {n}", online: "Online", written: "Written {n}", pending: "Not yet", none: "None", truck: "Truck", tonnesFmt: "{n} t", pctFmt: "{n} %",
   phases: { dig: "Dig", swing: "Swing", dump: "Dump", return: "Return", travel: "Travel" },
   states: { clear: "Clear", caution: "Caution", warning: "Warning", critical: "Critical" },
 };

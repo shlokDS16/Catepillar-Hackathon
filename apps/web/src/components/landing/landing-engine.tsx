@@ -3,7 +3,7 @@
 import { useEffect } from "react";
 import type { SceneController, SceneOptions } from "@/components/landing/scene";
 import { findReadouts, driveReadout, liveValues, type LiveReadout, type RoMsgs } from "@/components/landing/readout";
-import { S5 } from "@/components/landing/shift";
+import { ENTRIES, S5 } from "@/components/landing/shift";
 import { driveTape, findTape, tapeFromScroll, type TapeMsgs } from "@/components/landing/shift-tape";
 
 /** Screen-space anchors the scene exposes, in CSS px from the canvas. `id` is absent on older scenes. */
@@ -53,6 +53,7 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
     const ledgerEl = root.querySelector<HTMLElement>(".l-ledger");
     const proofEl = root.querySelector<HTMLElement>(".l-proof");
     const footEl = root.querySelector<HTMLElement>(".l-foot");
+    const heroEl = root.querySelector<HTMLElement>('.l-st[data-st="1"]');
     const scrubSt = stEls[4] ?? null;
     const tape = findTape(root);
     const readouts = findReadouts(root);
@@ -65,6 +66,9 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
     let L = { top: 0, h: 1, travel: 1 };
     let P = { top: 0, h: 1, travel: 1 };
     let footTop = Infinity;
+    // Layout read once per measure, never per frame: label and plate offsets inside their stage block.
+    let labelPos: Array<{ left: number; top: number }> = [];
+    let platePos: { left: number; top: number } | null = null;
     const ps = [0, 0, 0, 0, 0];
     let lastKey = "";
     let raf = 0;
@@ -92,6 +96,16 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
         P = { top: r.top + y, h: r.height, travel: Math.max(1, r.height - vh) };
       }
       if (footEl) footTop = footEl.getBoundingClientRect().top + y;
+      const st2 = stEls[1]?.getBoundingClientRect();
+      const st4 = stEls[3]?.getBoundingClientRect();
+      labelPos = st2
+        ? labels.map((el) => {
+            const r = el.getBoundingClientRect();
+            return { left: r.left - st2.left, top: r.top - st2.top };
+          })
+        : [];
+      const plate = stEls[3]?.querySelector<HTMLElement>(".l-readout")?.getBoundingClientRect();
+      platePos = plate && st4 ? { left: plate.left - st4.left, top: plate.top - st4.top } : null;
     };
 
     const setP = (el: HTMLElement | null, p: number) => {
@@ -123,19 +137,17 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
       if (!canvas || !anchors.length || window.innerWidth < 1100 || (curSt !== 2 && curSt !== 4)) return hideAll();
       const st = stEls[curSt - 1];
       if (!st) return hideAll();
-      const cr = canvas.getBoundingClientRect();
-      const pr = st.getBoundingClientRect();
+      // The canvas and the stage block both fill the pinned view, so anchor points are already in block coordinates.
       if (curSt === 2) {
         const hasIds = anchors.some((p) => p.id);
-        const rects = labels.map((el) => el.getBoundingClientRect());
         leaders.forEach((g, i) => {
           const p = hasIds ? anchors.find((q) => q.id === LEADER_ID[i]) : anchors[LEADER_FALLBACK[i]];
-          const r = rects[i];
+          const r = labelPos[i];
           if (!p || !r) return g.style.setProperty("--vis", "0");
-          const ax = p.x + cr.left - pr.left;
-          const ay = p.y + cr.top - pr.top;
-          const lx = r.left - pr.left - 8;
-          const ly = r.top - pr.top + 14;
+          const ax = p.x;
+          const ay = p.y;
+          const lx = r.left - 8;
+          const ly = r.top + 14;
           const ex = lx - 28 - i * 10;
           (g.firstElementChild as SVGPolylineElement).setAttribute("points", `${lx.toFixed(1)},${ly.toFixed(1)} ${ex.toFixed(1)},${ly.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`);
           const dot = g.lastElementChild as SVGCircleElement;
@@ -146,14 +158,12 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
         return;
       }
       const g = truckLeader;
-      const plate = st.querySelector<HTMLElement>(".l-readout");
       const p = anchors.find((q) => q.id === "truck");
-      if (!g || !plate || !p) return g?.style.setProperty("--vis", "0");
-      const rr = plate.getBoundingClientRect();
-      const ax = p.x + cr.left - pr.left;
-      const ay = p.y + cr.top - pr.top;
-      const lx = rr.left - pr.left;
-      const ly = rr.top - pr.top + 56;
+      if (!g || !platePos || !p) return g?.style.setProperty("--vis", "0");
+      const ax = p.x;
+      const ay = p.y;
+      const lx = platePos.left;
+      const ly = platePos.top + 56;
       (g.firstElementChild as SVGPolylineElement).setAttribute("points", `${lx.toFixed(1)},${ly.toFixed(1)} ${(lx - 40).toFixed(1)},${ly.toFixed(1)} ${ax.toFixed(1)},${ay.toFixed(1)}`);
       const dot = g.lastElementChild as SVGCircleElement;
       dot.setAttribute("cx", ax.toFixed(1));
@@ -202,11 +212,14 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
       // Tape: paper variant once the ledger sheet has risen to it; hidden through the proof and the footer.
       const tapeFloor = phone.matches ? 140 : 112;
       const onPaper = y + vh - tapeFloor > L.top;
-      const hidden = y + vh * 0.75 > P.top;
+      // Gone before the proof heading would slide under it; on phones also gone as soon as the paper rises (the bar would sit on the ledger heading).
+      const hidden = y + vh * 0.85 > P.top || (phone.matches && onPaper);
       const navPaper = y + 60 > L.top && y + 60 < footTop;
       toggle(root, "tapePaper", onPaper);
       toggle(root, "tapeHide", hidden);
       toggle(root, "paper", navPaper);
+      toggle(root, "navhide", y + 40 > footTop);
+      if (heroEl) heroEl.inert = curSt !== 1;
       if (tape) tape.el.inert = hidden;
       apply();
     };
@@ -323,17 +336,11 @@ export function LandingEngine({ tape: tapeMsgs, ro: roMsgs }: { tape: TapeMsgs; 
 
     // Tape ticks scroll to the point of the stage where their entry happens (spec §3.3).
     const ticks = Array.from(root.querySelectorAll<HTMLAnchorElement>("[data-tick]"));
-    const ENTRY_AT: Array<[number, number]> = [
-      [2, 0.2],
-      [3, 0.25],
-      [3, 0.5],
-      [4, 0.45],
-      [5, 0.711],
-      [5, 0.9],
-    ];
     const onTick = (e: MouseEvent) => {
       const a = e.currentTarget as HTMLAnchorElement;
-      const [stage, p] = ENTRY_AT[Number(a.dataset.tick) - 1] ?? [];
+      const entry = ENTRIES[Number(a.dataset.tick) - 1];
+      if (!entry) return;
+      const { stage, p } = entry;
       const b = B[stage - 1];
       if (!b) return;
       e.preventDefault();

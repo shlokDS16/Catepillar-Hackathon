@@ -49,6 +49,9 @@ export type RoMsgs = {
   pending: string;
   none: string;
   truck: string;
+  /** "{n} t" and "{n} %": units stay in the catalogue. */
+  tonnesFmt: string;
+  pctFmt: string;
   phases: Record<RoPhase, string>;
   states: Record<"clear" | "caution" | "warning" | "critical", string>;
 };
@@ -116,9 +119,10 @@ export function liveValues(stage: 2 | 3 | 4, p: number, live: LiveReadout | unde
   const trail = clamp01(live.trail);
   return {
     ...base,
-    boom: live.boomDeg,
-    stick: live.stickDeg,
-    bucket: live.bucketDeg,
+    // The scene's joint angles are relative to the link before them and can be negative; the plate shows the opening, never a sign.
+    boom: Math.abs(live.boomDeg),
+    stick: Math.abs(live.stickDeg),
+    bucket: Math.abs(live.bucketDeg),
     phase: live.phase,
     cycles: stage === 3 ? live.cycles : base.cycles,
     tonnes: stage === 3 ? Math.round(S3.tonnes * trail) : base.tonnes,
@@ -141,8 +145,8 @@ export function roText(v: RoValues, m: RoMsgs): Record<string, string> {
     phase: m.phases[v.phase],
     link: v.link === "online" ? m.online : fill(v.link === "held" ? m.held : m.sent, { n: 2 }),
     cycles: String(v.cycles),
-    tonnes: `${v.tonnes} t`,
-    trail: `${v.trailPct} %`,
+    tonnes: fill(m.tonnesFmt, { n: v.tonnes }),
+    trail: fill(m.pctFmt, { n: v.trailPct }),
     nearest: v.nearest === null ? "–" : v.nearest.toFixed(1),
     unit: v.nearest === null ? "" : fill(m.metres, { n: "" }).trim(),
     who: v.nearest === null ? m.none : m.truck,

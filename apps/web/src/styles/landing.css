@@ -90,6 +90,15 @@
   font-weight: 600;
 }
 
+.l-nav {
+  transition: opacity 240ms linear;
+}
+
+.landing[data-navhide] .l-nav {
+  opacity: 0;
+  pointer-events: none;
+}
+
 .landing[data-paper] .l-brand,
 .landing[data-paper] .l-nav .chip {
   background: var(--paper);
@@ -149,6 +158,7 @@
 
 .l-caption {
   position: absolute;
+  z-index: 4;
   left: 64px;
   bottom: 128px;
   color: var(--on-frame-2);
@@ -297,7 +307,7 @@
 .l-dim {
   position: absolute;
   inset: 0;
-  z-index: 3;
+  z-index: -1;
   background: var(--frame);
   opacity: var(--dim);
   pointer-events: none;
@@ -309,7 +319,11 @@
   position: absolute;
   inset: 0;
   z-index: 2;
-  visibility: hidden;
+  /* Not visibility:hidden: a hidden stage keeps its headings and words in the accessibility tree, so a
+     screen reader walks the whole story. It is invisible and inert to the pointer; the engine makes
+     stage 1 (the only one with links) inert while it is not current. */
+  opacity: 0;
+  pointer-events: none;
   isolation: isolate;
 }
 
@@ -318,7 +332,8 @@
 .landing[data-st="3"] .l-st[data-st="3"],
 .landing[data-st="4"] .l-st[data-st="4"],
 .landing[data-st="5"] .l-st[data-st="5"] {
-  visibility: visible;
+  opacity: 1;
+  pointer-events: auto;
 }
 
 .l-poster,
@@ -333,10 +348,20 @@
 
 .l-poster-img {
   object-fit: cover;
+  display: none;
 }
 
-[data-gl="on"] .l-poster,
-[data-gl="on"] .l-poster-img {
+/* Stage stills load only when they can be seen: the current stage's and the next one's, and only
+   when WebGL is not running (a lazy image in a display:none box is not fetched). */
+.landing[data-gl="off"][data-st="1"] :is(.l-st[data-st="1"], .l-st[data-st="2"]) .l-poster-img,
+.landing[data-gl="off"][data-st="2"] :is(.l-st[data-st="2"], .l-st[data-st="3"]) .l-poster-img,
+.landing[data-gl="off"][data-st="3"] :is(.l-st[data-st="3"], .l-st[data-st="4"]) .l-poster-img,
+.landing[data-gl="off"][data-st="4"] :is(.l-st[data-st="4"], .l-st[data-st="5"]) .l-poster-img,
+.landing[data-gl="off"][data-st="5"] .l-st[data-st="5"] .l-poster-img {
+  display: block;
+}
+
+[data-gl="on"] .l-poster {
   display: none;
 }
 
@@ -1054,12 +1079,16 @@
   gap: var(--s-7);
   max-width: 1320px;
   margin: 0 auto;
-  padding: 112px 64px 132px;
+  padding: 96px 64px 132px;
 }
 
 .l-ledger .ln-i {
   --li: 1;
   --lo: 0;
+}
+
+.l-ledger .l-h2 {
+  font-size: clamp(44px, 4.6vw, 66px);
 }
 
 .l-ledger-copy {
@@ -1449,6 +1478,10 @@ li[data-role="3"] > .l-role {
   transform: translate(10px, -50%);
 }
 
+.l-note-tag[data-at="inside"] {
+  transform: translateY(-50%);
+}
+
 /* Sheets behind the front one show only their top edge: their bar text would be half cut. */
 .l-proof[data-active="1"] .l-sheet:not([data-sheet="1"]) .l-bar > *,
 .l-proof[data-active="2"] .l-sheet:not([data-sheet="2"]) .l-bar > *,
@@ -1786,9 +1819,14 @@ li[data-role="3"] > .l-role {
   }
 
   .l-nav {
-    top: 12px;
-    left: 16px;
-    right: 16px;
+    top: 0;
+    left: 0;
+    right: 0;
+    padding: 12px 16px 8px;
+  }
+
+  .landing[data-paper] .l-nav {
+    background: var(--paper);
   }
 
   .l-brand {
@@ -1898,10 +1936,9 @@ li[data-role="3"] > .l-role {
   .l-caption {
     left: 16px;
     right: 16px;
-    top: 150px;
-    bottom: auto;
-    font-size: 12px;
-    display: none;
+    bottom: 6px;
+    font-size: 11.5px;
+    line-height: 16px;
   }
 
   /* Each stage block is a column anchored to the bottom: readout, then words, then callouts. */
@@ -1948,17 +1985,30 @@ li[data-role="3"] > .l-role {
     position: static;
     order: -1;
     align-self: flex-end;
-    width: 176px;
+    width: 196px;
   }
 
-  .l-ro-head,
-  .l-ro-rows,
-  .l-ro-what {
+  .l-ro-rows {
     display: none;
   }
 
+  /* Phones keep the label and the SIM mark: a bare number says nothing. */
+  .l-ro-head {
+    padding: 6px 10px;
+    font-size: 12px;
+  }
+
   .l-ro-big {
-    padding: 10px 12px 6px;
+    flex-wrap: wrap;
+    gap: 0 8px;
+    padding: 8px 12px 6px;
+  }
+
+  .l-ro-what {
+    margin-left: 0;
+    flex-basis: 100%;
+    font-size: 13px;
+    text-align: left;
   }
 
   .l-ro-v {
@@ -2120,11 +2170,16 @@ li[data-role="3"] > .l-role {
     transition: none;
   }
 
+  .l-bar {
+    height: auto;
+    min-height: 40px;
+    flex-wrap: wrap;
+    gap: 0 12px;
+    padding: 6px 12px;
+  }
+
   .l-bar-tag {
-    max-width: 55%;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
+    white-space: normal;
   }
 
   .l-shot {
@@ -2149,7 +2204,7 @@ li[data-role="3"] > .l-role {
 
   .l-plate {
     height: auto;
-    padding: 28px 0 56px;
+    padding: 28px 0 0;
   }
 
   .l-plate-svg {
@@ -2161,10 +2216,10 @@ li[data-role="3"] > .l-role {
   }
 
   .l-plate-legend {
-    left: 16px;
-    bottom: 16px;
+    position: static;
     flex-wrap: wrap;
-    gap: 14px;
+    gap: 6px 14px;
+    padding: 14px 16px 0;
     font-size: 13px;
   }
 
@@ -2174,7 +2229,7 @@ li[data-role="3"] > .l-role {
 
   .l-plate-close {
     position: static;
-    padding: 20px 16px 0;
+    padding: 16px 16px 28px;
     text-align: left;
   }
 
@@ -2248,8 +2303,17 @@ li[data-role="3"] > .l-role {
   .l-st {
     position: relative;
     inset: auto;
-    visibility: visible;
+    opacity: 1;
+    pointer-events: auto;
     min-height: 100svh;
+  }
+
+  .l-poster-img {
+    display: block;
+  }
+
+  .l-plate-legend {
+    position: static;
   }
 
   .l-tape-static {

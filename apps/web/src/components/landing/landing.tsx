@@ -82,7 +82,7 @@ const bandOf = (minute: number) => (minute < 380 ? 1 : minute < 440 ? 2 : minute
  * view becomes static, each stage shows its poster, its words, its readout and a static tape strip.
  * The same rules live in landing.css behind prefers-reduced-motion; keep the two in step.
  */
-const NOSCRIPT = `.landing .l-view{position:static!important;height:auto!important;margin:0!important;overflow:visible!important}.landing .l-band,.landing .l-hold,.landing .l-canvas,.landing .l-dim,.landing .l-tape,.landing .l-leaders,.landing .l-skip{display:none!important}.landing .l-st{position:relative!important;inset:auto!important;visibility:visible!important;min-height:100svh}.landing .l-tape-static{display:flex!important}.landing .l-ledger{margin-top:0!important;height:auto!important;--p:1}.landing .l-ledger-pin,.landing .l-proof-pin{position:relative!important;height:auto!important}.landing .l-proof{height:auto!important}.landing .ln-i{transform:none!important}.landing .rv{opacity:1!important;transform:none!important}.landing .callout::before{transform:none!important}.landing .lrow{opacity:1!important;transform:none!important}`;
+const NOSCRIPT = `.landing .l-view{position:static!important;height:auto!important;margin:0!important;overflow:visible!important}.landing .l-band,.landing .l-hold,.landing .l-canvas,.landing .l-dim,.landing .l-tape,.landing .l-leaders,.landing .l-skip{display:none!important}.landing .l-st{position:relative!important;inset:auto!important;opacity:1!important;pointer-events:auto!important;min-height:100svh}.landing .l-poster-img{display:block!important}.landing .callout-n,.landing .callout-t{opacity:1!important;transform:none!important}.landing .l-sheet{transform:none!important;margin-top:24px}.landing .l-sheet .l-bar>*,.landing .l-sheet .l-shotwrap{visibility:visible!important}.landing .l-note-box,.landing .l-note-tag{opacity:1!important}.landing .st-ok{opacity:0!important}.landing .st-bad{opacity:1!important}.landing .l-plate-legend{position:static}.landing .l-tape-static{display:flex!important}.landing .l-ledger{margin-top:0!important;height:auto!important;--p:1}.landing .l-ledger-pin,.landing .l-proof-pin{position:relative!important;height:auto!important}.landing .l-proof{height:auto!important}.landing .ln-i{transform:none!important}.landing .rv{opacity:1!important;transform:none!important}.landing .callout::before{transform:none!important}.landing .lrow{opacity:1!important;transform:none!important}`;
 
 export async function Landing() {
   const t = await getTranslations("landing");
@@ -105,6 +105,8 @@ export async function Landing() {
     pending: t("ro.pending"),
     none: t("ro.none"),
     truck: t("ro.truck"),
+    tonnesFmt: t.raw("ro.tonnesFmt") as string,
+    pctFmt: t.raw("ro.pctFmt") as string,
     phases: t.raw("ro.phases") as RoMsgs["phases"],
     states: { clear: te("clear"), caution: te("caution"), warning: te("warning"), critical: te("critical") },
   };
@@ -166,7 +168,6 @@ export async function Landing() {
           {/* One pinned view for stages 1-5: the canvas, one stage's words at a time, the tape stays fixed above. */}
           <div className="l-view">
             <canvas className="l-canvas" aria-hidden="true" />
-            <div className="l-dim" aria-hidden="true" />
 
             {/* 1 · Dawn over the bench */}
             <div className="l-st" data-st="1">
@@ -273,6 +274,8 @@ export async function Landing() {
             <div className="l-st" data-st="5">
               <Poster n={5} />
               <div className="l-scrim" aria-hidden="true" />
+              {/* The dim goes under the card: it darkens the scene, never the card's own words. */}
+              <div className="l-dim" aria-hidden="true" />
               <div className="l-card">
                 <h2 className="l-h2">
                   <Lines text={t("s5.title")} />

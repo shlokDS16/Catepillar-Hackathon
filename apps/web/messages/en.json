@@ -978,12 +978,12 @@
       "sevLabel": "Severity"
     },
     "s7": {
-      "title": "The same shift, in the app.",
+      "title": "The same product, in the app.",
       "body": "Three screens from the working product, running on demo data. Start from the seat you sit in.",
       "op": {
         "who": "Operator",
         "does": "One plain word for the machine, the task and its time left. Practice built from your own events.",
-        "alt": "The operator cockpit: a status band with the machine's state, a plain word for what the machine needs, the current task with its progress and time left, and a labelled drawing of the machine's parts."
+        "alt": "The operator cockpit: a plain word for what the machine needs, the current task with its progress and time left, and a labelled drawing of the machine's parts."
       },
       "fm": {
         "who": "Fleet manager",
@@ -997,8 +997,8 @@
         "go": "Verify the ledger",
         "alt": "The ledger page: entries verified and sealed, a Check again button, and a form to compare with the checkpoint line received outside the app."
       },
-      "bar": "demo data, captured from the live app",
-      "cap": "Screens are captured from the deployed app on demo data.",
+      "bar": "demo data, captured from a production build",
+      "cap": "Screens are captured from a production build of the app, on demo data.",
       "note": {
         "op": "One plain word",
         "fm": "Tier, then age",
@@ -1063,7 +1063,9 @@
       "ledger": "Ledger",
       "written": "Entry {n} written",
       "pending": "Not yet",
-      "trail": "Trail drawn"
+      "trail": "Trail drawn",
+      "tonnesFmt": "{n} t",
+      "pctFmt": "{n} %"
     },
     "foot": {
       "map": "The word Spotter drawn from the contour lines of the simulated quarry, with the shift's trail on the pit floor.",

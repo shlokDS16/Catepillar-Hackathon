@@ -14,7 +14,7 @@ type Style = CSSProperties & Record<`--${string}`, string | number>;
 const ROLES = [
   { key: "op", href: "/op", file: "op", path: "/op", note: { left: 2.6, top: 4.2, width: 30.6, height: 11.6, at: "right" } },
   { key: "fm", href: "/fm", file: "fm", path: "/fm", note: { left: 2.6, top: 42, width: 30.4, height: 5.6, at: "below" } },
-  { key: "au", href: "/fm/ledger", file: "ledger", path: "/fm/ledger", note: { left: 2.4, top: 55.6, width: 95.2, height: 14, at: "below" } },
+  { key: "au", href: "/fm/ledger", file: "ledger", path: "/fm/ledger", note: { left: 2.4, top: 55.6, width: 95.2, height: 14, at: "inside" } },
 ] as const;
 
 /** Locales whose captures were taken from a fully translated app screen (see the B report). */
@@ -50,10 +50,11 @@ export async function Proof() {
                   </figcaption>
                   <div className="l-shotwrap">
                     <picture>
-                      <source media="(max-width: 767px)" srcSet={`${base}-m${suffix}.avif`} type="image/avif" />
-                      <source media="(max-width: 767px)" srcSet={`${base}-m${suffix}.webp`} type="image/webp" />
-                      <source srcSet={`${base}${suffix}.avif`} type="image/avif" />
-                      <source srcSet={`${base}${suffix}.webp`} type="image/webp" />
+                      {/* WebP first: at these sizes it is the smaller file. The phone crop has its own size. */}
+                      <source media="(max-width: 767px)" srcSet={`${base}-m${suffix}.webp`} type="image/webp" width={390} height={520} />
+                      <source media="(max-width: 767px)" srcSet={`${base}-m${suffix}.avif`} type="image/avif" width={390} height={520} />
+                      <source srcSet={`${base}${suffix}.webp`} type="image/webp" width={1320} height={825} />
+                      <source srcSet={`${base}${suffix}.avif`} type="image/avif" width={1320} height={825} />
                       <img className="l-shot" src={`${base}${suffix}.webp`} alt={t(`s7.${r.key}.alt`)} width={1320} height={825} loading="lazy" decoding="async" />
                     </picture>
                     <span
@@ -65,7 +66,13 @@ export async function Proof() {
                       className="l-note-tag"
                       aria-hidden="true"
                       data-at={r.note.at}
-                      style={r.note.at === "right" ? { left: `${r.note.left + r.note.width}%`, top: `${r.note.top + r.note.height / 2}%` } : { left: `${r.note.left}%`, top: `${r.note.top + r.note.height}%` }}
+                      style={
+                        r.note.at === "right"
+                          ? { left: `${r.note.left + r.note.width}%`, top: `${r.note.top + r.note.height / 2}%` }
+                          : r.note.at === "inside"
+                            ? { right: `${100 - r.note.left - r.note.width + 1.5}%`, top: `${r.note.top + r.note.height / 2}%` }
+                            : { left: `${r.note.left}%`, top: `${r.note.top + r.note.height}%` }
+                      }
                     >
                       {t(`s7.note.${r.key}`)}
                     </span>
