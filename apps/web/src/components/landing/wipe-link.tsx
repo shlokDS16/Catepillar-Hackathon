@@ -4,28 +4,47 @@ import { useRouter } from "next/navigation";
 import { useEffect, useRef, type MouseEvent, type ReactNode } from "react";
 
 /**
- * A link that leaves the landing with the dossier's circle wipe (§5): an ink circle grows from the
- * click point to the farthest corner (.5 s in-out), the route pushes at +500 ms. Under reduced
- * motion it is a 150 ms crossfade. Modified and middle clicks fall through to the browser.
+ * A link that leaves the landing with the circle wipe, ending in the portal's Ink Frame
+ * (docs/design/portal-redesign-study.md section 3 B). Sequence: an ink circle grows from the click
+ * point to the farthest corner (500 ms), an ink status band (top) and dock (bottom) settle, the
+ * paper middle opens between them (360 ms), then the route pushes. When the next route has
+ * rendered the landing unmounts and the veil fades away. Under reduced motion there is no wipe:
+ * the route changes at once. Modified and middle clicks fall through to the browser.
  */
-export function WipeLink({ href, className, children }: { href: string; className?: string; children: ReactNode }) {
+const CIRCLE_MS = 500;
+const OPEN_MS = 360;
+
+export function WipeLink({
+  href,
+  className,
+  children,
+  band,
+}: {
+  href: string;
+  className?: string;
+  children: ReactNode;
+  /** The mono caption on the ink status band. */
+  band?: string;
+}) {
   const router = useRouter();
   const busy = useRef(false);
-  const veilRef = useRef<HTMLDivElement | null>(null);
-  const fallback = useRef<number | undefined>(undefined);
-  const reducedRef = useRef(false);
+  const hostRef = useRef<HTMLDivElement | null>(null);
+  const timers = useRef<number[]>([]);
 
-  // The landing unmounts when the next route has rendered: that is the moment to shrink the veil
-  // away (dossier §1.5) and remove it, so the app is never left under ink.
+  useEffect(() => {
+    router.prefetch(href);
+  }, [router, href]);
+
+  // The landing unmounts when the next route has rendered: that is the moment to fade the veil
+  // away and remove it, so the app is never left under ink.
   useEffect(
     () => () => {
-      window.clearTimeout(fallback.current);
-      const veil = veilRef.current;
-      if (!veil) return;
-      veilRef.current = null;
-      if (reducedRef.current) veil.style.opacity = "0";
-      else veil.style.transform = "scale(0)";
-      window.setTimeout(() => veil.remove(), 600);
+      timers.current.forEach((id) => window.clearTimeout(id));
+      const host = hostRef.current;
+      if (!host) return;
+      hostRef.current = null;
+      host.dataset.leave = "1";
+      window.setTimeout(() => host.remove(), 500);
     },
     [],
   );
@@ -35,47 +54,47 @@ export function WipeLink({ href, className, children }: { href: string; classNam
     e.preventDefault();
     if (busy.current) return;
     busy.current = true;
-    const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-    reducedRef.current = reduced;
-    const veil = document.createElement("div");
-    veil.setAttribute("aria-hidden", "true");
+    if (window.matchMedia("(prefers-reduced-motion: reduce)").matches) {
+      router.push(href);
+      return;
+    }
     const x = e.clientX || window.innerWidth / 2;
     const y = e.clientY || window.innerHeight / 2;
     const r = Math.hypot(Math.max(x, window.innerWidth - x), Math.max(y, window.innerHeight - y));
-    Object.assign(veil.style, {
-      position: "fixed",
-      zIndex: "60",
-      pointerEvents: "none",
-      background: "var(--ink)",
-    });
-    if (reduced) {
-      Object.assign(veil.style, { inset: "0", opacity: "0", transition: "opacity 150ms linear" });
-    } else {
-      Object.assign(veil.style, {
-        left: `${x - r}px`,
-        top: `${y - r}px`,
-        width: `${2 * r}px`,
-        height: `${2 * r}px`,
-        borderRadius: "50%",
-        transform: "scale(0)",
-        transition: "transform 500ms var(--ease-inout)",
-      });
-    }
-    veilRef.current = veil;
-    document.body.appendChild(veil);
+
+    const host = document.createElement("div");
+    host.className = "wipe";
+    host.setAttribute("aria-hidden", "true");
+    const circle = document.createElement("div");
+    circle.className = "wipe-circle";
+    Object.assign(circle.style, { left: `${x - r}px`, top: `${y - r}px`, width: `${2 * r}px`, height: `${2 * r}px` });
+    const top = document.createElement("div");
+    top.className = "wipe-band";
+    top.textContent = band ?? "";
+    const dock = document.createElement("div");
+    dock.className = "wipe-dock";
+    const paper = document.createElement("div");
+    paper.className = "wipe-paper";
+    host.append(circle, top, dock, paper);
+    hostRef.current = host;
+    document.body.appendChild(host);
+
+    const after = (ms: number, fn: () => void) => timers.current.push(window.setTimeout(fn, ms));
     requestAnimationFrame(() =>
       requestAnimationFrame(() => {
-        if (reduced) veil.style.opacity = "1";
-        else veil.style.transform = "scale(1)";
+        host.dataset.step = "circle";
       }),
     );
-    window.setTimeout(() => router.push(href), reduced ? 150 : 500);
+    after(CIRCLE_MS, () => {
+      host.dataset.step = "open";
+    });
+    after(CIRCLE_MS + OPEN_MS, () => router.push(href));
     // If the route never arrives (offline), do not leave the page blocked.
-    fallback.current = window.setTimeout(() => {
-      veil.remove();
-      veilRef.current = null;
+    after(6000, () => {
+      host.remove();
+      hostRef.current = null;
       busy.current = false;
-    }, 6000);
+    });
   }
 
   return (

@@ -25,6 +25,12 @@
   --on-ink: #ffffff;
   --on-signal: #16150f;
 
+  /* Ink Frame (portal direction B): the dark chrome around paper work. --frame equals --ink. */
+  --frame: #16150f;
+  --on-frame: #f2f0ea;
+  --on-frame-2: #b9b5aa;
+  --frame-rule: #3a382f;
+
   /* 2. Type. Families arrive as next/font variables on <html>. */
   --ff-body: var(--font-barlow), var(--font-devanagari), var(--font-tamil), system-ui, sans-serif;
   --ff-display: var(--font-barlow-condensed), var(--font-devanagari), var(--font-tamil), system-ui,
@@ -186,6 +192,9 @@
   --rock-front: #181723;
   --bone: #e6e1d4;
   --line-glow: #fff6e4;
+  --machine-body: #e9e4d6;
+  --graphite: #2a2924;
+  --glass: #1c2a33;
   --ease-quint: cubic-bezier(0.22, 1, 0.36, 1);
   --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
   --ease-inout: cubic-bezier(0.76, 0, 0.24, 1);
