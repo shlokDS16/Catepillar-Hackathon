@@ -15,6 +15,17 @@ function Caption({ text }: { text: string }) {
   return <p className="l-caption">{text}</p>;
 }
 
+/** The still for a stage, shown when WebGL is off or motion is reduced (rendered from our own scene). */
+function Poster({ n }: { n: 2 | 3 | 4 | 5 }) {
+  return (
+    <picture>
+      <source srcSet={`/landing/poster-${n}.avif`} type="image/avif" />
+      <source srcSet={`/landing/poster-${n}.webp`} type="image/webp" />
+      <img className="l-poster-img" src={`/landing/poster-${n}.webp`} alt="" width={1440} height={900} loading="lazy" decoding="async" />
+    </picture>
+  );
+}
+
 const RING_STATES: Array<{ lv: number; tone: "clear" | "caution" | "warning" | "critical"; shape: SignShape }> = [
   { lv: 1, tone: "clear", shape: "circle" },
   { lv: 2, tone: "caution", shape: "triangle" },
@@ -79,6 +90,7 @@ export async function Landing() {
         {/* 2 · The machine */}
         <section className="stage" data-stage="2" style={{ "--h": 200 } as Style}>
           <div className="pin">
+            <Poster n={2} />
             <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.2, "--b": 0.32 } as Style}>
               <p className="l-kicker">02</p>
               <h2 className="l-h2">{t("s2.title")}</h2>
@@ -99,6 +111,7 @@ export async function Landing() {
         {/* 3 · The operator's trail */}
         <section className="stage" data-stage="3" style={{ "--h": 250 } as Style}>
           <div className="pin">
+            <Poster n={3} />
             <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.08, "--b": 0.2 } as Style}>
               <p className="l-kicker">03</p>
               <h2 className="l-h2">{t("s3.title")}</h2>
@@ -125,6 +138,7 @@ export async function Landing() {
         {/* 4 · Guardian rings */}
         <section className="stage" data-stage="4" style={{ "--h": 250 } as Style}>
           <div className="pin">
+            <Poster n={4} />
             <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.05, "--b": 0.17 } as Style}>
               <p className="l-kicker">04</p>
               <h2 className="l-h2">{t("s4.title")}</h2>
@@ -146,6 +160,7 @@ export async function Landing() {
         {/* 5 · Replay hand-off */}
         <section className="stage" data-stage="5" style={{ "--h": 200 } as Style}>
           <div className="pin">
+            <Poster n={5} />
             <div className="l-card rv rv-io" style={{ "--a": 0.45, "--b": 0.6, "--c": 0.97, "--d": 1 } as Style}>
               <p className="l-kicker">05</p>
               <h2 className="l-h2">{t("s5.title")}</h2>
