@@ -233,8 +233,10 @@ begin
   assert exists (select 1 from pg_locks where locktype = 'advisory' and classid = 0 and objid = 4210001
                    and objsubid = 1 and pid = pg_backend_pid()), 'checkpoint takes lock 4210001';
   select sent_text into v_line from public.ledger_roots where id = (ck ->> 'root_id')::uuid;
-  assert v_line ~ ('^SPOTTER-LEDGER v1 seq=\d+\.\.\d+ n=\d+ root=[0-9a-f]{64} head=[0-9a-f]{64} at=\d{2}:\d{2} IST$'),
+  assert v_line ~ ('^SPOTTER-LEDGER v1 seq=\d+\.\.\d+ n=\d+ root=[0-9a-f]{64} head=[0-9a-f]{64} at=\d{2}:\d{2} IST np=[0-9a-f]{64}$'),
     'witness line shape: ' || v_line;
+  assert v_line like '% np=' || encode(sha256(convert_to((select string_agg(seq::text, ',' order by seq) from public.incidents where non_punitive), 'UTF8')), 'hex'),
+    'the line carries the hash of the non-punitive seqs';
   assert v_line like '%root=' || (ck ->> 'root_hex') || '%', 'the line carries the root';
   assert v_line like '%head=' || (ck ->> 'head_hash') || '%', 'the line carries the head';
   assert (ck ->> 'root_hex') = encode(private.ledger_merkle_root((ck ->> 'first_seq')::bigint, (ck ->> 'last_seq')::bigint), 'hex'), 'checkpoint root';
@@ -352,6 +354,24 @@ begin
 end $$;
 
 -- ── 9. RLS, column grants and the export gate ────────────────────────────────────────────────────
+-- 003e: a near-miss event never reaches the site or supervisor topics (checked as owner, before the role switch)
+do $$
+declare e_nm uuid; e_log uuid; e_belt uuid;
+begin
+  select id into e_nm from public.events where idempotency_key = 'inc:ledger:1';
+  select id into e_log from public.events where type = 'incident.logged' and payload ->> 'non_punitive' = 'true';
+  assert e_log is not null, 'incident.logged carries non_punitive for a near miss';
+  assert (select count(*) from public.events where type = 'incident.logged' and payload ->> 'non_punitive' = 'false') = 2,
+    'and false for the other incidents';
+  if (select exists (select 1 from pg_inherits where inhparent = 'realtime.messages'::regclass)) then
+    select id into e_belt from public.events where idempotency_key = 'det:ledger:seatbelt:1';
+    assert 'sup:' || pg_temp.id('site') = any (select topic from realtime.messages where extension = 'broadcast' and payload ->> 'id' = e_belt::text),
+      'positive control: an ordinary event still reaches sup:';
+    assert not exists (select 1 from realtime.messages where extension = 'broadcast' and payload ->> 'id' in (e_nm::text, e_log::text)
+                       and (topic like 'sup:%' or topic like 'site:%')), 'near-miss events never broadcast on sup: or site:';
+  end if;
+end $$;
+
 set local role authenticated;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_ravi'), 'role', 'authenticated')::text, true);
 do $$
@@ -391,12 +411,52 @@ begin
     where (e.canonical_fields ->> 'non_punitive')::boolean
       and (e.canonical_fields ->> 'seq' <> e.seq or e.canonical_fields ->> 'prev_hash' <> e.prev_hash)),
     'sealed rows keep seq and prev_hash for the chain walk';
+  assert not exists (select 1 from public.ledger_export(1, 3) e
+    where (e.canonical_fields ->> 'non_punitive')::boolean
+      and (select array_agg(k order by k collate "C") from jsonb_object_keys(e.canonical_fields) k)
+          <> array['non_punitive', 'prev_hash', 'sealed', 'seq', 'v']),
+    'a sealed row carries exactly 5 keys: v, seq, prev_hash, non_punitive, sealed';
   assert (public.ledger_verify(1, null)) ->> 'ok' = 'true', 'server verify still ok over the range with a near-miss row';
+  -- the event routes: the FM cannot read the near-miss report or its incident.logged announcement
+  assert not exists (select 1 from public.events where type = 'incident.reported' and idempotency_key = 'inc:ledger:1'),
+    'FM cannot read the near-miss event';
+  assert not exists (select 1 from public.events where type = 'incident.logged' and payload ->> 'non_punitive' = 'true'),
+    'FM cannot read the near-miss incident.logged event';
+  assert not exists (select 1 from public.events where operator_id = pg_temp.id('op_other')
+                       and type in ('incident.reported', 'incident.logged')), 'no event names the near-miss reporter to the FM';
+  assert exists (select 1 from public.events where type = 'safety.seatbelt_breach'), 'positive control: the FM still reads ordinary events';
 end $$;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_trainer'), 'role', 'authenticated')::text, true);
 do $$
 begin
   assert (select count(*) from public.incidents) = 1, 'TR sees near misses only';
   assert (select count(*) from public.incidents where incident_type <> 'near_miss') = 0, 'TR sees nothing else';
+  begin
+    perform public.ledger_export(1, 3);
+    raise exception 'a trainer exported the ledger';
+  exception when raise_exception then
+    if sqlerrm <> 'forbidden' then raise; end if;
+  end;
+end $$;
+select set_config('request.jwt.claims', json_build_object('sub', gen_random_uuid(), 'role', 'authenticated')::text, true);
+do $$
+begin
+  begin
+    perform public.ledger_export(1, 3);
+    raise exception 'a caller with no profile exported the ledger';
+  exception when raise_exception then
+    if sqlerrm <> 'forbidden' then raise; end if;
+  end;
+end $$;
+reset role;
+set local role anon;
+select set_config('request.jwt.claims', json_build_object('role', 'anon')::text, true);
+do $$
+begin
+  begin
+    perform public.ledger_export(1, 3);
+    raise exception 'anon exported the ledger';
+  exception when insufficient_privilege then null;
+  end;
 end $$;
 reset role;
