@@ -368,14 +368,16 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   const M = (lx: number, ly: number, lz: number): [number, number, number] => [lx * ch + lz * sh, ly, -lx * sh + lz * ch];
   type Key = { pos: [number, number, number]; tgt: [number, number, number]; fov: number; sx: number; sy: number; m?: { sx: number; sy: number } };
   const W: Key[] = [
-    { pos: M(20, 3.0, -14), tgt: M(1.2, 2.0, 0.2), fov: 30, sx: 0.13, sy: 0, m: { sx: -0.13, sy: -0.16 } },
+    { pos: M(20, 3.0, -14), tgt: M(1.2, 2.0, 0.2), fov: 30, sx: 0.25, sy: 0, m: { sx: -0.25, sy: -0.16 } },
     { pos: [46, 18, -36], tgt: [-18, 5, 14], fov: 38, sx: 0.06, sy: 0 },
     { pos: M(8, 4.6, -29), tgt: M(3.0, 3.0, 0.2), fov: 28, sx: 0.08, sy: -0.04 },
     { pos: [-8, 36, 70], tgt: [0, 0, 2], fov: 38, sx: 0, sy: 0 },
     { pos: [26, 38, 40], tgt: [-6, 0, -1], fov: 34, sx: 0.08, sy: 0 },
     { pos: [34, 74, 78], tgt: [0, 0, 0], fov: 40, sx: 0, sy: 0 },
   ];
-  const TRAVEL = [0.85, 0.45, 0.45, 0.4, 0.55];
+  const TRAVEL = [0.95, 0.45, 0.45, 0.4, 0.55];
+  /* Stage 1 holds the hero framing for the first third, then pulls back. */
+  const HOLD = [0.35, 0, 0, 0, 0];
   const ORBIT = [0, 0.5, 0.25, 0, 0];
   const posCurve = new THREE.CatmullRomCurve3(W.map((k) => new THREE.Vector3(...k.pos)), false, "centripetal");
   const tgtCurve = new THREE.CatmullRomCurve3(W.map((k) => new THREE.Vector3(...k.tgt)), false, "centripetal");
@@ -417,6 +419,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   const wantTgt = new THREE.Vector3();
   const wantAux = new THREE.Vector3();
   const tmp = new THREE.Vector3();
+  const tmp2 = new THREE.Vector3();
   const tan = new THREE.Vector3();
   const rt = new THREE.Vector3();
   const quat = new THREE.Quaternion();
@@ -458,7 +461,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     let s = 0;
     for (let i = 0; i < 5; i++) if (ps[i] > 0) s = i;
     const p = ps[s];
-    const e = quint(win(p, 0, TRAVEL[s]));
+    const e = quint(win(p, HOLD[s], TRAVEL[s]));
     const t = (s + e) / 5;
     posCurve.getPoint(t, wantPos);
     tgtCurve.getPoint(t, wantTgt);
@@ -616,8 +619,10 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
 
   function updateCamera(dt: number, snap: boolean) {
     computeCamera();
-    const d = snap ? 0 : dt;
-    const st = 0.42;
+    let d = snap ? 0 : dt;
+    const st = 0.22;
+    const err = camera.position.distanceTo(wantPos);
+    if (err > 30) d = 0;
     camera.position.set(cx[0].to(wantPos.x, st, d), cx[1].to(wantPos.y, st, d), cx[2].to(wantPos.z, st, d));
     const target = tmp.set(tx[0].to(wantTgt.x, st, d), tx[1].to(wantTgt.y, st, d), tx[2].to(wantTgt.z, st, d));
     const fovNow = cfov.to(wantAux.x, st, d);
@@ -633,6 +638,10 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
       off.applyQuaternion(quat.setFromAxisAngle(rt, ay));
       camera.position.copy(target).add(off);
     }
+    // Keep the camera at least 12 m from the machine so the spline never passes through it.
+    tmp2.subVectors(camera.position, exc.group.position);
+    const dm = Math.hypot(tmp2.x, tmp2.y - 2, tmp2.z);
+    if (dm < 12) camera.position.copy(exc.group.position).add(tmp2.multiplyScalar(12 / Math.max(0.1, dm)));
     camera.lookAt(target);
     const boost = Math.max(1, 1.25 / aspect);
     camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(fovNow) / 2) * boost));
@@ -680,7 +689,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   function tick(now: number) {
     if (!running) return;
     raf = requestAnimationFrame(tick);
-    const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
+    const dt = Math.min(0.25, (now - last) / 1000 || 0.016);
     last = now;
     time += dt;
     updateWorld(dt);
