@@ -136,6 +136,7 @@ secret such as `DEMO_OPERATOR_PHONE`; phone numbers never enter the database), `
 
 **operator_pairings** (M10 "pair a machine", G2-14/PA-8): `run_id`, `operator_id`, `machine_id`,
 `paired_at`, `unpaired_at null`. Unique (run_id, operator_id) where `unpaired_at is null`. RPC `pair_machine`.
+RLS (005b, 005c): an operator reads their own rows; a fleet manager reads rows of operators of their own site only; trainer and other sites read none (a pairing plus `operators.display_name` would name who was in a cab, §2.10).
 
 **protocol_cards** (fixed, reviewed; never LLM-generated): `id text pk`, `fault_type`, `version`,
 `steps jsonb` (`{"en":[…],"hi":[…],"ta":[…]}`), `audio_paths jsonb`, `source_refs text[]`,
