@@ -168,3 +168,27 @@
     --dur-tick: 0ms;
   }
 }
+
+/*
+ * Landing scene palette (docs/design/landing-dossier.md). Scenery only: sky, rock, haze.
+ * The four safety hues are NOT here: they stay the state tokens above and appear only as
+ * Guardian rings and ledger states. No yellow-and-black anywhere in the scenery.
+ */
+:root {
+  --dawn-top: #141c36;
+  --dawn-mid: #3d4f7c;
+  --dawn-low: #9a8fb0;
+  --dawn-horizon: #f1b995;
+  --dawn-sun: #fff0d8;
+  --rock-far: #6f7396;
+  --rock-mid: #4b4d6e;
+  --rock-near: #2c2c42;
+  --rock-front: #181723;
+  --bone: #e6e1d4;
+  --line-glow: #fff6e4;
+  --ease-quint: cubic-bezier(0.22, 1, 0.36, 1);
+  --ease-expo: cubic-bezier(0.16, 1, 0.3, 1);
+  --ease-inout: cubic-bezier(0.76, 0, 0.24, 1);
+  --dur-lhover: 260ms;
+  --dur-lpanel: 420ms;
+}

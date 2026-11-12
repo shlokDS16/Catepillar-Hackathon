@@ -708,5 +708,64 @@
         }
       }
     }
+  },
+  "landing": {
+    "brand": "Spotter",
+    "caption": "Simulated data. Illustrative shift, not a real site.",
+    "kicker": "Bench 3 · first light",
+    "headline": "A whole shift, kept safe.",
+    "sub": "Spotter rides with the operator. It reads the machine, watches the ring around it, and keeps a record nobody can quietly edit.",
+    "cta": "Open the operator cockpit",
+    "ctaFleet": "Fleet view",
+    "scrollHint": "Scroll to follow the shift",
+    "s1b": "Dawn. Bench 3. The excavator is already warm.",
+    "s2": {
+      "title": "The machine",
+      "body": "A generic tracked excavator, drawn from a few primitives. Spotter reads its signals and turns them into one plain word.",
+      "c1": "Boom and stick, read live",
+      "c2": "Seatbelt, idle, speed and slope rules",
+      "c3": "Works on a patchy bench connection"
+    },
+    "s3": {
+      "title": "The operator's trail",
+      "body": "Every pass across the bench is drawn as it happens, and kept for the shift's replay.",
+      "cycles": "cycles",
+      "tonnes": "tonnes moved"
+    },
+    "s4": {
+      "title": "Guardian rings",
+      "body": "Four rings, four states. A walker steps in and the ring steps up, in colour, in a symbol and in a word.",
+      "walker": "Walker in range"
+    },
+    "s5": {
+      "title": "Replay hand-off",
+      "body": "The trail rewinds, and the next operator learns from this shift without being on it.",
+      "scrub": "Shift replay",
+      "from": "06:12",
+      "to": "14:12",
+      "card": "Practice from today's shift"
+    },
+    "s6": {
+      "title": "A record nobody can quietly edit",
+      "body": "Each entry carries the hash of the one before it. Change one row after the fact and the chain stops verifying, and the changed row is named.",
+      "row": "Entry",
+      "prev": "previous",
+      "tamper": "Row {n} changed after the fact",
+      "chainOk": "Chain verified",
+      "chainBroken": "Chain broken at row {n}",
+      "types": {
+        "seatbelt_breach": "Seatbelt off",
+        "idle_excess": "Idle too long",
+        "overspeed": "Overspeed",
+        "proximity_warning": "Proximity warning",
+        "slope_alert": "Slope alert"
+      },
+      "sev": "Severity {n}"
+    },
+    "s7": {
+      "title": "Start the shift.",
+      "body": "The operator cockpit opens on a simulated shift you can drive yourself.",
+      "foot": "Spotter is a student project. It is not affiliated with or endorsed by Caterpillar Inc."
+    }
   }
 }

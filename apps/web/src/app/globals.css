@@ -9,6 +9,7 @@
 @import "../styles/base.css" layer(base);
 @import "../styles/components.css" layer(components);
 @import "../styles/guide.css" layer(components);
+@import "../styles/landing.css" layer(components);
 @import "../styles/debrief.css" layer(components);
 @import "../styles/ledger.css" layer(components);
 
