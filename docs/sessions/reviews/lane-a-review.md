@@ -83,3 +83,55 @@ reset each have real assertions; the gaps are the merged-row tag and the takeove
 Counts: High 1, Medium 5, Low 7.
 
 **Verdict: CHANGES REQUIRED** (finding 1 blocks the merge; findings 2-6 should be fixed before the demo).
+
+## Re-review @ 4435503
+
+Scope: the lane fix commit 55ab2b4 (14 files) plus 4435503 (log line). The Machine Bay files came in through the main merge
+(0389806) and are not part of this re-review.
+
+### Checks run (lane-a worktree at 4435503, read-only; I removed my .vitest/.next folders afterwards)
+- `rtk tsc --noEmit` (apps/web): TypeScript: No errors found. `rtk lint`: ESLint: No issues found.
+- `vitest run`: web 41 files, 461 passed; shared 3 files, 147 passed.
+- Browser checks (`next dev`, port 3117). Beats were sent over the `spotter-director` channel. At each size a probe recorded where
+  the takeover sits, where SOS sits and whether its centre takes the click, each takeover control's corners and centre under
+  `elementFromPoint`, and a 15 px grid of every non-inert link or button outside the takeover, SOS and status strip.
+
+| Viewport | Beat 2 Warning (moving, no Ack by design) | Beat 3 Warning | SOS | Controls under SOS | Other clickable |
+|---|---|---|---|---|---|
+| 360x740 | box 0,104 360x636 | Ack 16,405 and Map 16,540, both clear (checked scrolled to the end) | 252,644 108x96, takes the click | 0 | 0 |
+| 768x1024 | box 0,104 753x920 | Ack 24,651, Map 212,651, clear | 645,928 108x96, takes the click | 0 | 0 |
+| 1024x768 | box 0,0 1009x768 with clip-path | Ack 152,651, Map 340,651, clear | 0,384 120x376, takes the click | 0 | 0 |
+| 1440x900 | box 0,0 1425x900 with clip-path | Ack 152,651, Map 340,651, clear | 0,384 120x376, takes the click | 0 | 0 |
+
+  The Beat 5 Critical at 1440 has no clip-path, Ack is at 152,244 and clear, and SOS takes the click.
+  Beat 8 clears Beat 2's takeover. The rail's top-left cell is now covered, and only the status strip stays live.
+- Lesson #9: the route loaded this time. I stepped through all cards with Next.
+  - At 1440x900, Next and Back sit at y 800-880 on the long cards (WHY, EXAMPLE) and 452-532 on the others. Every button is
+    on screen and takes its own click.
+  - At 375x812 they sit at y 620-700 (long cards) or 555-635, above the dock (its top is at 716), and take their own clicks.
+  - The quiz card has no action row until an answer is chosen, which is expected.
+
+### Prior findings
+- 1 High (SOS over Acknowledge): **fixed**, verified at all four widths.
+- 2 (rail top-left leak): **fixed** with a clip-path polygon and padding. Grid probe found no leaks.
+- 3 (restore validation): **fixed**. Each restored event's payload is checked with `EVENT_REGISTRY[type].payload.safeParse`, and saved state
+  under another `CONTRACTS_VERSION` is ignored. Both cases are tested.
+- 4 (idea.md §7): **fixed**. 77/92 matches the fixture, and the merged factor is 1.111 x 1.174 = +30 %. The call claim is gone and the checkpoint line says "copied from /director".
+  The ETA countdown now starts from the task's own estimate (`fixture-adapter.ts` startProgress), so it no longer jumps from 77 to 47.
+- 5 (ledger Telegram copy): **fixed** in en and hi.
+- 6 and 7 (Hindi word and the generic state word): **fixed**. The state word is "Needs PPE" / "PPE चाहिए" on both the plate and the task chip.
+- 8 (progress after reload): **fixed**. The constructor restarts the progress timer when the last saved task event is a start or progress tick.
+- 10 (dispatch formatting): **fixed**. `dispatchLabel` lives in `inbox.ts` and both callers use it.
+- 11 (provenance tag): **fixed**. One constant is shared, and a test covers it.
+- 12: the operator list is explicit and the seed now fits about 9 h. Still open: `IDS.anomaly` stands in for EXC-014's machine id (Low).
+- 9 (`ppe.restored` resolves every PPE alert, whoever it belongs to): **open**, Low, and harmless while fixtures are the default.
+- 13: the redundant CSS is gone and #9 is verified.
+
+### New
+- N1 **Low.** `components/chrome/nav.tsx:28` and `lockable.tsx:17`: while a Warning without a motion lock is open (Beat 3), `nav` and
+  `.shell-body` are not inert. Pointer clicks are blocked, but the keyboard can still Tab to the links underneath the takeover.
+  Fix: inert both while a takeover is shown, as is already done for the motion lock.
+
+Counts: High 0, Medium 0, Low 3 (finding 9, part of 12, N1).
+
+**Verdict: APPROVE.**

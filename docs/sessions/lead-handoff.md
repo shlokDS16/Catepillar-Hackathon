@@ -18,26 +18,29 @@ Paste this into a fresh Claude Code session (model Opus, never Fable) opened in 
 ## Session 3 (lead L0, 66 % -> ~68 % weekly): status at handoff
 - Judge-content (17aac73) and F19 (6668dd1) were already merged; their review files are now in docs/sessions/reviews/.
 - MERGED: lane/l3-bay-machine (D17 T2+T3) at 0389806: optional `machine.parts`, machine drawing, parts list. Review: reviews/bay-machine-review.md (APPROVE; open Low: Engine and Rear-sensor tags overlap ~29x24 px at 1440, move one tag's `ty`).
-- SEE "In flight (session 3)" for lane-a, live-path and bay-band-tape: check each branch's last commit and its review file.
+- See "Merged in session 3" and "In flight at handoff" below.
 - D18 design changed (decisions.md D18 amendment): seeded demo users, passwords only in the main folder .env
   (DEMO_OPERATOR_*/DEMO_FM_*), sign-in page /director/live; judges see fixtures. The shared DB now holds the seeded
   DEMO-LIVE site (scripts/seed-demo-users.ts). sqltests must scope to their own rows (live-path review High).
 - Gate gotcha: implementers' Playwright sometimes writes screenshots into the MAIN folder's docs/design/qa/, which
   blocks the merge ("untracked files would be overwritten"). Move them to a scratch folder first, then rerun the gate.
 
-## In flight (session 3)
-- lane/l2-lane-a: judge #2/#3/#4/#5/#9, idea.md §7, ETA provenance, takeover leak, Lesson buttons. Review
-  reviews/lane-a-review.md = CHANGES REQUIRED (High: SOS slab overlapped the takeover's Acknowledge at 1440); fixes
-  sent back. Next: re-review (code-reviewer, opus) then gate. #9 Lesson buttons and the takeover need a browser check
-  on the deploy (dynamic routes 404 in a dev worktree).
-- lane/l1-live-path (D18): review reviews/live-path-review.md = CHANGES REQUIRED (High: seeded rows broke sqltest
-  002/005/010, 11/14; Medium: live band says "Simulated shift"; fallback notice global). Fixes sent back. Next:
-  backend-reviewer (opus) re-review, then gate.
-- lane/l2-bay-band-tape (D17 T1+T4): APPROVED at cc02f16 (reviews/bay-band-tape-review.md); gate hit a conflict in
-  home-screen.tsx with bay-machine; implementer is merging main. Next: gate it.
+## Merged in session 3 (all with an Opus review APPROVE; files in docs/sessions/reviews/)
+- 0389806 lane/l3-bay-machine (D17 T2+T3). d02084e lane/l2-bay-band-tape (D17 T1+T4: band "Demo data · hh:mm · 10×
+  speed", Sync cell only when offline, shift tape). a720218 lane/l2-lane-a (judge #2/#3/#4/#5/#9, idea.md §7, ETA
+  provenance, takeover clear of SOS, Lesson buttons; browser-checked at 360/768/1024/1440 by the reviewer).
+- Open Lows: bay tags Engine/Rear-sensor overlap ~29x24 px at 1440; every shift-tape mark uses the seatbelt
+  pictogram; ppe.restored not scoped per operator; IDS.anomaly stands in for EXC-014's id; nav/shell not `inert`
+  under a Beat 3 Warning (keyboard can Tab beneath).
+
+## In flight at handoff
+- lane/l1-live-path (D18): re-review @ab4074b approved every fix; one merge-only Medium sent back (move the live/demo
+  switch into main's `dataLabel()`, no "Demo data · Demo data"), plus restore the 002:80 check breadth and a
+  read-only report of the hosted sign-up setting. Next: check the branch's newest commit, have the backend-reviewer
+  confirm the merge (short re-review), then gate. sqltest must stay 14/14.
 
 ## Queue after session 3 (priority order)
-1. Finish the three in-flight items above.
+1. Finish lane/l1-live-path (above). Then a quick browser pass on production of /op, /op/training, /director.
 2. D17 phase 2: T5 Bay layout (home-screen.tsx + new styles/home.css; MachineBay, LoopCard, ShiftTape are now
    separate mounts on Home to arrange) and T6 While-you-wait (loop-card variant). Phase 3: T7 inbox detail, T8 fleet
    strip, T9 band ledger cell + triage. Specs: study.md (e). Up to 3 lanes on disjoint files.

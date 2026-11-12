@@ -58,3 +58,42 @@ covering both the seed and smoke scripts and the web LiveAdapter. I did not run 
 **Counts:** High 1, Medium 2, Low 7.
 
 **CHANGES REQUIRED**
+
+## Re-review @ ab4074b
+
+Scope: `git diff b1f56b5 origin/lane/l1-live-path`, which covers the fix commit c0faaed, the merge of an earlier main (1e92963) and a docs commit. Current main is d02084e, and this lane does **not** yet contain it.
+
+### What I ran
+- The lane's own `supabase/tests` through its `scripts/sqltest.ts`, run once. I used a lane export in the scratchpad, with env loaded by a wrapper and no values printed. Every file rolls back. Result: **14/14 passed**.
+- Lane export: web `vitest run src/data` 41/41, web `tsc` 0 errors, `scripts/seed-demo-users.test.ts` 4/4.
+- `git merge-tree --write-tree origin/main origin/lane/l1-live-path`: **3 conflicts**, in `status-strip.tsx`, `messages/en.json` and `messages/hi.json`.
+
+### Earlier findings, checked one by one
+| # | Status | Evidence |
+|---|---|---|
+| 1 High (sqltests) | Fixed | 14/14. The rescoped checks still test real behaviour. 002: the fleet-manager "sees all" checks still have to find 3 profiles, 2 tasks and so on, which include other operators' rows on the same site. 005: the chain-shape block (005:144-156) still walks the **whole** `incidents` table, checking genesis zeros, every link and every hash. The export, verify and role checks use a `seqbase` offset with a positive count of 3, and `ledger.verified` is limited to this transaction's `now()`. 010: the counts are scoped to the test operators and still assert 0, then 1, then 1. |
+| 2 Med (fixture stream) | Fixed | live-adapter.ts:67-70 forwards only `clock` and `connectivity`, with a test at live-adapter.test.ts:84-94. In live mode the band shows "Live data · run paused/none" and never the fixture clock. |
+| 3 Med (fallback cleared) | Fixed | Fallbacks are now tracked per call in the `failed` list (live-session.ts:37-48), with 3 tests in live-session.test.ts. |
+| 4, 5 Low | Documented | Both are listed on `/director/live` (live-panel.tsx:58-63). |
+| 6 Low (global sign-out) | Fixed | Both sign-outs now use `scope: "local"`. |
+| 7 Low (`--also-env`) | Fixed | `git check-ignore` runs for every target **before** any DB or auth write. A tracked or unknown path is refused, and so is a missing directory, because the spawn returns a null status. |
+| 8 Low (real account, sign-up) | Partly fixed | `isDemoEmail` checks both emails before any write. Hosted `enable_signup` is still unverified: the header now says to confirm it in the dashboard, and `config.toml` still sets it to `true`. |
+| 9 Low (silent seed) | Fixed | The seed throws if no replay was built. |
+| 10 Low (429 message) | Fixed | A 429 now maps to its own `rate` message. |
+
+### New findings
+1. **Medium: the lane conflicts with main d02084e, and the obvious resolution doubles the label.**
+   - **Cause:** main moved the band caption into `apps/web/src/chrome/data-label.ts`, whose comment says a live variant should switch only there, and changed `chrome.fixtureStatus` to "Demo data · {time} · {speed}× speed". The lane's demo branch (status-strip.tsx:59) prefixes `chrome.source.demo` to that caption.
+   - **Effect:** if the conflict is resolved by keeping both, the band reads "Demo data · Demo data · 14:02 · 10× speed".
+   - **Fix:** merge main into the lane and move the `source` switch into `dataLabel()`, with fallback, live plus run state, and demo meaning main's text unchanged. Keep main's `syncText` cell, merge the `chrome.source` keys into both catalogues, then re-run the web tests.
+2. **Low: one isolation check was weakened without need.**
+   - **What changed:** 002_core_rls.sql:80, "OP sees own overrides", is now limited to the test site's operators. It passed unfiltered at b1f56b5, because the earlier failure was at line 116, and the seed writes no `ppe_overrides`.
+   - **Effect:** an RLS leak of another site's override to an operator would no longer be caught.
+   - **Fix:** restore the unfiltered count on that one line.
+3. **Low, carried over from finding 8: hosted sign-up is still unverified.** The publishable key is in the bundle, so confirm in the dashboard that email sign-up is off.
+
+Note: live mode still lets the fixture clock tick reach `store.clock` and `lastFrameMs` as a heartbeat (live-adapter.ts:62-66 comment). As a result the band can never show NO SIGNAL for live data. The band no longer displays the fixture clock, so I accept this as a stated limit.
+
+**Counts:** Medium 1, Low 2.
+
+**CHANGES REQUIRED**: merge main and fold the source label into `dataLabel()`. Every earlier finding is fixed or documented, so the merge is the only blocker.
