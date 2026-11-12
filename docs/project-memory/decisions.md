@@ -88,3 +88,6 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 
 ## 2026-10-12 — D16: incident severity scale 1-5 (B5, documented after the fact)
 - B5 derives `incidents.severity` from the event tier: critical 5, warning 4, caution 2, info/none 1, with 3 reserved for the `incident.reported` fallback. No spec defined this scale; it is deterministic and hashed into the canonical entry, so it is recorded here rather than changed. `caution → 2` is currently unreachable (no `ledger = true` event type defaults to caution) and is kept for future types.
+
+## 2026-11-12 - D-near-miss: the near-miss list is trainer-only and unattributed
+- 003e-003g, after three reviews. `ledger_export` seals near-miss rows for the FM; `private.event_visible` keeps near-miss events off the FM, site and trainer routes (RLS, `my_snapshot`, broadcast); the trainer has no direct `incidents` read. `near_miss_list()` is trainer-only and returns (day, severity, incident_type) for sealed rows only: the stable pseudonym is withdrawn because one punitive row (visible to the FM with identity) ties it to a name, and seq/incident_id line up with the ledger export. NearMissListOut changes: breaking change to an RPC with no consumer, CONTRACTS_VERSION 1.0.0 to 2.0.0. Residual: the browser cannot recompute a sealed row's content hash (server `ledger_verify` does).

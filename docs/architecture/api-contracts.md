@@ -258,8 +258,8 @@ export const LedgerRecomputeIn = z.object({ p_first_seq: z.number().int().min(1)
 export const LedgerRecomputeOut = z.object({ first_seq: z.number().int(), last_seq: z.number().int(),
   leaf_count: z.number().int(), root_hex: Hash64, head_hash: Hash64 });   // computed from ledger rows only
 export const WITNESS_LINE = /^SPOTTER-LEDGER v1 seq=(\d+)\.\.(\d+) n=(\d+) root=([0-9a-f]{64}) head=([0-9a-f]{64})/;
-export const NearMissListOut = z.array(z.object({ incident_id: Id, seq: z.number().int(), occurred_at: Ts,
-  operator_pseudonym: z.string(), description: z.string(), severity: z.number().int() }));
+export const NearMissListOut = z.array(z.object({ day: z.string().regex(/^\d{4}-\d{2}-\d{2}$/),
+  severity: z.number().int(), incident_type: z.string() }));   // v2.0.0 (003g): trainer-only, sealed rows only, unattributed
 
 // Training
 export const LessonCompleteIn = z.object({ p_assignment_id: Id, p_quiz_score: z.number().min(0).max(100), p_request_id: RequestId });
