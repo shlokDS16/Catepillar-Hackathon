@@ -1,106 +1,140 @@
 /*
- * Landing (docs/design/landing-dossier.md). Pinned stages inside tall wrappers; pacing comes from
- * the wrapper height. JS only writes `--p` (0..1) on each .stage; everything else is CSS math.
- * Colour reads tokens only (scenery tokens are at the end of tokens.css).
+ * Landing v3 (docs/design/landing-v3-spec.md). One simulated shift with one clock.
+ *  - .l-scene: five empty "bands" set the scroll length of stages 1-5; one sticky .l-view holds the
+ *    canvas and one .l-st block per stage (only the current one is visible), so no frame loses its words.
+ *  - .l-tape: the shift tape, fixed, driven by the same scroll numbers as the 3D.
+ *  - .l-ledger (paper) slides over the held scene; .l-proof (paper) shows the real app; .l-foot is dusk.
+ * JS only writes `--p` (0..1) on bands, stage blocks, the ledger and the proof; the rest is CSS math.
+ * Colour reads tokens only. Square corners everywhere. Reduced motion and no script: a stack of stills.
  */
 
 .landing {
-  --k: 1;
-  background: var(--rock-front);
+  background: var(--frame);
   color: var(--on-frame);
   font-family: var(--ff-body);
 }
 
-@media (max-width: 767px) {
-  .landing {
-    --k: 0.8;
-  }
+.landing :focus-visible {
+  outline: 3px solid var(--first-light);
+  outline-offset: 3px;
 }
 
-/* Navbar: a fixed centred pill. One variant (paper); both dark and light stages read it clearly. */
+.l-ledger :focus-visible,
+.l-proof :focus-visible,
+.landing[data-paper] .l-nav :focus-visible,
+.landing[data-tape-paper] .l-tape :focus-visible {
+  outline-color: var(--ink);
+}
+
+/* Skip link: first in the tab order, visible on focus. */
+.l-skip {
+  position: fixed;
+  top: 84px;
+  z-index: calc(var(--z-chrome) + 10);
+  padding: 12px 16px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  left: -10000px;
+}
+
+.l-skip:focus-visible {
+  left: 24px;
+}
+
+/* Nav: two square plates, brand and language. Ink on the scenes, paper over the paper sections. */
 .l-nav {
   position: fixed;
-  top: 18px;
-  left: 50%;
+  top: 20px;
+  left: 24px;
+  right: 24px;
   z-index: var(--z-chrome);
   display: flex;
   align-items: center;
-  gap: var(--s-4);
-  max-width: calc(100vw - 2 * var(--gutter));
-  min-height: 52px;
-  padding: var(--s-1) var(--s-1) var(--s-1) var(--s-5);
-  transform: translateX(-50%);
-  border-radius: 16px;
-  background: color-mix(in srgb, var(--surface) 92%, transparent);
-  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent);
-  color: var(--ink);
+  justify-content: space-between;
+  pointer-events: none;
+}
+
+.l-nav > * {
+  pointer-events: auto;
+}
+
+.l-brand,
+.l-nav .chip {
+  background: var(--frame);
+  color: var(--on-frame);
+  border: 1px solid var(--frame-rule);
+  border-radius: 0;
+  transition:
+    background var(--dur-lhover) var(--ease-quint),
+    color var(--dur-lhover) var(--ease-quint),
+    border-color var(--dur-lhover) var(--ease-quint);
 }
 
 .l-brand {
+  padding: 8px 14px 6px;
   font-family: var(--ff-display);
   font-size: 22px;
-  font-weight: 700;
-  letter-spacing: 0.02em;
+  font-weight: 800;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
   text-transform: uppercase;
 }
 
-/* Stages */
-.stage {
-  --p: 0;
-  position: relative;
-  height: calc(var(--h) * 1svh * var(--k));
+.l-nav .chip {
+  min-width: 56px;
+  min-height: var(--hit-dense);
+  justify-content: center;
+  padding: 0 var(--s-4);
+  font-size: 16px;
+  font-weight: 600;
 }
 
-.pin {
-  position: sticky;
-  top: 0;
-  height: 100svh;
+.landing[data-paper] .l-brand,
+.landing[data-paper] .l-nav .chip {
+  background: var(--paper);
+  color: var(--ink);
+  border-color: var(--ink);
+}
+
+/* Shared small parts */
+.l-sim {
+  display: inline-block;
+  padding: 3px 6px 2px;
+  background: var(--first-light);
+  color: var(--frame);
+  font-family: var(--ff-mono);
+  font-size: 12px;
+  font-weight: 500;
+  letter-spacing: 0.02em;
+  line-height: 1;
+}
+
+.l-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  padding: 0;
   overflow: hidden;
-  isolation: isolate;
-}
-
-.l-poster {
-  position: absolute;
-  inset: 0;
-  z-index: -2;
-  width: 100%;
-  height: 100%;
-  transition: opacity 0.6s var(--ease-quint) 0.45s;
-}
-
-[data-gl="on"] .l-poster {
-  opacity: 0;
-}
-
-.l-shade {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: linear-gradient(to top, color-mix(in srgb, var(--rock-front) 82%, transparent), transparent 62%);
-}
-
-.l-copy {
-  position: absolute;
-  left: var(--gutter);
-  right: var(--gutter);
-  bottom: calc(var(--s-8) + var(--s-5));
-  max-width: 920px;
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
+  clip-path: inset(50%);
+  white-space: nowrap;
+  list-style: none;
 }
 
 .l-kicker,
-.l-caption,
-.l-hint {
-  --lh: 1.56em;
+.l-caption {
   margin: 0;
-  text-transform: uppercase;
   font-family: var(--ff-mono);
-  font-size: 12.5px;
-  line-height: 19.5px;
+  font-size: 13px;
+  line-height: 19px;
   letter-spacing: 0.04em;
+  text-transform: uppercase;
   font-variant-numeric: tabular-nums;
+}
+
+.l-kicker {
+  color: var(--on-frame-2);
 }
 
 .l-kicker::before {
@@ -113,48 +147,47 @@
   background: currentColor;
 }
 
-.l-kicker {
+.l-caption {
+  position: absolute;
+  left: 64px;
+  bottom: 128px;
   color: var(--on-frame-2);
 }
 
-.l-h1 {
+.l-h1,
+.l-h2 {
   margin: 0;
   font-family: var(--ff-display);
   font-weight: 800;
-  font-size: clamp(46px, 9.2vw, 118px);
-  line-height: 0.98;
+  line-height: 0.96;
   letter-spacing: -0.03em;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
 
+.l-h1 {
+  font-size: clamp(46px, 8.2vw, 120px);
+}
+
+.l-h2 {
+  font-size: clamp(48px, 6.1vw, 88px);
+}
+
 :lang(hi) .l-h1,
-:lang(ta) .l-h1 {
+:lang(hi) .l-h2,
+:lang(ta) .l-h1,
+:lang(ta) .l-h2 {
   letter-spacing: 0;
   line-height: 1.2;
 }
 
-.l-sub {
+.l-sub,
+.l-lede {
   margin: 0;
-  max-width: 52ch;
-  font-size: 17px;
-  line-height: 25px;
-  color: color-mix(in srgb, var(--on-frame) 82%, transparent);
-}
-
-.l-b {
-  pointer-events: none;
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  margin: 0;
-  max-width: 28ch;
-  font-family: var(--ff-display);
-  font-weight: 600;
-  font-size: clamp(30px, 5vw, 56px);
-  line-height: 1.05;
-  letter-spacing: -0.03em;
+  max-width: 40ch;
+  font-size: 19px;
+  line-height: 1.5;
+  color: var(--on-frame);
 }
 
 .l-actions {
@@ -171,15 +204,13 @@
   gap: var(--s-3);
   min-height: var(--hit-dense);
   padding: 0 var(--s-5);
-  border-radius: 14px;
+  border-radius: 0;
   background: var(--paper);
   color: var(--ink);
   font-weight: 600;
   font-size: 17px;
   text-decoration: none;
-  transition:
-    transform var(--dur-lhover) var(--ease-quint),
-    box-shadow var(--dur-lhover) var(--ease-quint);
+  transition: transform var(--dur-lhover) var(--ease-quint);
 }
 
 .l-arrow {
@@ -189,7 +220,6 @@
 @media (hover: hover) {
   .l-cta:hover {
     transform: translateY(-1px);
-    box-shadow: 0 3px 12px color-mix(in srgb, var(--ink) 40%, transparent);
   }
   .l-cta:hover .l-arrow {
     transform: translateX(3px);
@@ -201,111 +231,62 @@
   transition-duration: 130ms;
 }
 
-.l-cta:focus-visible,
-.l-link:focus-visible {
-  outline-color: var(--on-frame);
-}
-
 .l-link {
+  display: inline-flex;
+  align-items: center;
+  min-height: var(--hit-dense);
   color: var(--on-frame);
   font-weight: 500;
   text-underline-offset: 4px;
 }
 
-.l-caption {
-  position: absolute;
-  left: var(--gutter);
-  right: var(--gutter);
-  bottom: var(--s-5);
-  color: color-mix(in srgb, var(--on-frame) 70%, transparent);
+/* ------------------------------------------------------------------ scene: bands and the pinned view */
+
+.l-body {
+  position: relative;
+  background: var(--frame);
 }
 
-.l-hint {
-  position: absolute;
-  right: var(--gutter);
-  bottom: var(--s-5);
-  display: none;
-  color: color-mix(in srgb, var(--on-frame) 70%, transparent);
-}
-
-@media (min-width: 900px) {
-  .l-hint {
-    display: block;
-  }
-}
-
-/*
- * Scroll-linked reveals. Per element: --a..--b is the p window; defaults suit "in" at .5-.65.
- * smoothstep(t) = t*t*(3-2t) so the scroll position eases without any script.
- */
-.rv {
-  --a: 0.5;
-  --b: 0.65;
-  --c: 0.86;
-  --d: 0.97;
-  --t: clamp(0, calc((var(--p) - var(--a)) / (var(--b) - var(--a))), 1);
-  --e: calc(var(--t) * var(--t) * (3 - 2 * var(--t)));
-  --to: clamp(0, calc((var(--p) - var(--c)) / (var(--d) - var(--c))), 1);
-  --eo: calc(var(--to) * var(--to) * (3 - 2 * var(--to)));
-}
-
-.rv-in {
-  opacity: var(--e);
-  transform: translateY(calc((1 - var(--e)) * 28px));
-}
-
-.rv-out {
-  --a: 0.22;
-  --b: 0.44;
-  opacity: calc(1 - var(--e));
-  transform: translateY(calc(var(--e) * -28px));
-}
-
-/* In at --a..--b, out at --c..--d. */
-.rv-io {
-  opacity: calc(var(--e) * (1 - var(--eo)));
-  transform: translateY(calc((1 - var(--e)) * 28px - var(--eo) * 28px));
-}
-
-.stage[data-stage="1"] .l-b {
-  --a: 0.62;
-  --b: 0.74;
-}
-
-/* The language chip inside the pill: a compact 48 px target, rounded to match. */
-.l-nav .chip {
-  min-height: var(--hit-dense);
-  border-width: 0;
-  background: color-mix(in srgb, var(--ink) 6%, transparent);
-  border-radius: 12px;
-  padding: 0 var(--s-4);
-  font-size: 15px;
-}
-
-/* Scene wrapper: one sticky canvas behind five pinned stages (stages 1-5). */
 .l-scene {
   position: relative;
-  isolation: isolate;
-  background: var(--rock-front);
+  z-index: 0;
+  background: var(--frame);
 }
 
-.stage {
-  z-index: 2;
+.l-band {
+  --p: 0;
+  height: calc(var(--h) * 1svh);
 }
 
-.l-canvas {
+.l-band:focus {
+  outline: none;
+}
+
+/* 200 svh after the last band: 100 for the paper to rise over the held scene, 100 for the pin's own screen. */
+.l-hold {
+  height: 200svh;
+}
+
+.l-view {
   position: sticky;
   top: 0;
   z-index: 1;
-  display: block;
-  width: 100%;
   height: 100svh;
   margin-bottom: -100svh;
+  overflow: hidden;
+  isolation: isolate;
+  background: var(--frame);
+  --dim: 0;
+}
+
+.l-canvas {
+  position: absolute;
+  inset: 0;
+  display: block;
+  width: 100%;
+  height: 100%;
   opacity: 0;
   pointer-events: none;
-  transform-origin: var(--gutter) 50%;
-  transform: scale(calc(1 - 0.5 * var(--f, 0)));
-  border-radius: calc(var(--f, 0) * 20px);
   transition: opacity 0.5s linear;
 }
 
@@ -313,78 +294,148 @@
   opacity: 1;
 }
 
-@media (max-width: 767px) {
-  .l-canvas {
-    transform-origin: 50% 76px;
-    transform: scale(calc(1 - 0.66 * var(--f, 0)));
-  }
+.l-dim {
+  position: absolute;
+  inset: 0;
+  z-index: 3;
+  background: var(--frame);
+  opacity: var(--dim);
+  pointer-events: none;
 }
 
-/* Left text blocks for stages 2-5. A soft shade keeps white type legible over the bright sky. */
-.l-copy-left {
-  max-width: 440px;
-  bottom: calc(var(--s-8) + var(--s-5));
+/* One stage block: its still, its scrim, its words, its readout. Only the current one is visible. */
+.l-st {
+  --p: 0;
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  visibility: hidden;
+  isolation: isolate;
 }
 
-.l-copy-left .l-sub {
-  color: var(--on-frame);
-  max-width: 38ch;
+.landing[data-st="1"] .l-st[data-st="1"],
+.landing[data-st="2"] .l-st[data-st="2"],
+.landing[data-st="3"] .l-st[data-st="3"],
+.landing[data-st="4"] .l-st[data-st="4"],
+.landing[data-st="5"] .l-st[data-st="5"] {
+  visibility: visible;
 }
 
-/* One scrim over the canvas: ink at 55 % fading to nothing across the left 45 % of the width, so
-   copy reads over any frame. On phones the copy spans the width, so the scrim rises from the bottom. */
-.l-grade {
-  position: sticky;
-  top: 0;
-  z-index: 1;
+.l-poster,
+.l-poster-img {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
   display: block;
-  height: 100svh;
-  margin-bottom: -100svh;
+  width: 100%;
+  height: 100%;
+}
+
+.l-poster-img {
+  object-fit: cover;
+}
+
+[data-gl="on"] .l-poster,
+[data-gl="on"] .l-poster-img {
+  display: none;
+}
+
+/* Ink scrim: left 86 -> 70 % at 26 % of the width -> 0 at 50 %, and a floor for the tape (spec §3.4). */
+.l-scrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
   pointer-events: none;
   background:
-    linear-gradient(to right, color-mix(in srgb, var(--frame) 74%, transparent) 0, color-mix(in srgb, var(--frame) 60%, transparent) 30%, transparent 60%),
-    radial-gradient(70% 55% at 0% 100%, color-mix(in srgb, var(--frame) 55%, transparent), transparent),
-    radial-gradient(120% 90% at 60% 45%, transparent 55%, color-mix(in srgb, var(--frame) 45%, transparent));
+    linear-gradient(90deg, color-mix(in srgb, var(--frame) 86%, transparent) 0, color-mix(in srgb, var(--frame) 70%, transparent) 26%, transparent 50%),
+    linear-gradient(0deg, color-mix(in srgb, var(--frame) 75%, transparent) 0, transparent 26%);
 }
 
-@media (max-width: 1099px) {
-  .l-grade {
-    background:
-      linear-gradient(to top, color-mix(in srgb, var(--frame) 90%, transparent) 0, color-mix(in srgb, var(--frame) 80%, transparent) 40%, transparent 82%),
-      linear-gradient(to bottom, color-mix(in srgb, var(--frame) 45%, transparent), transparent 26%);
-  }
-}
-
-.l-h2 {
-  margin: 0;
-  font-family: var(--ff-display);
-  font-weight: 800;
-  font-size: clamp(44px, 5.3vw, 76.8px);
-  line-height: 0.98;
-  letter-spacing: -0.03em;
-  text-wrap: balance;
-  overflow-wrap: anywhere;
-}
-
-:lang(hi) .l-h2,
-:lang(ta) .l-h2 {
-  letter-spacing: 0;
-  line-height: 1.2;
-}
-
-.l-callouts {
-  isolation: isolate;
+/* The copy column: left, 452 px, centred between the nav and the tape. */
+.l-copy {
   position: absolute;
-  right: var(--gutter);
-  top: 50%;
+  left: 64px;
+  top: 92px;
+  bottom: 136px;
+  width: 452px;
   display: flex;
   flex-direction: column;
-  gap: var(--s-6);
+  justify-content: center;
+  gap: 20px;
+}
+
+.l-st[data-st="1"] .l-copy {
+  width: min(840px, calc(100% - 128px));
+}
+
+.l-st[data-st="1"] .l-sub {
+  max-width: 46ch;
+}
+
+/* Headline lines and body blocks slide up inside their own masks at the stage boundaries: the
+   incoming ones over the first 3 % of the band, staggered, the outgoing over the last 3 %. Scroll-driven. */
+.ln-w {
+  display: block;
+}
+
+.ln {
+  display: block;
+  overflow: hidden;
+  padding: 0 0.04em 0.12em;
+  margin: 0 -0.04em -0.12em;
+}
+
+.ln-b .ln {
+  padding: 0;
+  margin: 0;
+}
+
+.ln-i {
+  --li: clamp(0, calc((var(--p) - var(--i) * 0.004) / 0.03), 1);
+  --lo: clamp(0, calc((var(--p) - 0.97) / 0.03), 1);
+  --ui: calc(1 - var(--li));
+  display: block;
+  transform: translateY(calc((var(--ui) * var(--ui) * (3 - 2 * var(--ui)) + var(--lo) * var(--lo) * (3 - 2 * var(--lo))) * 105%));
+}
+
+.l-st[data-st="1"] .ln-i {
+  --li: 1;
+}
+
+.l-st[data-st="5"] .ln-i {
+  --lo: 0;
+}
+
+/* Scroll-linked reveals that then hold: --a..--b is the p window. */
+.rv {
+  --a: 0.5;
+  --b: 0.65;
+  --t: clamp(0, calc((var(--p) - var(--a)) / (var(--b) - var(--a))), 1);
+  --e: calc(var(--t) * var(--t) * (3 - 2 * var(--t)));
+}
+
+/* Stage 2 callouts: bottom right, above the tape. */
+.l-callouts {
+  position: absolute;
+  right: 64px;
+  bottom: 136px;
+  isolation: isolate;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-5);
   width: min(300px, 44vw);
   margin: 0;
   padding: 0;
   list-style: none;
-  transform: translateY(-50%);
+}
+
+.l-callouts::before {
+  content: "";
+  position: absolute;
+  z-index: -1;
+  inset: -24px -64px -24px -24px;
+  background: radial-gradient(closest-side, color-mix(in srgb, var(--frame) 72%, transparent) 0%, color-mix(in srgb, var(--frame) 48%, transparent) 60%, transparent 100%);
+  pointer-events: none;
 }
 
 .callout {
@@ -409,14 +460,13 @@
 
 .callout-n {
   font-family: var(--ff-mono);
-  font-size: 12.5px;
+  font-size: 13px;
   line-height: 24px;
-  color: color-mix(in srgb, var(--on-frame) 70%, transparent);
+  color: var(--on-frame-2);
   opacity: var(--e);
 }
 
 .callout-t {
-  text-shadow: 0 0 12px color-mix(in srgb, var(--frame) 75%, transparent), 0 1px 3px color-mix(in srgb, var(--frame) 60%, transparent);
   font-family: var(--ff-display);
   font-weight: 600;
   font-size: 22px;
@@ -425,74 +475,68 @@
   transform: translateY(calc((1 - var(--e)) * 18px));
 }
 
-@media (max-width: 767px) {
-  .l-callouts {
-    top: 92px;
-    left: var(--gutter);
-    width: auto;
-    gap: var(--s-4);
-    transform: none;
-  }
-  .callout-t {
-    font-size: 18px;
-  }
+.l-leaders {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
 }
 
-.l-stats {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-4) var(--s-7);
-  margin: var(--s-2) 0 0;
+.leader {
+  opacity: calc(var(--e, 1) * var(--vis, 0));
+  transition: opacity var(--dur-lhover) linear;
 }
 
-.l-stats > div {
-  display: flex;
-  flex-direction: column-reverse;
-  gap: 2px;
+.leader polyline {
+  fill: none;
+  stroke: var(--on-frame);
+  stroke-width: 1.5;
+  filter: drop-shadow(0 0 2px var(--frame));
 }
 
-.l-stats dt {
-  margin: 0;
-  font-family: var(--ff-mono);
-  font-size: 12.5px;
-  letter-spacing: 0.04em;
-  text-transform: uppercase;
-  color: color-mix(in srgb, var(--on-frame) 70%, transparent);
+.leader circle {
+  fill: var(--frame);
+  stroke: var(--on-frame);
+  stroke-width: 2;
 }
 
-.l-stats dd {
-  margin: 0;
-}
-
-.l-num {
-  font-family: var(--ff-display);
-  font-weight: 700;
-  font-size: clamp(44px, 6vw, 72px);
-  line-height: 1;
-  letter-spacing: -0.03em;
-  font-variant-numeric: tabular-nums;
-  white-space: nowrap; /* the rolling digit columns must never wrap one per line */
-}
-
-/* Guardian legend: one row under the body copy; the active state is the only filled plate. */
+/* Guardian legend: the active state is the only filled plate. */
 .l-legend {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-2);
-  margin: var(--s-2) 0 0;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px;
+  max-width: 380px;
+  margin: 8px 0 0;
   padding: 0;
   list-style: none;
 }
 
 .lg .chip {
-  min-width: 148px;
-  justify-content: center;
-  border: 1.5px solid color-mix(in srgb, var(--on-frame) 65%, transparent);
-  background: transparent;
-  color: var(--on-frame);
+  width: 100%;
+  min-height: var(--hit-dense);
+  justify-content: flex-start;
+  border: 1px solid var(--frame-rule);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--frame) 60%, transparent);
+  color: var(--on-frame-2);
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: 19px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
   transition:
     background var(--dur-lhover) var(--ease-quint),
     color var(--dur-lhover) var(--ease-quint);
+}
+
+.landing[data-ring="1"] .lg[data-lv="1"] .chip,
+.landing[data-ring="2"] .lg[data-lv="2"] .chip,
+.landing[data-ring="3"] .lg[data-lv="3"] .chip,
+.landing[data-ring="4"] .lg[data-lv="4"] .chip {
+  color: var(--on-signal);
+  border-color: transparent;
 }
 
 .landing[data-ring="1"] .lg[data-lv="1"] .chip {
@@ -501,52 +545,41 @@
 }
 .landing[data-ring="2"] .lg[data-lv="2"] .chip {
   background: var(--state-caution);
-  color: var(--on-signal);
 }
 .landing[data-ring="3"] .lg[data-lv="3"] .chip {
   background: var(--state-warning);
-  color: var(--on-signal);
 }
 .landing[data-ring="4"] .lg[data-lv="4"] .chip {
   background: var(--state-critical);
   color: var(--on-frame);
 }
 
-@media (max-width: 767px) {
-  .lg .chip {
-    min-width: 0;
-    flex: 1 1 calc(50% - var(--s-2));
-  }
-  .l-caption {
-    font-size: 11.5px;
-  }
-}
-
-/* Stage 5: the canvas shrinks to a card on the left; the hand-off card sits on the right. */
+/* Stage 5: the replay card keeps the right of the frame and holds through the paper's rise. */
 .l-card {
   position: absolute;
-  right: var(--gutter);
+  right: 64px;
   top: 0;
   bottom: 0;
   height: fit-content;
   margin-block: auto;
   display: flex;
   flex-direction: column;
-  justify-content: center;
   align-items: flex-start;
-  gap: var(--s-4);
-  width: min(440px, calc(100% - 2 * var(--gutter)));
+  gap: 16px;
+  width: min(480px, calc(100% - 128px));
+  padding: var(--s-5);
+  background: color-mix(in srgb, var(--frame) 92%, transparent);
+  border: 1px solid var(--frame-rule);
 }
 
-@media (max-width: 767px) {
-  .l-card {
-    left: var(--gutter);
-    top: auto;
-    bottom: var(--s-8);
-    margin-block: 0;
-    justify-content: flex-end;
-    width: auto;
-  }
+.l-card .l-h2 {
+  font-size: clamp(40px, 4.4vw, 64px);
+}
+
+.l-card .chip {
+  max-width: 100%;
+  white-space: normal;
+  border-radius: 0;
 }
 
 .scrub {
@@ -557,107 +590,496 @@
   display: flex;
   justify-content: space-between;
   font-family: var(--ff-mono);
-  font-size: 12.5px;
+  font-size: 13px;
   letter-spacing: 0.04em;
   font-variant-numeric: tabular-nums;
-  color: color-mix(in srgb, var(--on-frame) 78%, transparent);
+  color: var(--on-frame-2);
 }
 
 .scrub-track {
   position: relative;
   height: 4px;
   margin-top: var(--s-3);
-  border-radius: 2px;
-  background: color-mix(in srgb, var(--on-frame) 28%, transparent);
+  background: var(--frame-rule);
 }
 
 .scrub-track::before {
   content: "";
   position: absolute;
   inset: 0 auto 0 0;
-  width: calc((1 - var(--e)) * 100%);
-  border-radius: 2px;
-  background: var(--line-glow);
+  width: calc(var(--sh, 1) * 100%);
+  background: var(--first-light);
 }
 
 .scrub-head {
   position: absolute;
   top: 50%;
-  left: calc((1 - var(--e)) * 100%);
-  width: 16px;
-  height: 16px;
-  margin: -8px 0 0 -8px;
-  border-radius: 50%;
-  background: var(--line-glow);
+  left: calc(var(--sh, 1) * 100%);
+  width: 14px;
+  height: 14px;
+  margin: -7px 0 0 -7px;
+  background: var(--first-light);
 }
 
-/* Body wrapper: everything above the footer curtain. */
-.l-body {
-  position: relative;
-  z-index: 2;
-  background: var(--rock-front);
-}
+/* ------------------------------------------------------------------ readouts (instrument plates) */
 
-/* Per-stage poster images: the WebGL-off and reduced-motion picture (hidden while the canvas runs). */
-.l-poster-img {
+.l-readout {
   position: absolute;
-  inset: 0;
-  z-index: -2;
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* The poster is the state without script and before three.js arrives; the canvas replaces it. */
-.landing[data-gl="on"] .l-poster-img {
-  display: none;
-}
-
-/* 6 · Ledger: a light, paper stage. */
-.stage-light {
+  top: 120px;
+  right: 64px;
+  width: 336px;
   background: var(--frame);
+  border: 1px solid var(--frame-rule);
+}
+
+.l-ro-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 12px 16px;
+  border-bottom: 1px solid var(--frame-rule);
+  font-size: 15px;
+  font-weight: 500;
+  color: var(--on-frame-2);
+}
+
+.l-ro-big {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 14px 16px 10px;
+}
+
+.l-ro-v,
+.l-tape-t,
+.l-plate-time {
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.l-ro-v {
+  min-width: 2.2ch;
+  font-size: 76px;
+  line-height: 0.9;
+}
+
+.l-ro-u {
+  font-size: 22px;
+  color: var(--on-frame-2);
+}
+
+.l-ro-what {
+  margin-left: auto;
+  align-self: center;
+  font-size: 15px;
+  line-height: 1.3;
+  text-align: right;
+  color: var(--on-frame-2);
+}
+
+.l-ro-rows {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 12px 16px 14px;
+  list-style: none;
+  font-size: 15px;
+  font-variant-numeric: tabular-nums;
+}
+
+.l-ro-rows li {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.l-ro-rows li > span:first-child {
+  color: var(--on-frame-2);
+}
+
+.l-ro-rows li > span:last-child {
+  text-align: right;
+}
+
+/* State plate: the word, the sign shape and the colour, all three. */
+.l-ro-state {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  height: 52px;
+  margin: 0 16px;
+  padding: 0 14px;
+  background: var(--state-clear);
+  color: var(--on-frame);
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 26px;
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.l-ro-state[data-state="caution"] {
+  background: var(--state-caution);
+  color: var(--on-signal);
+}
+.l-ro-state[data-state="warning"] {
+  background: var(--state-warning);
+  color: var(--on-signal);
+}
+.l-ro-state[data-state="critical"] {
+  background: var(--state-critical);
+}
+
+.l-ro-sign {
+  display: inline-flex;
+  width: 24px;
+  height: 24px;
+}
+
+.l-ro-sign > svg {
+  display: none;
+  width: 24px;
+  height: 24px;
+}
+
+.l-ro-state[data-state="clear"] .l-ro-sign > svg:nth-child(1),
+.l-ro-state[data-state="caution"] .l-ro-sign > svg:nth-child(2),
+.l-ro-state[data-state="warning"] .l-ro-sign > svg:nth-child(2),
+.l-ro-state[data-state="critical"] .l-ro-sign > svg:nth-child(3) {
+  display: block;
+}
+
+/* ------------------------------------------------------------------ the shift tape */
+
+.l-tape {
+  position: fixed;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  z-index: calc(var(--z-chrome) + 5);
+  display: grid;
+  grid-template-columns: 196px minmax(0, 1fr) minmax(300px, 420px);
+  height: 88px;
+  background: var(--frame);
+  color: var(--on-frame);
+  border: 1px solid var(--frame-rule);
+  transition: transform 240ms var(--ease-quint);
+}
+
+.landing[data-tape-hide] .l-tape {
+  transform: translateY(calc(100% + 40px));
+}
+
+.l-tape-clock {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  padding: 12px 18px;
+  border-right: 1px solid var(--frame-rule);
+}
+
+.l-tape-t {
+  font-size: 46px;
+  line-height: 1;
+}
+
+.l-tape-l {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+  color: var(--on-frame-2);
+}
+
+.l-tape-line {
+  position: relative;
+  margin: 0 28px;
+}
+
+.l-tape-rail {
+  position: absolute;
+  top: 40px;
+  left: 0;
+  right: 0;
+  height: 2px;
+  background: var(--frame-rule);
+}
+
+.l-tape-done,
+.l-tape-ghost {
+  position: absolute;
+  top: 0;
+  left: 0;
+  height: 2px;
+  background: var(--on-frame-2);
+}
+
+.l-tape-ghost {
+  background: repeating-linear-gradient(90deg, var(--first-light) 0 4px, transparent 4px 8px);
+  width: 0;
+}
+
+.l-hour {
+  position: absolute;
+  top: 62px;
+  transform: translateX(-50%);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  color: var(--on-frame-2);
+}
+
+.l-hour::before {
+  content: "";
+  position: absolute;
+  left: 50%;
+  top: -18px;
+  width: 1px;
+  height: 8px;
+  background: var(--frame-rule);
+}
+
+.l-tick {
+  position: absolute;
+  top: 17px;
+  display: grid;
+  place-items: center;
+  width: 48px;
+  height: 48px;
+  margin-left: -24px;
+  color: var(--on-frame-2);
+}
+
+.l-tick svg {
+  fill: none;
+  stroke: var(--on-frame-2);
+  stroke-width: 1.4;
+  stroke-linejoin: round;
+  transition: transform 180ms var(--ease-quint);
+}
+
+.l-tick[data-on] svg {
+  stroke: none;
+}
+
+.l-tick[data-on][data-tier="caution"] svg {
+  fill: var(--state-caution);
+}
+.l-tick[data-on][data-tier="warning"] svg {
+  fill: var(--state-warning);
+}
+.l-tick[data-on][data-tier="critical"] svg {
+  fill: var(--state-critical);
+}
+.l-tick[data-on][data-tier="info"] svg {
+  fill: var(--on-frame-2);
+}
+
+.l-tick[data-cur] svg {
+  transform: scale(1.3);
+}
+
+.l-tick[data-pop] svg {
+  animation: l-stamp 180ms var(--ease-quint);
+}
+
+@keyframes l-stamp {
+  from {
+    transform: scale(1.25);
+  }
+}
+
+.l-tick-n {
+  position: absolute;
+  top: 0;
+  font-size: 12px;
+  font-weight: 500;
+  color: var(--on-frame-2);
+}
+
+.l-tick[data-cur] .l-tick-n {
+  color: var(--first-light);
+  font-weight: 600;
+}
+
+.l-head {
+  position: absolute;
+  top: 45px;
+  width: 0;
+  height: 0;
+  margin-left: -7px;
+  border: 7px solid transparent;
+  border-top: 0;
+  border-bottom-color: var(--first-light);
+}
+
+/* Replay: the playhead is an outline caret (a frame-coloured triangle inside the light one). */
+.l-tape[data-replay] .l-head::after {
+  content: "";
+  position: absolute;
+  left: -4px;
+  top: 4px;
+  border: 4px solid transparent;
+  border-top: 0;
+  border-bottom-color: var(--frame);
+}
+
+.l-tape-now {
+  display: grid;
+  align-content: center;
+  gap: 4px;
+  margin: 0;
+  padding: 12px 20px;
+  border-left: 1px solid var(--frame-rule);
+  overflow: hidden;
+}
+
+.l-tape-k {
+  display: block;
+  font-family: var(--ff-mono);
+  font-size: 13px;
+  letter-spacing: 0.02em;
+  color: var(--on-frame-2);
+}
+
+.l-tape-s {
+  display: block;
+  font-size: 18px;
+  line-height: 1.3;
+  font-weight: 500;
+}
+
+/* Over paper (stage 6): ink on paper, 2 px ink border. */
+.landing[data-tape-paper] .l-tape {
+  background: var(--paper);
+  color: var(--ink);
+  border: 2px solid var(--ink);
+}
+
+.landing[data-tape-paper] .l-tape-clock,
+.landing[data-tape-paper] .l-tape-now {
+  border-color: var(--ink);
+}
+
+.landing[data-tape-paper] .l-tape-l,
+.landing[data-tape-paper] .l-tape-k,
+.landing[data-tape-paper] .l-hour,
+.landing[data-tape-paper] .l-tick-n {
+  color: var(--ink-2);
+}
+
+.landing[data-tape-paper] .l-tape-rail {
+  background: var(--rule-soft, #cfcbc0);
+}
+
+.landing[data-tape-paper] .l-tape-done {
+  background: var(--ink-2);
+}
+
+.landing[data-tape-paper] .l-tick svg {
+  stroke: var(--ink-2);
+}
+
+.landing[data-tape-paper] .l-tick[data-on] svg {
+  stroke: var(--ink);
+  stroke-width: 1.2;
+}
+
+.landing[data-tape-paper] .l-tick[data-on][data-tier="info"] svg {
+  fill: var(--ink-3);
+}
+
+.landing[data-tape-paper] .l-head {
+  border-bottom-color: var(--ink);
+}
+
+.landing[data-tape-paper] .l-tape[data-replay] .l-head::after {
+  border-bottom-color: var(--paper);
+}
+
+/* The static strip: one clock and one sentence per stage, shown only when the live tape is not. */
+.l-tape-static {
+  display: none;
+  position: absolute;
+  left: 24px;
+  right: 24px;
+  bottom: 24px;
+  align-items: center;
+  gap: 20px;
+  padding: 12px 18px;
+  background: var(--frame);
+  border: 1px solid var(--frame-rule);
+}
+
+.l-tape-static-t {
+  display: grid;
+  gap: 4px;
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 40px;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+}
+
+.l-tape-static-s {
+  display: grid;
+  gap: 4px;
+}
+
+/* ------------------------------------------------------------------ 6 · ledger (paper) */
+
+.l-ledger {
+  --p: 0;
+  position: relative;
+  z-index: 3;
+  height: 180svh;
+  margin-top: -100svh;
+  background: var(--paper);
+  color: var(--ink);
+  border-top: 2px solid var(--ink);
+}
+
+.l-ledger:focus {
+  outline: none;
+}
+
+.l-ledger-pin {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 0.85fr) minmax(0, 1.15fr);
+  align-items: start;
+  gap: var(--s-7);
+  max-width: 1320px;
+  margin: 0 auto;
+  padding: 112px 64px 132px;
+}
+
+.l-ledger .ln-i {
+  --li: 1;
+  --lo: 0;
+}
+
+.l-ledger-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.l-h2-paper {
   color: var(--ink);
 }
 
-.l-paper {
-  position: absolute;
-  inset: 0;
-  background: var(--paper);
-  border-top: var(--bw-hair) solid var(--frame-rule);
-  transform: translateY(calc((1 - var(--e)) * 100%));
-}
-
-.stage-light .l-kicker,
-.stage-light .l-caption {
+.l-ledger .l-lede,
+.l-proof .l-lede {
   color: var(--ink-2);
-}
-
-.stage-light .l-sub {
-  color: var(--ink-2);
-}
-
-.l-ledger-wrap {
-  position: absolute;
-  inset: 0;
-  display: grid;
-  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
-  align-items: center;
-  gap: var(--s-7);
-  padding: calc(var(--s-8) + var(--s-5)) var(--gutter) var(--s-8);
-  max-width: var(--content-max);
-  margin: 0 auto;
-}
-
-.l-copy-light {
-  display: flex;
-  flex-direction: column;
-  gap: var(--s-4);
 }
 
 .l-status {
   display: grid;
-  margin-top: var(--s-4);
+  margin-top: var(--s-3);
 }
 
 .l-status > span {
@@ -665,20 +1087,22 @@
   justify-self: start;
 }
 
-/* Clean crossfade in one grid cell: "verified" leaves in the first half, "broken" arrives in the second. */
+/* One grid cell: "verified" from p .40, then "broken" from .70. */
 .st-ok {
-  opacity: clamp(0, calc(1 - var(--e) * 2), 1);
+  opacity: calc(clamp(0, (var(--p) - 0.38) / 0.04, 1) * (1 - clamp(0, (var(--p) - 0.66) / 0.04, 1)));
 }
 
 .st-bad {
-  opacity: clamp(0, calc(var(--e) * 2 - 1), 1);
+  opacity: clamp(0, calc((var(--p) - 0.66) / 0.04), 1);
 }
 
-.l-ledger {
-  position: relative;
+.l-ledger .chip {
+  border-radius: 0;
+}
+
+.l-ledger-rows {
   display: flex;
   flex-direction: column;
-  gap: 0;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -690,52 +1114,44 @@
   --et: calc(var(--tt) * var(--tt) * (3 - 2 * var(--tt)));
   position: relative;
   display: grid;
-  grid-template-columns: auto 1fr auto;
-  column-gap: var(--s-3);
+  grid-template-columns: auto auto minmax(0, 1fr) auto;
+  column-gap: 14px;
   row-gap: 2px;
-  padding: var(--s-3) var(--s-4);
-  border: var(--bw) solid var(--ink);
+  padding: 8px 14px;
+  border: 2px solid var(--ink);
   background: var(--surface);
-  font-size: 12.5px;
-  line-height: 19.5px;
-  letter-spacing: 0.04em;
+  font-size: 14px;
+  line-height: 20px;
+  letter-spacing: 0.02em;
   font-variant-numeric: tabular-nums;
   opacity: var(--e);
-  transform: translateY(calc((1 - var(--e)) * -48px));
-}
-
-/* The tampered row flashes the critical state once, in the window where the chain breaks. */
-.lrow-tamper::after {
-  content: "";
-  position: absolute;
-  inset: calc(var(--bw) * -1);
-  z-index: -1;
-  background: var(--state-critical);
-  opacity: var(--ov);
-  pointer-events: none;
+  transform: translateY(calc((1 - var(--e)) * -32px));
 }
 
 .lrow + .lrow {
-  margin-top: var(--s-4);
+  margin-top: 8px;
 }
 
-/* The hash link to the row above: a 1 px rule that draws as the row arrives. */
+/* The hash link to the row above: a rule that draws as the row arrives. */
 .lrow + .lrow::before {
   content: "";
   position: absolute;
-  left: var(--s-5);
+  left: 24px;
   bottom: 100%;
-  width: var(--bw-hair);
-  height: var(--s-4);
+  width: 1px;
+  height: 8px;
   background: var(--ink-3);
   transform: scaleY(var(--e));
   transform-origin: top;
-  transition: background var(--dur-lhover) var(--ease-quint);
 }
 
 .lrow-n {
   font-weight: 700;
   text-transform: uppercase;
+}
+
+.lrow-time {
+  font-weight: 600;
 }
 
 .lrow-type {
@@ -744,28 +1160,52 @@
 
 .lrow-sev {
   color: var(--ink-2);
+  white-space: nowrap;
 }
 
 .lrow-hash {
-  grid-column: 1 / 3;
+  grid-column: 1 / 4;
   font-weight: 700;
 }
 
 .lrow-prev {
-  grid-column: 3;
+  grid-column: 4;
   color: var(--ink-3);
   text-align: right;
 }
 
+/* Row 4: severity 4 is struck and 1 written beside it (p .55 - .70); rows after it are marked unchecked. */
+.sv {
+  display: inline-flex;
+  gap: 0;
+}
+
+.sv-old {
+  text-decoration: none;
+  background: linear-gradient(currentColor, currentColor) 0 55% / calc(var(--et, 0) * 100%) 2px no-repeat;
+}
+
+.sv-new {
+  display: inline-block;
+  max-width: calc(var(--et, 0) * 1.5em);
+  margin-left: calc(var(--et, 0) * 0.35em);
+  overflow: hidden;
+  opacity: var(--et, 0);
+  color: var(--state-critical);
+}
+
 .lrow-flag {
   grid-column: 1 / -1;
-  margin-top: var(--s-1);
-  padding-top: var(--s-1);
-  border-top: var(--bw-hair) solid currentColor;
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px solid currentColor;
   font-weight: 700;
+  font-size: 13px;
+  line-height: 18px;
   text-transform: uppercase;
+  color: var(--state-critical);
   opacity: var(--et);
-  max-height: calc(var(--et) * 28px);
+  max-height: calc(var(--et) * 30px);
   overflow: hidden;
 }
 
@@ -774,23 +1214,8 @@
   border-color: color-mix(in srgb, var(--ink) calc((1 - var(--et)) * 100%), var(--state-critical));
 }
 
-/* Flash: red fill with light text (--on-frame on critical is above 6:1) while --ov is high, then the
-   row settles on paper: ink text, a 3 px critical left plate, critical border, critical flag line. */
 .lrow-tamper {
-  --ov: clamp(0, calc(12 * var(--et) * (1 - var(--et))), 1);
-  --fx: clamp(0, calc((var(--ov) - 0.8) * 20), 1);
-  isolation: isolate;
-  border-left-width: calc(2px + var(--et) * 1px);
-  color: color-mix(in srgb, var(--on-frame) calc(var(--fx) * 100%), var(--ink));
-}
-
-.lrow-tamper .lrow-flag {
-  color: color-mix(in srgb, var(--on-frame) calc(var(--fx) * 100%), var(--state-critical));
-}
-
-.lrow-tamper .lrow-sev,
-.lrow-tamper .lrow-prev {
-  color: inherit;
+  border-left-width: calc(2px + var(--et) * 2px);
 }
 
 .lrow-after + .lrow-after::before,
@@ -798,356 +1223,434 @@
   background: color-mix(in srgb, var(--ink-3) calc((1 - var(--et)) * 100%), var(--state-critical));
 }
 
-@media (hover: hover) {
-  .lrow:hover + .lrow::before,
-  .lrow + .lrow:hover::before {
-    background: var(--ink);
-  }
-}
+/* ------------------------------------------------------------------ 7 · proof (paper) */
 
-@media (max-width: 899px) {
-  .l-ledger-wrap {
-    grid-template-columns: minmax(0, 1fr);
-    align-content: start;
-    gap: var(--s-5);
-    padding-top: calc(var(--s-8) + var(--s-2));
-    overflow: hidden;
-  }
-  .lrow {
-    padding: var(--s-2) var(--s-3);
-  }
-  .lrow + .lrow {
-    margin-top: var(--s-2);
-  }
-  .lrow + .lrow::before {
-    height: var(--s-2);
-  }
-  .l-copy-light .l-sub {
-    display: none;
-  }
-  .l-copy-light .l-h2 {
-    font-size: 32px;
-  }
-  .l-copy-light {
-    gap: var(--s-3);
-  }
-  .lrow {
-    grid-template-columns: auto minmax(0, 1fr) auto;
-  }
-  .lrow-hash {
-    grid-column: 1 / -1;
-  }
-  /* Phones: the connector rule between rows carries "previous"; the hash line stays. */
-  .lrow-prev {
-    display: none;
-  }
-}
-
-/* An ink plate keeps the title and scrubber readable over bright terrain. */
-.l-card {
-  padding: var(--s-5);
-  background: color-mix(in srgb, var(--frame) 90%, transparent);
-  border: var(--bw-hair) solid var(--frame-rule);
-}
-
-.l-card .chip {
-  max-width: 100%;
-  white-space: normal;
-}
-
-/* 7 · Close: ink stage, then the footer curtain. */
-.stage-close {
+.l-proof {
   --p: 0;
-  height: 100svh;
-}
-
-.close-pin {
   position: relative;
-  display: flex;
-  flex-direction: column;
-  align-items: flex-start;
-  justify-content: center;
-  gap: var(--s-5);
-  padding: 0 var(--gutter);
-  max-width: var(--content-max);
-  margin: 0 auto;
-  background: transparent;
-}
-
-.stage-close {
-  background: var(--frame);
-}
-
-.close-h {
-  max-width: 14ch;
-}
-
-/* Sticky curtain footer: the body (z 2) scrolls off a sticky footer (z 1). */
-.l-foot {
-  position: sticky;
-  bottom: 0;
-  z-index: 1;
-  display: flex;
-  min-height: 60svh;
-  flex-direction: column;
-  justify-content: flex-end;
-  gap: var(--s-5);
-  padding: var(--s-8) var(--gutter) var(--s-6);
+  z-index: 3;
+  height: 240svh;
   background: var(--paper);
   color: var(--ink);
+  border-top: 1px solid var(--rule-soft, #cfcbc0);
 }
 
-.l-foot-brand {
-  margin: 0;
+.l-proof:focus {
+  outline: none;
+}
+
+.l-proof-pin {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  display: grid;
+  grid-template-columns: minmax(0, 500px) minmax(0, 1fr);
+  grid-template-rows: auto auto auto auto minmax(0, 1fr);
+  column-gap: 56px;
+  align-content: center;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 104px 64px 40px;
+}
+
+.l-proof-head {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.l-proof .l-h2 {
+  margin-bottom: 18px;
+}
+
+.l-proof .l-lede {
+  margin-bottom: 28px;
+}
+
+/* The list and its items vanish into the grid: role rows take column 1, captures stack in column 2. */
+.l-roles,
+.l-roles > li {
+  display: contents;
+}
+
+.l-role {
+  position: relative;
+  grid-column: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  min-height: 48px;
+  padding: 16px 0 16px 20px;
+  border-bottom: 1px solid var(--rule-soft, #cfcbc0);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+li[data-role="1"] > .l-role {
+  grid-row: 2;
+  border-top: 2px solid var(--ink);
+}
+li[data-role="2"] > .l-role {
+  grid-row: 3;
+}
+li[data-role="3"] > .l-role {
+  grid-row: 4;
+}
+
+.l-who {
   font-family: var(--ff-display);
   font-weight: 800;
-  font-size: clamp(72px, 20vw, 260px);
-  line-height: 0.85;
-  letter-spacing: -0.045em;
-  text-transform: uppercase;
-}
-
-:lang(hi) .l-foot-brand,
-:lang(ta) .l-foot-brand {
-  letter-spacing: 0;
-  line-height: 1.2;
-}
-
-.l-foot-nav {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--s-5);
-}
-
-.l-foot-nav a {
-  color: var(--ink);
-  font-weight: 600;
-  text-underline-offset: 4px;
-}
-
-.l-foot-note {
-  margin: 0;
-  max-width: 60ch;
-  font-size: 13px;
-  line-height: 19.5px;
+  font-size: 32px;
+  line-height: 1;
+  letter-spacing: -0.01em;
   color: var(--ink-2);
 }
 
-/* Headline line masks: each line slides up from its own overflow mask, quint ease, 0.16 of the
-   block's window apart (scroll-driven, no script). Hero lines play once on load; the close plays
-   once when seen. */
-.ln-w {
-  display: block;
+.l-does {
+  grid-column: 1;
+  max-width: 38ch;
+  margin-top: 6px;
+  font-size: 16px;
+  line-height: 1.45;
+  color: var(--ink-2);
 }
 
-.ln {
-  display: block;
-  overflow: hidden;
-  padding: 0 0.04em 0.12em;
-  margin: 0 -0.04em -0.12em;
+.l-go {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  padding: 12px 16px;
+  border: 2px solid var(--ink);
+  font-weight: 600;
+  font-size: 16px;
+  white-space: nowrap;
 }
 
-.ln-i {
-  --lt: clamp(0, calc((var(--t) - var(--i) * 0.16) / 0.6), 1);
-  --u: calc(1 - var(--lt));
-  display: block;
-  transform: translateY(calc(var(--u) * var(--u) * var(--u) * var(--u) * var(--u) * 105%));
-}
-
-.stage[data-stage="1"] .ln-i {
-  transform: none;
-}
-
-@media (prefers-reduced-motion: no-preference) {
-  .stage-close .ln-i {
-    transform: none;
-    transition: transform 0.9s var(--ease-quint) calc(var(--i) * 60ms);
-  }
-  [data-js] .stage-close:not([data-seen]) .ln-i {
-    transform: translateY(105%);
-  }
-}
-
-@keyframes ln-rise {
-  from {
-    transform: translateY(105%);
-  }
-  to {
-    transform: none;
-  }
-}
-
-/* Kicker "0N / 07": the digit rolls from the previous number as the block arrives. */
-.roll {
-  display: inline-block;
-  height: var(--lh);
-  overflow: hidden;
-  vertical-align: top;
-}
-
-.roll-col {
-  display: block;
-  transform: translateY(calc((var(--n) - 1 + var(--e, 1)) * var(--lh) * -1));
-}
-
-.roll-col > span {
-  display: block;
-  height: var(--lh);
-}
-
-/* Stat counters roll digit by digit (the engine builds the columns on first sight). */
-.l-num {
-  --dg-h: 1em;
-}
-
-.l-dg {
-  display: inline-block;
-  height: var(--dg-h);
-  overflow: hidden;
-  vertical-align: top;
-}
-
-.l-dg-c {
-  display: block;
-  transition: transform 1.1s var(--ease-quint);
-}
-
-.l-dg-c > span {
-  display: block;
-  height: var(--dg-h);
-  line-height: var(--dg-h);
-}
-
-/* An ink scrim behind the right-hand callouts, like the copy's on the left, so the labels read over
-   the bright bench and tracks. */
-.l-callouts::before {
+.l-proof[data-active="1"] li[data-role="1"] .l-role::before,
+.l-proof[data-active="2"] li[data-role="2"] .l-role::before,
+.l-proof[data-active="3"] li[data-role="3"] .l-role::before {
   content: "";
   position: absolute;
-  z-index: -1;
-  inset: calc(var(--s-6) * -1) calc(var(--gutter) * -1) calc(var(--s-6) * -1) calc(var(--s-6) * -1);
-  background: radial-gradient(
-    ellipse at 70% 50%,
-    color-mix(in srgb, var(--ink) 72%, transparent) 0%,
-    color-mix(in srgb, var(--ink) 55%, transparent) 55%,
-    transparent 100%
-  );
+  left: 0;
+  top: 16px;
+  bottom: 16px;
+  width: 6px;
+  background: var(--ink);
+}
+
+.l-proof[data-active="1"] li[data-role="1"] .l-go,
+.l-proof[data-active="2"] li[data-role="2"] .l-go,
+.l-proof[data-active="3"] li[data-role="3"] .l-go {
+  background: var(--ink);
+  color: var(--paper);
+}
+
+.l-proof[data-active="1"] li[data-role="1"] .l-who,
+.l-proof[data-active="2"] li[data-role="2"] .l-who,
+.l-proof[data-active="3"] li[data-role="3"] .l-who {
+  color: var(--ink);
+}
+
+/* The tray: three framed captures; the active one is in front, the others shift up and to the right. */
+.l-sheet {
+  --pos: 0;
+  grid-column: 2;
+  grid-row: 1 / span 5;
+  align-self: center;
+  justify-self: start;
+  position: relative;
+  z-index: calc(3 - var(--pos));
+  width: calc(100% - 36px);
+  margin: 0;
+  background: var(--paper-2);
+  border: 2px solid var(--ink);
+  transform: translate(calc(var(--pos) * 18px), calc(var(--pos) * -18px));
+  transition: transform 200ms var(--ease-quint);
+}
+
+.l-proof[data-active="1"] [data-sheet="1"],
+.l-proof[data-active="2"] [data-sheet="2"],
+.l-proof[data-active="3"] [data-sheet="3"] {
+  --pos: 0;
+}
+.l-proof[data-active="1"] [data-sheet="2"],
+.l-proof[data-active="2"] [data-sheet="3"],
+.l-proof[data-active="3"] [data-sheet="1"] {
+  --pos: 1;
+}
+.l-proof[data-active="1"] [data-sheet="3"],
+.l-proof[data-active="2"] [data-sheet="1"],
+.l-proof[data-active="3"] [data-sheet="2"] {
+  --pos: 2;
+}
+
+.l-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 40px;
+  padding: 0 14px;
+  background: var(--paper);
+  border-bottom: 2px solid var(--ink);
+  font-family: var(--ff-mono);
+  font-size: 13px;
+  color: var(--ink);
+}
+
+.l-bar-tag {
+  color: var(--ink-2);
+}
+
+.l-shotwrap {
+  position: relative;
+  overflow: hidden;
+}
+
+.l-shot {
+  display: block;
+  width: 100%;
+  height: auto;
+  aspect-ratio: 1440 / 900;
+  object-fit: cover;
+  object-position: top left;
+}
+
+.l-note-box {
+  position: absolute;
+  z-index: 3;
+  border: 3px solid var(--first-light);
+  box-shadow: 0 0 0 2px var(--ink);
+  opacity: 0;
+  transition: opacity 200ms linear;
   pointer-events: none;
 }
 
-/* Stage progress rail: seven ticks on the right edge, desktop only. */
-.l-rail {
-  position: fixed;
-  top: 50%;
-  right: var(--s-2);
-  z-index: var(--z-chrome);
-  display: none;
-  transform: translateY(-50%);
-  color: var(--on-frame);
-  transition: opacity var(--dur-lhover) var(--ease-quint);
+.l-note-tag {
+  position: absolute;
+  z-index: 3;
+  transform: translateY(6px);
+  padding: 8px 12px;
+  background: var(--ink);
+  color: var(--paper);
+  font-weight: 600;
+  font-size: 15px;
+  line-height: 1.2;
+  opacity: 0;
+  transition: opacity 200ms linear;
+  pointer-events: none;
 }
 
-.l-rail ol {
+.l-proof[data-active="1"] [data-sheet="1"] :is(.l-note-box, .l-note-tag),
+.l-proof[data-active="2"] [data-sheet="2"] :is(.l-note-box, .l-note-tag),
+.l-proof[data-active="3"] [data-sheet="3"] :is(.l-note-box, .l-note-tag) {
+  opacity: 1;
+}
+
+.l-note-tag[data-at="right"] {
+  transform: translate(10px, -50%);
+}
+
+/* Sheets behind the front one show only their top edge: their bar text would be half cut. */
+.l-proof[data-active="1"] .l-sheet:not([data-sheet="1"]) .l-bar > *,
+.l-proof[data-active="2"] .l-sheet:not([data-sheet="2"]) .l-bar > *,
+.l-proof[data-active="3"] .l-sheet:not([data-sheet="3"]) .l-bar > * {
+  visibility: hidden;
+}
+
+.l-proof[data-active="1"] .l-sheet:not([data-sheet="1"]) .l-shotwrap,
+.l-proof[data-active="2"] .l-sheet:not([data-sheet="2"]) .l-shotwrap,
+.l-proof[data-active="3"] .l-sheet:not([data-sheet="3"]) .l-shotwrap {
+  visibility: hidden;
+}
+
+.l-proof-cap {
+  grid-column: 2;
+  grid-row: 5;
+  align-self: start;
+  margin: 24px 0 0;
+  font-family: var(--ff-mono);
+  font-size: 14px;
+  color: var(--ink-2);
+}
+
+/* ------------------------------------------------------------------ footer (dusk) */
+
+.l-foot {
+  position: relative;
+  z-index: 3;
+  background: var(--frame);
+  color: var(--on-frame);
+}
+
+.l-plate {
+  position: relative;
+  height: 560px;
+  overflow: hidden;
+  border-bottom: 1px solid var(--frame-rule);
+}
+
+.l-plate-svg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* Contours are styled through custom properties: <use> clones cannot be reached by selectors. */
+.l-map-dim {
+  --cm: rgb(242 240 234 / 0.08);
+  --wm: 0.4;
+  --cM: rgb(242 240 234 / 0.2);
+  --wM: 0.55;
+  --rd: rgb(185 181 170 / 0.5);
+  --rg: rgb(241 185 149 / 0.3);
+}
+
+.l-map-lit {
+  --cf: rgb(242 240 234 / 0.5);
+  --wf: 0.32;
+  --cm: rgb(242 240 234 / 0.72);
+  --wm: 0.45;
+  --cM: rgb(242 240 234 / 1);
+  --wM: 0.7;
+}
+
+.l-map-trail {
+  --tr: #f1b995;
+  --tw: 1.1;
+}
+
+.l-word-fill {
+  fill: #f2f0ea;
+  fill-opacity: 0.06;
+}
+
+.l-word-edge {
+  fill: none;
+  stroke: #f2f0ea;
+  stroke-opacity: 0.55;
+  stroke-width: 1.25;
+}
+
+.l-plate-legend {
+  position: absolute;
+  left: 64px;
+  bottom: 24px;
   display: flex;
-  flex-direction: column;
+  gap: 28px;
+  margin: 0;
+  font-size: 14px;
+  color: var(--on-frame-2);
+}
+
+.l-plate-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.l-plate-legend i {
+  display: inline-block;
+  width: 22px;
+  height: 0;
+  border-top: 2px solid var(--first-light);
+}
+
+.l-plate-legend i.rd {
+  border-top: 2px dashed var(--on-frame-2);
+}
+
+.l-plate-legend i.ct {
+  border-top: 1px solid var(--on-frame);
+}
+
+.l-plate-close {
+  position: absolute;
+  right: 64px;
+  bottom: 20px;
+  text-align: right;
+}
+
+.l-plate-time {
+  margin: 0;
+  font-size: 44px;
+  line-height: 1;
+}
+
+.l-plate-line {
+  margin: 4px 0 0;
+  font-size: 15px;
+  color: var(--on-frame-2);
+}
+
+.l-cols {
+  display: grid;
+  grid-template-columns: 1fr 1.3fr 1.3fr;
+  gap: 56px;
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: 40px 64px 56px;
+}
+
+.l-cols h3 {
+  margin: 0 0 14px;
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: 22px;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.l-cols p {
+  max-width: 46ch;
+  margin: 0;
+  font-size: 16px;
+  line-height: 1.55;
+  color: var(--on-frame-2);
+}
+
+.l-cols p + p {
+  margin-top: 10px;
+}
+
+.l-cols ul {
+  display: grid;
+  gap: 2px;
   margin: 0;
   padding: 0;
   list-style: none;
 }
 
-.l-rail a {
+.l-cols a,
+.l-lang-switch {
   display: flex;
   align-items: center;
-  justify-content: flex-end;
-  width: var(--hit-dense);
-  height: 40px;
-  color: inherit;
-}
-
-.l-rail a span {
-  display: block;
-  width: 14px;
-  height: 2px;
-  background: currentColor;
-  opacity: 0.5;
-  transition:
-    width var(--dur-lhover) var(--ease-quint),
-    opacity var(--dur-lhover) var(--ease-quint);
-}
-
-.l-rail a:focus-visible {
-  outline: 2px solid currentColor;
-  outline-offset: -2px;
+  width: 100%;
+  min-height: 48px;
+  padding: 0;
+  border: 0;
+  border-bottom: 1px solid var(--frame-rule);
+  background: none;
+  color: var(--on-frame);
+  font: inherit;
+  font-size: 18px;
+  font-weight: 500;
+  text-align: left;
+  text-decoration: none;
+  cursor: pointer;
 }
 
 @media (hover: hover) {
-  .l-rail a:hover span {
-    width: 26px;
-    opacity: 0.85;
+  .l-cols a:hover,
+  .l-lang-switch:hover {
+    color: var(--first-light);
   }
 }
 
-.landing[data-now="1"] .l-rail li:nth-child(1) span,
-.landing[data-now="2"] .l-rail li:nth-child(2) span,
-.landing[data-now="3"] .l-rail li:nth-child(3) span,
-.landing[data-now="4"] .l-rail li:nth-child(4) span,
-.landing[data-now="5"] .l-rail li:nth-child(5) span,
-.landing[data-now="6"] .l-rail li:nth-child(6) span,
-.landing[data-now="7"] .l-rail li:nth-child(7) span {
-  width: 32px;
-  opacity: 1;
+.l-foot-note {
+  color: var(--on-frame-2);
 }
 
-.landing[data-paper] .l-rail {
-  color: var(--ink);
-}
-
-.landing[data-now="8"] .l-rail {
-  opacity: 0;
-  pointer-events: none;
-}
-
-@media (min-width: 900px) {
-  .l-rail {
-    display: block;
-  }
-}
-
-/* Stage 2 leader lines, from callout labels to anchors on the machine. */
-.l-leaders {
-  position: absolute;
-  inset: 0;
-  width: 100%;
-  height: 100%;
-  overflow: visible;
-  pointer-events: none;
-}
-
-.leader {
-  opacity: calc(var(--e) * var(--vis, 0));
-  transition: opacity var(--dur-lhover) linear;
-}
-
-.leader polyline {
-  fill: none;
-  stroke: var(--on-frame);
-  stroke-width: 1;
-}
-
-.leader circle {
-  fill: var(--on-frame);
-}
-
-/* Stage 5 to 6: the scene darkens to ink before the paper rises. */
-.l-ink {
-  position: absolute;
-  inset: 0;
-  z-index: -1;
-  background: var(--frame);
-  opacity: var(--e);
-  pointer-events: none;
-}
-
-/* The poster's machine: placed in user units so it can sit differently on a portrait crop. */
+/* Headline helper kept for the dawn poster's machine placement. */
 .dp-machine {
   transform: translate(1010px, 660px) scale(1.2);
 }
@@ -1157,6 +1660,7 @@
     transform: translate(610px, 590px) scale(1);
   }
 }
+
 
 /* The wipe from a call to action: ink circle, then the portal's Ink Frame (status band, dock),
    then the paper middle opens. Built by wipe-link.tsx. */
@@ -1273,125 +1777,556 @@
   }
 }
 
-/* Still mode (posters): the scene alone, no copy. */
-.landing[data-still] .l-copy,
-.landing[data-still] .l-callouts,
-.landing[data-still] .l-legend,
-.landing[data-still] .l-card,
-.landing[data-still] .l-nav,
-.landing[data-still] .l-hint,
-.landing[data-still] .l-rail,
-.landing[data-still] .l-leaders,
-.landing[data-still] .l-caption {
+
+/* ------------------------------------------------------------------ phones (spec §9, §11) */
+
+@media (max-width: 767px) {
+  .l-band {
+    height: calc(var(--hm) * 1svh);
+  }
+
+  .l-nav {
+    top: 12px;
+    left: 16px;
+    right: 16px;
+  }
+
+  .l-brand {
+    padding: 6px 10px 4px;
+    font-size: 18px;
+  }
+
+  .l-skip {
+    top: 130px;
+    left: 16px;
+  }
+
+  /* Tape: a two-cell bar under the nav; the timeline collapses to a progress line (ticks stay for keyboards). */
+  .l-tape {
+    top: 72px;
+    bottom: auto;
+    left: 16px;
+    right: 16px;
+    height: auto;
+    grid-template-columns: auto minmax(0, 1fr);
+  }
+
+  .landing[data-tape-hide] .l-tape {
+    transform: translateY(calc(-100% - 100px));
+  }
+
+  .l-tape-clock {
+    padding: 8px 12px;
+    gap: 2px;
+  }
+
+  .l-tape-t {
+    font-size: 28px;
+  }
+
+  .l-tape-l > span:last-child {
+    display: none;
+  }
+
+  .l-tape-now {
+    padding: 8px 12px;
+    align-content: center;
+  }
+
+  .l-tape-k {
+    display: none;
+  }
+
+  .l-tape-s {
+    font-size: 15px;
+    line-height: 1.25;
+  }
+
+  .l-tape-line {
+    position: absolute;
+    left: 0;
+    right: 0;
+    bottom: -1px;
+    height: 3px;
+    margin: 0;
+  }
+
+  .l-tape-rail {
+    top: 0;
+    height: 3px;
+    background: var(--frame-rule);
+  }
+
+  .l-tape-done {
+    height: 3px;
+    background: var(--first-light);
+  }
+
+  .l-tape-ghost,
+  .l-hour,
+  .l-head {
+    display: none;
+  }
+
+  .l-tick {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    top: 0;
+    overflow: hidden;
+    clip-path: inset(50%);
+  }
+
+  .l-tick:focus-visible {
+    clip-path: none;
+    width: 48px;
+    height: 48px;
+    margin-left: -24px;
+    top: 8px;
+    background: var(--frame);
+    z-index: 2;
+  }
+
+  .landing[data-tape-paper] .l-tape-done {
+    background: var(--ink);
+  }
+
+  .l-caption {
+    left: 16px;
+    right: 16px;
+    top: 150px;
+    bottom: auto;
+    font-size: 12px;
+    display: none;
+  }
+
+  /* Each stage block is a column anchored to the bottom: readout, then words, then callouts. */
+  .l-tape-static {
+    position: static;
+  }
+
+  .l-st {
+    display: flex;
+    flex-direction: column;
+    justify-content: flex-end;
+    gap: 14px;
+    padding: 0 16px 24px;
+  }
+
+  .l-scrim {
+    background:
+      linear-gradient(0deg, color-mix(in srgb, var(--frame) 94%, transparent) 0, color-mix(in srgb, var(--frame) 86%, transparent) 42%, transparent 80%),
+      linear-gradient(180deg, color-mix(in srgb, var(--frame) 70%, transparent) 0, transparent 24%);
+  }
+
+  .l-copy,
+  .l-st[data-st="1"] .l-copy {
+    position: static;
+    width: auto;
+    gap: 12px;
+  }
+
+  .l-h1 {
+    font-size: clamp(46px, 13.4vw, 64px);
+  }
+
+  .l-h2 {
+    font-size: clamp(42px, 12.4vw, 52px);
+  }
+
+  .l-sub,
+  .l-lede {
+    font-size: 17px;
+    line-height: 1.45;
+  }
+
+  .l-readout {
+    position: static;
+    order: -1;
+    align-self: flex-end;
+    width: 176px;
+  }
+
+  .l-ro-head,
+  .l-ro-rows,
+  .l-ro-what {
+    display: none;
+  }
+
+  .l-ro-big {
+    padding: 10px 12px 6px;
+  }
+
+  .l-ro-v {
+    font-size: 44px;
+  }
+
+  .l-ro-state {
+    height: 40px;
+    margin: 0 12px 12px;
+    font-size: 20px;
+  }
+
+  .l-callouts {
+    position: static;
+    width: auto;
+    gap: 10px;
+  }
+
+  .l-callouts::before {
+    display: none;
+  }
+
+  .callout-t {
+    font-size: 18px;
+  }
+
+  .l-leaders {
+    display: none;
+  }
+
+  .l-legend {
+    max-width: none;
+    margin-top: 4px;
+  }
+
+  .lg .chip {
+    font-size: 17px;
+  }
+
+  .l-card {
+    position: static;
+    height: auto;
+    width: auto;
+    margin: 0;
+    padding: 16px;
+    gap: 12px;
+  }
+
+  .l-card .l-h2 {
+    font-size: 40px;
+  }
+
+  /* Stages 6 and 7 are not pinned: they flow, and show their end state. */
+  .l-ledger {
+    --p: 1;
+    height: auto;
+  }
+
+  .l-ledger-pin {
+    position: relative;
+    height: auto;
+    display: block;
+    padding: 96px 16px 48px;
+  }
+
+  .l-ledger-copy {
+    gap: 14px;
+    margin-bottom: 28px;
+  }
+
+  .l-status > span {
+    justify-self: start;
+  }
+
+  .lrow {
+    column-gap: 10px;
+    padding: 8px 12px;
+  }
+
+  .lrow-prev {
+    display: none;
+  }
+
+  .lrow-hash {
+    grid-column: 1 / -1;
+  }
+
+  .l-proof {
+    height: auto;
+  }
+
+  .l-proof-pin {
+    position: relative;
+    height: auto;
+    display: block;
+    padding: 56px 16px 40px;
+  }
+
+  .l-proof .l-h2 {
+    margin-bottom: 12px;
+  }
+
+  .l-proof .l-lede {
+    margin-bottom: 8px;
+  }
+
+  .l-roles {
+    display: block;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+  }
+
+  .l-roles > li {
+    display: block;
+    padding: 24px 0 8px;
+    border-top: 2px solid var(--ink);
+  }
+
+  .l-role {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 0 0 0 16px;
+    border: 0;
+  }
+
+  li[data-role="1"] > .l-role {
+    border-top: 0;
+  }
+
+  .l-role::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 2px;
+    bottom: 2px;
+    width: 6px;
+    background: var(--ink);
+  }
+
+  .l-who {
+    font-size: 30px;
+    color: var(--ink);
+  }
+
+  .l-go {
+    grid-column: 1;
+    grid-row: auto;
+    justify-self: start;
+    margin-top: 12px;
+    background: var(--ink);
+    color: var(--paper);
+  }
+
+  .l-sheet {
+    width: 100%;
+    margin: 20px 0 0;
+    transform: none;
+    transition: none;
+  }
+
+  .l-bar-tag {
+    max-width: 55%;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+  }
+
+  .l-shot {
+    aspect-ratio: 390 / 520;
+    object-fit: cover;
+    object-position: top center;
+  }
+
+  .l-note-box,
+  .l-note-tag {
+    display: none;
+  }
+
+  .l-proof-cap {
+    margin-top: 20px;
+  }
+
+  .l-plate {
+    height: auto;
+    padding: 28px 0 56px;
+  }
+
+  .l-plate-svg {
+    position: static;
+    display: block;
+    width: 100%;
+    height: auto;
+    aspect-ratio: 1440 / 560;
+  }
+
+  .l-plate-legend {
+    left: 16px;
+    bottom: 16px;
+    flex-wrap: wrap;
+    gap: 14px;
+    font-size: 13px;
+  }
+
+  .l-plate-legend .opt {
+    display: none;
+  }
+
+  .l-plate-close {
+    position: static;
+    padding: 20px 16px 0;
+    text-align: left;
+  }
+
+  .l-cols {
+    grid-template-columns: 1fr;
+    gap: 32px;
+    padding: 28px 16px 40px;
+  }
+}
+
+/* Tablets and small laptops: the same layout, tighter margins. */
+@media (min-width: 768px) and (max-width: 1099px) {
+  .l-copy {
+    left: 32px;
+  }
+
+  .l-readout {
+    right: 32px;
+    width: 288px;
+  }
+
+  .l-callouts {
+    right: 32px;
+  }
+
+  .l-proof-pin,
+  .l-ledger-pin {
+    padding-left: 32px;
+    padding-right: 32px;
+  }
+
+  .l-proof-pin {
+    grid-template-columns: minmax(0, 380px) minmax(0, 1fr);
+    column-gap: 32px;
+  }
+
+  .l-go {
+    padding: 10px 12px;
+  }
+}
+
+/* ------------------------------------------------------------------ still mode (posters, sync check) */
+
+.landing[data-still] :is(.l-copy, .l-callouts, .l-legend, .l-card, .l-nav, .l-caption, .l-skip, .l-readout, .l-tape, .l-leaders, .l-dim) {
   visibility: hidden;
 }
 
-/* Reduced motion: still stages, no pinning, everything visible, nothing loops. */
+.landing[data-still-ui] :is(.l-readout, .l-tape, .l-leaders) {
+  visibility: visible;
+}
+
+/* ------------------------------------------------------------------ reduced motion: a stack of stills */
+
 @media (prefers-reduced-motion: reduce) {
-  .stage {
+  .l-view {
+    position: static;
     height: auto;
-    min-height: 100svh;
+    margin: 0;
+    overflow: visible;
   }
-  .pin {
+
+  .l-band,
+  .l-hold,
+  .l-canvas,
+  .l-dim,
+  .l-tape,
+  .l-leaders {
+    display: none;
+  }
+
+  .l-st {
     position: relative;
+    inset: auto;
+    visibility: visible;
     min-height: 100svh;
   }
+
+  .l-tape-static {
+    display: flex;
+  }
+
+  .ln-i {
+    transform: none !important;
+  }
+
   .rv,
   .lrow {
     opacity: 1 !important;
     transform: none !important;
   }
-  .l-b {
-    position: static;
-    margin-top: var(--s-4);
-  }
-  .l-cta,
-  .l-arrow,
-  .lg .chip,
-  .lrow + .lrow::before {
-    transition: none;
-  }
-  .l-poster-img {
-    display: block;
-  }
-  .l-poster {
-    transition: none;
-  }
-  /* The trail and rings read as fully drawn, the ledger shows the broken chain, callouts show. */
+
   .callout::before {
     transform: none;
   }
+
   .callout-n,
   .callout-t {
     opacity: 1;
     transform: none;
   }
-  /* data-now and data-paper are not driven here, so the static rail carries its own ink plate and
-     reads over both the scene and the paper. */
-  .l-rail ol {
-    padding: var(--s-2) 0;
-    background: var(--frame);
-    color: var(--on-frame);
-  }
-  .stage[data-stage="6"] {
+
+  .l-ledger {
     --p: 1;
+    margin-top: 0;
+    height: auto;
   }
+
+  .l-ledger-pin,
+  .l-proof-pin {
+    position: relative;
+    height: auto;
+  }
+
+  .l-proof {
+    height: auto;
+  }
+
+  .l-proof-pin {
+    padding-bottom: 64px;
+  }
+
+  .l-sheet {
+    transform: none;
+    transition: none;
+    margin-top: 24px;
+  }
+
+  .l-note-box,
+  .l-note-tag {
+    opacity: 1;
+  }
+
+  .l-bar > * {
+    visibility: visible !important;
+  }
+
   .st-ok {
     opacity: 0;
   }
+
   .st-bad {
     opacity: 1;
   }
-  .lrow + .lrow::before {
-    transform: none;
-  }
-  .l-canvas {
-    display: none;
-  }
-  .ln-i,
-  .stage[data-stage="1"] .ln-i,
-  .stage-close .ln-i {
-    transform: none !important;
-    animation: none;
-  }
-  .roll-col {
-    transform: translateY(calc(var(--n) * var(--lh) * -1));
-  }
-  .l-paper {
-    transform: none;
-  }
-  .l-ink,
-  .leader {
-    display: none;
-  }
-  .lrow-tamper::after {
-    display: none;
-  }
-  .l-ledger-wrap {
-    position: relative;
-    min-height: 100svh;
-  }
-  .stage-close {
-    height: auto;
-    min-height: 100svh;
-  }
-  .l-foot {
-    position: static;
+
+  .l-cta,
+  .l-arrow,
+  .lg .chip,
+  .l-tick svg,
+  .l-tape {
+    transition: none;
   }
 }
 
-/* Visually hidden text for screen readers (the rolled digits are aria-hidden). */
-.l-sr {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  margin: -1px;
-  padding: 0;
-  overflow: hidden;
-  clip-path: inset(50%);
-  white-space: nowrap;
-}
+@media (prefers-reduced-motion: reduce) and (min-width: 768px) {
+  .l-proof-pin {
+    grid-template-columns: minmax(0, 500px) minmax(0, 1fr);
+  }
 
-.stage:focus {
-  outline: none;
+  .l-sheet {
+    grid-row: auto;
+    grid-column: 2;
+  }
 }

@@ -1,18 +1,23 @@
-import type { CSSProperties } from "react";
+import type { CSSProperties, ReactNode } from "react";
 import { getTranslations } from "next-intl/server";
 import { LanguageChip } from "@/components/chrome/language-sheet";
 import { DawnPoster } from "@/components/landing/dawn-poster";
 import { LandingEngine } from "@/components/landing/landing-engine";
+import { LandingFooter } from "@/components/landing/landing-footer";
+import { TAMPER_AT, buildLedgerDemo, groups } from "@/components/landing/ledger-demo";
+import { Proof } from "@/components/landing/proof";
+import { Readout, settledValues, type RoLabels, type RoMsgs } from "@/components/landing/readout";
+import { BANDS_VH, ENTRIES, LINES, S2 } from "@/components/landing/shift";
+import { SETTLED_MINUTES, ShiftTape, TapeStrip, fill, fmtClock, tapeState, type TapeMsgs } from "@/components/landing/shift-tape";
+import { WipeLink } from "@/components/landing/wipe-link";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram, type SignShape } from "@/components/ui/pictogram";
-import { TAMPER_AT, buildLedgerDemo, groups } from "@/components/landing/ledger-demo";
-import { WipeLink } from "@/components/landing/wipe-link";
 
 type Style = CSSProperties & Record<`--${string}`, string | number>;
 
 /**
  * A headline split into at most three lines, each inside an overflow mask so it can slide up on
- * its own (CSS only, driven by the block's --t). Words stay in one text flow for screen readers.
+ * its own (CSS only, driven by the stage's --p). Words stay in one text flow for screen readers.
  */
 function Lines({ text }: { text: string }) {
   const words = text.split(" ");
@@ -36,35 +41,25 @@ function Lines({ text }: { text: string }) {
   );
 }
 
-/** "0N / 07" whose digit rolls from the previous stage's number as the block fades in. */
-function Kicker({ n }: { n: number }) {
+/** A block that slides up inside its own mask at a stage boundary (same motion as a headline line). */
+function Mask({ i, children, className }: { i: number; children: ReactNode; className?: string }) {
   return (
-    <p className="l-kicker">
-      <span className="l-sr">{`0${n} / 07`}</span>
-      <span aria-hidden="true">
-        0
-        <span className="roll">
-          <span className="roll-col" style={{ "--n": n } as Style}>
-            {[0, 1, 2, 3, 4, 5, 6, 7].map((d) => (
-              <span key={d}>{d}</span>
-            ))}
-          </span>
-        </span>{" "}
-        / 07
-      </span>
-    </p>
+    <div className={`ln-b${className ? ` ${className}` : ""}`}>
+      <div className="ln">
+        <div className="ln-i" style={{ "--i": i } as Style}>
+          {children}
+        </div>
+      </div>
+    </div>
   );
 }
 
-/** The caption every stage carries (dossier §2). */
-function Caption({ text }: { text: string }) {
-  return <p className="l-caption">{text}</p>;
-}
-
-/** The still for a stage, shown when WebGL is off or motion is reduced (rendered from our own scene). */
+/** The still for a stage: the WebGL-off, reduced-motion and phone picture, rendered from our own scene. */
 function Poster({ n }: { n: 2 | 3 | 4 | 5 }) {
   return (
     <picture>
+      <source media="(max-width: 767px)" srcSet={`/landing/poster-${n}-m.avif`} type="image/avif" />
+      <source media="(max-width: 767px)" srcSet={`/landing/poster-${n}-m.webp`} type="image/webp" />
       <source srcSet={`/landing/poster-${n}.avif`} type="image/avif" />
       <source srcSet={`/landing/poster-${n}.webp`} type="image/webp" />
       <img className="l-poster-img" src={`/landing/poster-${n}.webp`} alt="" width={1440} height={900} loading="lazy" decoding="async" />
@@ -79,265 +74,312 @@ const RING_STATES: Array<{ lv: number; tone: "clear" | "caution" | "warning" | "
   { lv: 4, tone: "critical", shape: "octagon" },
 ];
 
+/** Which stage's band a tape sentence belongs to, by minute (for the screen-reader sentence list). */
+const bandOf = (minute: number) => (minute < 380 ? 1 : minute < 440 ? 2 : minute < 630 ? 3 : minute < 660 ? 4 : 5);
+
 /**
- * The landing page, server-rendered. Stage 1 (poster, headline, CTA) is the LCP and is fully
- * visible without script. Every scroll-driven element carries `.rv`; the client engine only sets
- * `--p` per stage, and CSS does the rest (dossier §1.2). Without script, or under reduced motion,
- * the page is a plain stack of full-height stages.
+ * Without script, or with reduced motion, the page is a stack of full-height stills: the pinned
+ * view becomes static, each stage shows its poster, its words, its readout and a static tape strip.
+ * The same rules live in landing.css behind prefers-reduced-motion; keep the two in step.
  */
+const NOSCRIPT = `.landing .l-view{position:static!important;height:auto!important;margin:0!important;overflow:visible!important}.landing .l-band,.landing .l-hold,.landing .l-canvas,.landing .l-dim,.landing .l-tape,.landing .l-leaders,.landing .l-skip{display:none!important}.landing .l-st{position:relative!important;inset:auto!important;visibility:visible!important;min-height:100svh}.landing .l-tape-static{display:flex!important}.landing .l-ledger{margin-top:0!important;height:auto!important;--p:1}.landing .l-ledger-pin,.landing .l-proof-pin{position:relative!important;height:auto!important}.landing .l-proof{height:auto!important}.landing .ln-i{transform:none!important}.landing .rv{opacity:1!important;transform:none!important}.landing .callout::before{transform:none!important}.landing .lrow{opacity:1!important;transform:none!important}`;
+
 export async function Landing() {
   const t = await getTranslations("landing");
   const te = await getTranslations("enums.safety");
-  const caption = t("caption");
   const { rows: ledger } = await buildLedgerDemo();
+  const caption = t("caption");
+
+  const tapeMsgs: TapeMsgs = {
+    lines: t.raw("tape.lines") as Record<string, string>,
+    entry: t.raw("tape.entry") as string,
+    replay: t("tape.replay"),
+    clock: t("tape.clock"),
+  };
+  const roMsgs: RoMsgs = {
+    metres: t.raw("ro.metres") as string,
+    held: t.raw("ro.held") as string,
+    sent: t.raw("ro.sent") as string,
+    online: t("ro.online"),
+    written: t.raw("ro.written") as string,
+    pending: t("ro.pending"),
+    none: t("ro.none"),
+    truck: t("ro.truck"),
+    phases: t.raw("ro.phases") as RoMsgs["phases"],
+    states: { clear: te("clear"), caution: te("caution"), warning: te("warning"), critical: te("critical") },
+  };
+  const roLabels: RoLabels = {
+    sim: t("ro.sim"),
+    simMark: t("tape.sim"),
+    boom: t("ro.boom"),
+    stick: t("ro.stick"),
+    bucket: t("ro.bucket"),
+    phase: t("ro.phase"),
+    link: t("ro.link"),
+    cycles: t("s3.cycles"),
+    tonnes: t("s3.tonnes"),
+    trail: t("ro.trail"),
+    nearest: t("ro.nearest"),
+    shownIn: t("ro.shownIn"),
+    shownWhere: t("ro.shownWhere"),
+    ledger: t("ro.ledger"),
+  };
+  const initial = tapeState(360, false, tapeMsgs);
+  const tapeLabels = {
+    label: t("tape.label"),
+    clock: t("tape.clock"),
+    sim: t("tape.sim"),
+    goEntry: ENTRIES.map((e) => t("tape.goEntry", { time: fmtClock(e.at), event: t(`s6.types.${e.type}`) })),
+    initial,
+  };
+  const strip = (n: 1 | 2 | 3 | 4 | 5) => <TapeStrip state={tapeState(SETTLED_MINUTES[n], false, tapeMsgs)} sim={t("tape.sim")} />;
+  const bandHeights = (i: number) => ({ "--h": BANDS_VH.desk[i], "--hm": BANDS_VH.phone[i] }) as Style;
+  /** One sentence per tape line of a band, as text, so a screen reader walks the shift without the tape. */
+  const bandSentences = (n: number) =>
+    LINES.filter(([m]) => bandOf(m) === n).map(([m, key, params]) => {
+      const entry = ENTRIES.find((e) => e.at === m);
+      return `${fmtClock(m)}. ${fill(tapeMsgs.lines[key] ?? key, params)}${entry ? ` ${fill(tapeMsgs.entry, { n: entry.n })}.` : ""}`;
+    });
+  const cta = (
+    <WipeLink className="l-cta" href="/op" band={t("wipe.band")}>
+      <span>{t("cta")}</span>
+      <span className="l-arrow" aria-hidden="true">
+        →
+      </span>
+    </WipeLink>
+  );
+
   return (
-    <div className="landing" data-landing>
+    <div className="landing" data-landing data-st="1">
       <noscript>
-        <style>{`.landing .stage{height:auto!important;min-height:100svh}.landing .pin{position:relative!important}.landing .rv{opacity:1!important;transform:none!important}.landing .ln-i{transform:none!important;animation:none!important}.landing .roll-col{transform:translateY(calc(var(--n)*-1*var(--lh)))!important}.landing .l-paper{transform:none!important}.landing .callout::before{transform:none!important}.landing .l-ink,.landing .l-leaders{display:none!important}.landing .stage[data-stage="6"]{--p:1}.landing .callout-n,.landing .callout-t{opacity:1!important;transform:none!important}`}</style>
+        <style>{NOSCRIPT}</style>
       </noscript>
-      <header className="l-nav">
+      <a className="l-skip" href="#proof" data-chrome>
+        {t("skip")}
+      </a>
+      <header className="l-nav" data-chrome>
         <span className="l-brand">{t("brand")}</span>
         <LanguageChip />
       </header>
-
-      <nav className="l-rail" aria-label={t("rail.label")}>
-        <ol>
-          {[t("headline"), t("s2.title"), t("s3.title"), t("s4.title"), t("s5.title"), t("s6.title"), t("s7.title")].map((name, i) => (
-            <li key={i}>
-              <a href={`#stage-${i + 1}`} data-rail={i + 1} aria-label={t("rail.go", { n: i + 1, name })}>
-                <span aria-hidden="true" />
-              </a>
-            </li>
-          ))}
-        </ol>
-      </nav>
+      <ShiftTape labels={tapeLabels} />
 
       <main className="l-body">
-      <div className="l-scene">
-        <canvas className="l-canvas" aria-hidden="true" />
-        <div className="l-grade" aria-hidden="true" />
+        <div className="l-scene">
+          {/* One pinned view for stages 1-5: the canvas, one stage's words at a time, the tape stays fixed above. */}
+          <div className="l-view">
+            <canvas className="l-canvas" aria-hidden="true" />
+            <div className="l-dim" aria-hidden="true" />
 
-        {/* 1 · Dawn over the bench */}
-        <section className="stage" id="stage-1" tabIndex={-1} data-stage="1" style={{ "--h": 400 } as Style}>
-          <div className="pin">
-            <DawnPoster className="l-poster" />
-            <div className="l-shade" aria-hidden="true" />
-            <div className="l-copy">
-              <p className="l-kicker">{t("kicker")}</p>
-              <h1 className="l-h1 rv rv-out">
-                <Lines text={t("headline")} />
-              </h1>
-              <p className="l-sub rv rv-out">{t("sub")}</p>
-              <div className="l-actions rv rv-out" data-inert-after="0.44">
-                <WipeLink className="l-cta" href="/op" band={t("wipe.band")}>
-                  <span>{t("cta")}</span>
-                  <span className="l-arrow" aria-hidden="true">
-                    →
-                  </span>
-                </WipeLink>
-                <a className="l-link" href="/fm">
-                  {t("ctaFleet")}
-                </a>
-              </div>
-              <p className="l-b rv rv-in">{t("s1b")}</p>
-            </div>
-            <Caption text={caption} />
-            <p className="l-hint" aria-hidden="true">
-              {t("scrollHint")}
-            </p>
-          </div>
-        </section>
-
-        {/* 2 · The machine */}
-        <section className="stage" id="stage-2" tabIndex={-1} data-stage="2" style={{ "--h": 200 } as Style}>
-          <div className="pin">
-            <Poster n={2} />
-            <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.2, "--b": 0.32 } as Style}>
-              <Kicker n={2} />
-              <h2 className="l-h2">
-                <Lines text={t("s2.title")} />
-              </h2>
-              <p className="l-sub">{t("s2.body")}</p>
-            </div>
-            <svg className="l-leaders" aria-hidden="true" focusable="false">
-              {[0, 1, 2].map((i) => (
-                <g key={i} className="leader rv" data-leader={i} style={{ "--a": 0.3 + i * 0.2, "--b": 0.4 + i * 0.2 } as Style}>
-                  <polyline />
-                  <circle r="4" />
-                </g>
-              ))}
-            </svg>
-            <ul className="l-callouts">
-              {(["c1", "c2", "c3"] as const).map((k, i) => (
-                <li key={k} className="callout rv" style={{ "--a": 0.3 + i * 0.2, "--b": 0.4 + i * 0.2 } as Style}>
-                  <span className="callout-n">{`0${i + 1}`}</span>
-                  <span className="callout-t">{t(`s2.${k}`)}</span>
-                </li>
-              ))}
-            </ul>
-            <Caption text={caption} />
-          </div>
-        </section>
-
-        {/* 3 · The operator's trail */}
-        <section className="stage" id="stage-3" tabIndex={-1} data-stage="3" style={{ "--h": 250 } as Style}>
-          <div className="pin">
-            <Poster n={3} />
-            <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.08, "--b": 0.2 } as Style}>
-              <Kicker n={3} />
-              <h2 className="l-h2">
-                <Lines text={t("s3.title")} />
-              </h2>
-              <p className="l-sub">{t("s3.body")}</p>
-              <dl className="l-stats">
-                <div>
-                  <dt>{t("s3.cycles")}</dt>
-                  <dd className="l-num" data-count="14">
-                    14
-                  </dd>
-                </div>
-                <div>
-                  <dt>{t("s3.tonnes")}</dt>
-                  <dd className="l-num" data-count="620">
-                    620
-                  </dd>
-                </div>
-              </dl>
-            </div>
-            <Caption text={caption} />
-          </div>
-        </section>
-
-        {/* 4 · Guardian rings */}
-        <section className="stage" id="stage-4" tabIndex={-1} data-stage="4" style={{ "--h": 250 } as Style}>
-          <div className="pin">
-            <Poster n={4} />
-            <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.05, "--b": 0.17 } as Style}>
-              <Kicker n={4} />
-              <h2 className="l-h2">
-                <Lines text={t("s4.title")} />
-              </h2>
-              <p className="l-sub">{t("s4.body")}</p>
-              <ul className="l-legend">
-              {RING_STATES.map((s) => (
-                <li key={s.lv} className="lg" data-lv={s.lv}>
-                  <Chip tone={s.tone} word icon={<Pictogram name="proximity" shape={s.shape} />}>
-                    {te(s.tone)}
-                  </Chip>
-                </li>
-              ))}
-            </ul>
-            </div>
-            <Caption text={caption} />
-          </div>
-        </section>
-
-        {/* 5 · Replay hand-off */}
-        <section className="stage" id="stage-5" tabIndex={-1} data-stage="5" style={{ "--h": 200 } as Style}>
-          <div className="pin">
-            <Poster n={5} />
-            <div className="l-ink rv" style={{ "--a": 0.85, "--b": 1 } as Style} aria-hidden="true" />
-            <div className="l-card rv rv-io" style={{ "--a": 0.08, "--b": 0.18, "--c": 0.85, "--d": 0.95 } as Style}>
-              <Kicker n={5} />
-              <h2 className="l-h2">
-                <Lines text={t("s5.title")} />
-              </h2>
-              <p className="l-sub">{t("s5.body")}</p>
-              <div className="scrub rv" style={{ "--a": 0.05, "--b": 0.9 } as Style}>
-                <div className="scrub-top">
-                  <span>{t("s5.scrub")}</span>
-                  <span>
-                    {t("s5.from")} – {t("s5.to")}
-                  </span>
-                </div>
-                <div className="scrub-track">
-                  <span className="scrub-head" />
+            {/* 1 · Dawn over the bench */}
+            <div className="l-st" data-st="1">
+              <DawnPoster className="l-poster" />
+              <div className="l-scrim" aria-hidden="true" />
+              <div className="l-copy">
+                <p className="l-kicker">{t("kicker")}</p>
+                <h1 className="l-h1">
+                  <Lines text={t("headline")} />
+                </h1>
+                <p className="l-sub">{t("sub")}</p>
+                <div className="l-actions">
+                  {cta}
+                  <a className="l-link" href="/fm">
+                    {t("ctaFleet")}
+                  </a>
                 </div>
               </div>
-              <Chip tone="mandatory" word icon={<Pictogram name="vest" shape="circle" />}>
-                {t("s5.card")}
-              </Chip>
+              {strip(1)}
             </div>
-            <Caption text={caption} />
-          </div>
-        </section>
-      </div>
 
-        {/* 6 · Tamper-evident ledger (DOM, light stage) */}
-        <section className="stage stage-light" id="stage-6" tabIndex={-1} data-stage="6" style={{ "--h": 180 } as Style}>
-          <div className="pin">
-            <div className="l-paper rv" style={{ "--a": 0, "--b": 0.14 } as Style}>
-            <div className="l-ledger-wrap">
-              <div className="l-copy-light rv rv-io" style={{ "--a": 0.1, "--b": 0.22, "--c": 0.94, "--d": 1 } as Style}>
-                <Kicker n={6} />
+            {/* 2 · The machine */}
+            <div className="l-st" data-st="2">
+              <Poster n={2} />
+              <div className="l-scrim" aria-hidden="true" />
+              <div className="l-copy">
                 <h2 className="l-h2">
+                  <Lines text={t("s2.title")} />
+                </h2>
+                <Mask i={3}>
+                  <p className="l-sub">{t("s2.body")}</p>
+                </Mask>
+              </div>
+              <Readout stage={2} labels={roLabels} msgs={roMsgs} values={settledValues(2, 0.9)} />
+              <ul className="l-callouts">
+                {(["c1", "c2", "c3"] as const).map((k, i) => (
+                  <li key={k} className="callout rv" style={{ "--a": S2.callouts[i], "--b": S2.callouts[i] + 0.08 } as Style}>
+                    <span className="callout-n">{`0${i + 1}`}</span>
+                    <span className="callout-t">{t(`s2.${k}`)}</span>
+                  </li>
+                ))}
+              </ul>
+              <svg className="l-leaders" aria-hidden="true" focusable="false">
+                {[0, 1, 2].map((i) => (
+                  <g key={i} className="leader rv" data-leader={i} style={{ "--a": S2.callouts[i], "--b": S2.callouts[i] + 0.08 } as Style}>
+                    <polyline />
+                    <circle r="4" />
+                  </g>
+                ))}
+              </svg>
+              {strip(2)}
+            </div>
+
+            {/* 3 · The operator's trail */}
+            <div className="l-st" data-st="3">
+              <Poster n={3} />
+              <div className="l-scrim" aria-hidden="true" />
+              <div className="l-copy">
+                <h2 className="l-h2">
+                  <Lines text={t("s3.title")} />
+                </h2>
+                <Mask i={3}>
+                  <p className="l-sub">{t("s3.body")}</p>
+                </Mask>
+              </div>
+              <Readout stage={3} labels={roLabels} msgs={roMsgs} values={settledValues(3, 1)} />
+              {strip(3)}
+            </div>
+
+            {/* 4 · Guardian rings */}
+            <div className="l-st" data-st="4">
+              <Poster n={4} />
+              <div className="l-scrim" aria-hidden="true" />
+              <div className="l-copy">
+                <h2 className="l-h2">
+                  <Lines text={t("s4.title")} />
+                </h2>
+                <Mask i={3}>
+                  <p className="l-sub">{t("s4.body")}</p>
+                </Mask>
+                <Mask i={4}>
+                  <ul className="l-legend">
+                    {RING_STATES.map((s) => (
+                      <li key={s.lv} className="lg" data-lv={s.lv}>
+                        <Chip tone={s.tone} word icon={<Pictogram name="proximity" shape={s.shape} />}>
+                          {te(s.tone)}
+                        </Chip>
+                      </li>
+                    ))}
+                  </ul>
+                </Mask>
+              </div>
+              <Readout stage={4} labels={roLabels} msgs={roMsgs} values={settledValues(4, 0.62)} />
+              <svg className="l-leaders" aria-hidden="true" focusable="false">
+                <g className="leader" data-leader="truck">
+                  <polyline />
+                  <circle r="5" />
+                </g>
+              </svg>
+              {strip(4)}
+            </div>
+
+            {/* 5 · Replay hand-off */}
+            <div className="l-st" data-st="5">
+              <Poster n={5} />
+              <div className="l-scrim" aria-hidden="true" />
+              <div className="l-card">
+                <h2 className="l-h2">
+                  <Lines text={t("s5.title")} />
+                </h2>
+                <Mask i={3}>
+                  <p className="l-sub">{t("s5.body")}</p>
+                </Mask>
+                <div className="scrub">
+                  <div className="scrub-top">
+                    <span>{t("s5.scrub")}</span>
+                    <span>
+                      {t("s5.from")} – {t("s5.to")}
+                    </span>
+                  </div>
+                  <div className="scrub-track">
+                    <span className="scrub-head" />
+                  </div>
+                </div>
+                <Chip tone="mandatory" word icon={<Pictogram name="vest" shape="circle" />}>
+                  {t("s5.card")}
+                </Chip>
+              </div>
+              {strip(5)}
+            </div>
+
+            <p className="l-caption">{caption}</p>
+          </div>
+
+          {/* Bands: empty spacers that set the scroll length of each stage. They keep the anchors. */}
+          {[1, 2, 3, 4, 5].map((n) => (
+            <section key={n} className="l-band" id={`stage-${n}`} tabIndex={-1} data-stage={n} style={bandHeights(n - 1)}>
+              <ol className="l-sr">
+                {bandSentences(n).map((s) => (
+                  <li key={s}>{s}</li>
+                ))}
+              </ol>
+            </section>
+          ))}
+          <div className="l-hold" aria-hidden="true" />
+        </div>
+
+        {/* 6 · Tamper-evident ledger: a paper sheet that slides up over the held scene */}
+        <section className="l-ledger" id="stage-6" tabIndex={-1} data-stage="6" aria-labelledby="l-ledger-h">
+          <div className="l-ledger-pin">
+            <div className="l-ledger-copy">
+              <h2 id="l-ledger-h" className="l-h2 l-h2-paper">
                 <Lines text={t("s6.title")} />
               </h2>
-                <p className="l-sub">{t("s6.body")}</p>
-                <div className="l-status rv" style={{ "--a": 0.64, "--b": 0.76 } as Style}>
-                  <span className="st-ok">
-                    <Chip tone="clear" word icon={<Pictogram name="proximity" shape="circle" />}>
-                      {t("s6.chainOk")}
-                    </Chip>
-                  </span>
-                  <span className="st-bad">
-                    <Chip tone="critical" word icon={<Pictogram name="proximity" shape="octagon" />}>
-                      {t("s6.chainBroken", { n: TAMPER_AT })}
-                    </Chip>
-                  </span>
-                </div>
+              <p className="l-lede">{t("s6.body")}</p>
+              <div className="l-status">
+                <span className="st-ok">
+                  <Chip tone="clear" word icon={<Pictogram name="proximity" shape="circle" />}>
+                    {t("s6.chainOk")}
+                  </Chip>
+                </span>
+                <span className="st-bad">
+                  <Chip tone="critical" word icon={<Pictogram name="proximity" shape="octagon" />}>
+                    {t("s6.chainBroken", { n: TAMPER_AT })}
+                  </Chip>
+                </span>
               </div>
-              <ol className="l-ledger">
-                {ledger.map((r, i) => (
+            </div>
+            <ol className="l-ledger-rows">
+              {ledger.map((r, i) => {
+                const a = 0.04 + i * 0.045;
+                const after = r.seq > TAMPER_AT;
+                return (
                   <li
                     key={r.seq}
-                    className={`lrow rv${r.tampered ? " lrow-tamper" : ""}${r.seq > 4 ? " lrow-after" : ""}`}
-                    style={{ "--a": 0.14 + i * 0.07, "--b": 0.24 + i * 0.07, "--k": 0.64 + Math.max(0, r.seq - 4) * 0.04, "--m": 0.76 + Math.max(0, r.seq - 4) * 0.04 } as Style}
+                    className={`lrow rv${r.tampered ? " lrow-tamper" : ""}${after ? " lrow-after" : ""}`}
+                    style={{ "--a": a, "--b": a + 0.07, "--k": after ? 0.7 : 0.55, "--m": after ? 0.78 : 0.7 } as Style}
                   >
                     <span className="lrow-n">{`${t("s6.row")} ${r.seq}`}</span>
+                    <time className="lrow-time">{fmtClock(r.at)}</time>
                     <span className="lrow-type">{t(`s6.types.${r.type}`)}</span>
-                    <span className="lrow-sev">{t("s6.sev", { n: r.severity })}</span>
+                    <span className="lrow-sev">
+                      {t("s6.sevLabel")}{" "}
+                      {r.tampered ? (
+                        <span className="sv">
+                          <s className="sv-old">{r.honestSeverity}</s>
+                          <b className="sv-new">{r.severity}</b>
+                        </span>
+                      ) : (
+                        r.severity
+                      )}
+                    </span>
                     <span className="lrow-hash">{groups(r.stored)}</span>
                     <span className="lrow-prev">
                       {t("s6.prev")} {groups(r.prev)}
                     </span>
-                    {r.tampered ? <span className="lrow-flag">{t("s6.tamper", { n: TAMPER_AT })}</span> : null}
+                    {r.tampered ? <span className="lrow-flag">{t("s6.tamper", { n: TAMPER_AT, from: r.honestSeverity, to: r.severity })}</span> : null}
+                    {after ? <span className="lrow-flag lrow-flag-after">{t("s6.after", { n: TAMPER_AT })}</span> : null}
                   </li>
-                ))}
-              </ol>
-            </div>
-            <Caption text={caption} />
-            </div>
+                );
+              })}
+            </ol>
           </div>
         </section>
 
-        {/* 7 · Close; the footer curtain follows */}
-        <section className="stage stage-close" id="stage-7" tabIndex={-1} data-stage="7">
-          <div className="pin close-pin">
-            <h2 className="l-h1 close-h">
-              <Lines text={t("s7.title")} />
-            </h2>
-            <p className="l-sub">{t("s7.body")}</p>
-            <WipeLink className="l-cta" href="/op" band={t("wipe.band")}>
-              <span>{t("cta")}</span>
-              <span className="l-arrow" aria-hidden="true">
-                →
-              </span>
-            </WipeLink>
-            <Caption text={caption} />
-          </div>
-        </section>
+        {/* 7 · The same shift, in the app */}
+        <Proof />
       </main>
 
-      <footer className="l-foot">
-        <p className="l-foot-brand">{t("brand")}</p>
-        <nav className="l-foot-nav" aria-label={t("brand")}>
-          <a href="/op">{t("cta")}</a>
-          <a href="/fm">{t("ctaFleet")}</a>
-        </nav>
-        <p className="l-foot-note">{t("s7.foot")}</p>
-      </footer>
-      <LandingEngine />
+      <LandingFooter />
+      <LandingEngine tape={tapeMsgs} ro={roMsgs} />
     </div>
   );
 }

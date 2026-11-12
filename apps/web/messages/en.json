@@ -32,7 +32,13 @@
       "live": "Live data",
       "fallback": "Live data unavailable, showing demo data",
       "liveParts": "Live: snapshot, Replay, ledger check. Demo data: tasks, alerts, map, inbox, lessons, Ask. SOS is always a dry run.",
-      "run": { "ready": "run ready", "playing": "run playing", "paused": "run paused", "finished": "run finished", "none": "no run" }
+      "run": {
+        "ready": "run ready",
+        "playing": "run playing",
+        "paused": "run paused",
+        "finished": "run finished",
+        "none": "no run"
+      }
     }
   },
   "start": {
@@ -875,7 +881,9 @@
         "circadian": "Shift hour"
       },
       "value": {
-        "weather_heat": { "combined": "weather label and temperature band, multiplied" },
+        "weather_heat": {
+          "combined": "weather label and temperature band, multiplied"
+        },
         "weather": {
           "clear": "clear",
           "hot": "hot",
@@ -924,8 +932,6 @@
     "sub": "Spotter rides with the operator. It reads the machine, watches the ring around it, and keeps a record nobody can quietly edit.",
     "cta": "Open the operator cockpit",
     "ctaFleet": "Fleet view",
-    "scrollHint": "Scroll to follow the shift",
-    "s1b": "Dawn. Bench 3. The excavator is already warm.",
     "s2": {
       "title": "The machine",
       "body": "A generic tracked excavator, drawn from a few primitives. Spotter reads its signals and turns them into one plain word.",
@@ -948,8 +954,8 @@
       "title": "Replay of your own event",
       "body": "The trail rewinds, and the operator rehearses their own event from this shift, then decides again.",
       "scrub": "Shift replay",
-      "from": "06:12",
-      "to": "14:12",
+      "from": "10:40",
+      "to": "10:48",
       "card": "Practice from today's shift"
     },
     "s6": {
@@ -957,7 +963,7 @@
       "body": "Each entry carries the hash of the one before it. Change one row after the fact and the chain stops verifying, and the changed row is named.",
       "row": "Entry",
       "prev": "previous",
-      "tamper": "Row {n} changed after the fact",
+      "tamper": "Row {n} changed after the fact: severity {from} to {to}.",
       "chainOk": "Chain verified",
       "chainBroken": "Chain broken at row {n}",
       "types": {
@@ -967,19 +973,114 @@
         "proximity_warning": "Proximity warning",
         "slope_alert": "Slope alert"
       },
-      "sev": "Severity {n}"
+      "sev": "Severity {n}",
+      "after": "Not checked after row {n}",
+      "sevLabel": "Severity"
     },
     "s7": {
-      "title": "Start the shift.",
-      "body": "The operator cockpit opens on a simulated shift you can drive yourself.",
+      "title": "The same shift, in the app.",
+      "body": "Three screens from the working product, running on demo data. Start from the seat you sit in.",
+      "op": {
+        "who": "Operator",
+        "does": "One plain word for the machine, the task and its time left. Practice built from your own events.",
+        "alt": "The operator cockpit: a status band with the machine's state, a plain word for what the machine needs, the current task with its progress and time left, and a labelled drawing of the machine's parts."
+      },
+      "fm": {
+        "who": "Fleet manager",
+        "does": "Alerts sorted by tier, then age, each with one next step.",
+        "go": "Open the fleet inbox",
+        "alt": "The fleet inbox: alerts listed by tier, with the selected alert open beside the list and an Acknowledge button."
+      },
+      "au": {
+        "who": "Auditor",
+        "does": "Check that no entry was changed after the fact. It opens the ledger check in the fleet view.",
+        "go": "Verify the ledger",
+        "alt": "The ledger page: entries verified and sealed, a Check again button, and a form to compare with the checkpoint line received outside the app."
+      },
+      "bar": "demo data, captured from the live app",
+      "cap": "Screens are captured from the deployed app on demo data.",
+      "note": {
+        "op": "One plain word",
+        "fm": "Tier, then age",
+        "au": "Checked against the copy kept outside"
+      },
       "foot": "Spotter is a student project. It is not affiliated with or endorsed by Caterpillar Inc."
-    },
-    "rail": {
-      "label": "Story progress",
-      "go": "Part {n} of 7: {name}"
     },
     "wipe": {
       "band": "Operator cockpit · simulated shift"
+    },
+    "skip": "Skip to the app screens",
+    "tape": {
+      "label": "Shift clock, simulated",
+      "clock": "Shift clock",
+      "sim": "SIM",
+      "replay": "Replay",
+      "entry": "Ledger entry {n}",
+      "goEntry": "Go to {time}: {event}",
+      "lines": {
+        "open": "Shift opens on Bench 3.",
+        "move": "EXC-007 moves to the dig face.",
+        "dig": "Digging. Boom and stick read live.",
+        "belt": "Seatbelt off while moving.",
+        "beltOn": "Seatbelt on. Back to clear.",
+        "noSignal": "No signal. {n} events held on the machine.",
+        "signalBack": "Signal back. {n} events sent.",
+        "load": "Loading the first truck.",
+        "idle": "Idle too long: {m} minutes.",
+        "overspeed": "Overspeed on the ramp.",
+        "truck": "Haul truck on the ramp.",
+        "proximity": "Proximity warning. The haul truck is inside the third ring.",
+        "backOut": "Truck backs out. Clear.",
+        "replay": "Replaying entry 4 for practice.",
+        "slope": "Slope alert on Bench 3.",
+        "belt2": "Seatbelt off.",
+        "closed": "Shift closed. Six entries, chain checked."
+      }
+    },
+    "ro": {
+      "sim": "Simulated readout",
+      "boom": "Boom",
+      "stick": "Stick",
+      "bucket": "Bucket",
+      "phase": "Phase",
+      "phases": {
+        "dig": "Dig",
+        "swing": "Swing",
+        "dump": "Dump",
+        "return": "Return",
+        "travel": "Travel"
+      },
+      "link": "Link",
+      "online": "Online",
+      "held": "No signal, {n} held",
+      "sent": "Back, {n} sent",
+      "nearest": "Nearest object",
+      "truck": "Haul truck",
+      "metres": "{n} m",
+      "none": "Nothing in range",
+      "shownIn": "Alert shown in",
+      "shownWhere": "Cab and fleet inbox",
+      "ledger": "Ledger",
+      "written": "Entry {n} written",
+      "pending": "Not yet",
+      "trail": "Trail drawn"
+    },
+    "foot": {
+      "map": "The word Spotter drawn from the contour lines of the simulated quarry, with the shift's trail on the pit floor.",
+      "contours": "Bench contours, every 1.6 m (3.2 m on steep faces)",
+      "road": "Haul road",
+      "trail": "Today's trail",
+      "product": "Product",
+      "links": {
+        "op": "Operator cockpit",
+        "fm": "Fleet inbox",
+        "ledger": "Ledger check"
+      },
+      "otherLang": "हिन्दी में पढ़ें",
+      "simTitle": "What is simulated",
+      "sim": "Everything on this page runs on demo data: the shift, the machine readings, the ledger hashes and the app screens. No real site, operator or customer appears.",
+      "madeTitle": "How it is made",
+      "made": "The quarry and these contour lines come from one terrain function in our code, and the excavator is built in code too. No stock photos, no generated images."
     }
   },
   "training": {
@@ -1219,7 +1320,11 @@
     "photoRemove": "Remove photo",
     "photoFailed": "Could not read that photo. Try another.",
     "suggestedTitle": "Try asking",
-    "suggested": ["What is this leak?", "What do I check before starting?", "Is it safe to work in this heat?"],
+    "suggested": [
+      "What is this leak?",
+      "What do I check before starting?",
+      "Is it safe to work in this heat?"
+    ],
     "footer": "Answers come from site manuals. Your supervisor decides.",
     "rule": "Rule",
     "ruleSource": "Source: {title}, page {page}",

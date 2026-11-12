@@ -1,4 +1,5 @@
 import { ZERO_HASH, entryHash, type LedgerExportRow } from "@cat/shared/ledger";
+import { ENTRIES } from "@/components/landing/shift";
 
 /**
  * Six simulated ledger entries in full canonical v1 form (all 20 fields), hashed with the product's
@@ -12,6 +13,10 @@ export type LedgerRow = {
   seq: number;
   type: "seatbelt_breach" | "idle_excess" | "overspeed" | "proximity_warning" | "slope_alert";
   severity: string;
+  /** The severity the ledger holds (row 4: 4, while `severity` shows the edited 1). */
+  honestSeverity: string;
+  /** Minutes after midnight on the shift clock (shift.ts ENTRIES). */
+  at: number;
   /** The hash stored in the ledger (and carried by the next row as `prev`). */
   stored: string;
   prev: string;
@@ -37,7 +42,10 @@ const MACHINE = "33333333-3333-4333-8333-333333333333";
 
 function entry(i: number, prev: string, severity: string) {
   const b = BASE[i];
-  const ts = (s: number) => `2026-09-23T08:${String(15 + i * 7).padStart(2, "0")}:${String(s).padStart(2, "0")}.000000Z`;
+  const at = ENTRIES[i].at;
+  const hh = String(Math.floor(at / 60)).padStart(2, "0");
+  const mm = String(at % 60).padStart(2, "0");
+  const ts = (s: number) => `2026-09-23T${hh}:${mm}:${String(s).padStart(2, "0")}.000000Z`;
   return {
     v: "1",
     seq: String(i + 1),
@@ -84,7 +92,7 @@ export async function buildLedgerDemo(): Promise<LedgerDemo> {
     const shown = seq === TAMPER_AT ? entry(i, prev, "1") : e;
     const recomputed = seq === TAMPER_AT ? await entryHash(shown) : stored;
     tampered.push(exportRow(shown, stored));
-    rows.push({ seq, type: BASE[i].type, severity: shown.severity, stored, prev, recomputed, tampered: seq === TAMPER_AT });
+    rows.push({ seq, type: BASE[i].type, severity: shown.severity, honestSeverity: BASE[i].severity, at: ENTRIES[i].at, stored, prev, recomputed, tampered: seq === TAMPER_AT });
     prev = stored;
   }
   return { rows, honest, tampered };

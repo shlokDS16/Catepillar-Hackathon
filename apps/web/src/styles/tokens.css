@@ -217,6 +217,10 @@
   --dawn-low: #9a8fb0;
   --dawn-horizon: #f1b995;
   --dawn-sun: #fff0d8;
+  /* Landing v3 (docs/design/landing-v3-spec.md §4): the one non-state accent, and the recessed paper
+     under the product captures. --first-light is 10.5:1 on --frame; --ink is 14.4:1 on --paper-2. */
+  --first-light: var(--dawn-horizon);
+  --paper-2: #e7e4db;
   --rock-far: #6f7396;
   --rock-mid: #4b4d6e;
   --rock-near: #2c2c42;
