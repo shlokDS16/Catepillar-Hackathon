@@ -81,6 +81,11 @@ export class FixtureAdapter implements DataPort {
       this.seq = saved.seq;
       this.simMs = saved.simMs;
       this.progress = saved.progress;
+      // A task that was running when the page reloaded keeps running.
+      const last = [...saved.events].reverse().find((e) => e.type.startsWith("task."));
+      if (last && (last.type === "task.started" || last.type === "task.progress") && saved.progress < 100) {
+        this.startProgress((last.payload as { task_id: string }).task_id);
+      }
     }
   }
 
@@ -374,9 +379,13 @@ export class FixtureAdapter implements DataPort {
   private progress = 0;
   private startProgress(taskId: string) {
     if (this.progressTimer) clearInterval(this.progressTimer);
+    // The ETA counts down from the task's own estimate, so the first tick never jumps to another number.
+    const task = this.snapshotValue.tasks.find((t) => t.id === taskId);
+    const eta50 = task?.eta_p50_min ?? 52;
+    const eta90 = task?.eta_p90_min ?? 61;
     this.progressTimer = setInterval(() => {
       this.progress = Math.min(100, this.progress + 10);
-      this.push(this.event("task.progress", { ...EVENT_PAYLOADS["task.progress"], task_id: taskId, progress_pct: this.progress, eta_p50_min: Math.max(0, 52 - this.progress / 2), eta_p90_min: Math.max(0, 61 - this.progress / 2) }));
+      this.push(this.event("task.progress", { ...EVENT_PAYLOADS["task.progress"], task_id: taskId, progress_pct: this.progress, eta_p50_min: Math.max(0, eta50 * (1 - this.progress / 100)), eta_p90_min: Math.max(0, eta90 * (1 - this.progress / 100)) }));
       if (this.progress >= 100 && this.progressTimer) clearInterval(this.progressTimer);
     }, 6000);
   }

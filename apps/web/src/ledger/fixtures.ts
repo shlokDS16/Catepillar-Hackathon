@@ -1,4 +1,4 @@
-import { DISPLAY_NAMES, IDS } from "@cat/shared/fixtures";
+import { IDS } from "@cat/shared/fixtures";
 import { ZERO_HASH, entryHash, merkleRoot, npHash, verifyLedger } from "@cat/shared/ledger";
 import type { ExportRow } from "@/ledger/witness";
 
@@ -24,7 +24,7 @@ const TYPES = [
   "proximity", "proximity", "guardian_hazard", "first_aid", "property_damage", "ppe_override",
 ] as const;
 const SITE = "11111111-1111-4111-8111-111111111111";
-const OPERATOR_IDS = Object.keys(DISPLAY_NAMES).filter((k) => k.startsWith("2222222"));
+const OPERATOR_IDS = [IDS.operator, "22222223-2222-4222-8222-222222222222", "22222224-2222-4222-8222-222222222222", "22222225-2222-4222-8222-222222222222"];
 const MACHINE_IDS = [IDS.machine, "e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e1e1", "e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e2e2", IDS.anomaly];
 const SHIFT_START_MS = Date.parse("2026-09-23T05:41:00.000Z");
 
@@ -34,12 +34,12 @@ function unit(seq: number, salt: number): number {
   return x - Math.floor(x);
 }
 
-/** Irregular gaps of 1 to 8 minutes, so entries do not tick along at a fixed step. */
+/** Irregular gaps of 1 to 4 minutes (one shift, about 9 hours), so entries do not tick along at a fixed step. */
 const OCCURRED_MS: number[] = (() => {
   const out: number[] = [];
   let t = SHIFT_START_MS;
   for (let seq = 1; seq <= LEDGER_ROWS; seq++) {
-    t += Math.floor(60_000 + unit(seq, 1) * 7 * 60_000) + Math.floor(unit(seq, 2) * 59) * 1000;
+    t += Math.floor(60_000 + unit(seq, 1) * 3 * 60_000) + Math.floor(unit(seq, 2) * 59) * 1000;
     out.push(t);
   }
   return out;

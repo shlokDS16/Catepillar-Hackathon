@@ -1,6 +1,6 @@
 import type { EtaFactor } from "@cat/shared";
 import type { Task } from "@/data/types";
-import { provenanceOf, type ProvenanceTable } from "@/data/provenance";
+import { provenanceOf, SCENARIO_WEATHER_SOURCE, type ProvenanceTable } from "@/data/provenance";
 
 /**
  * The Task screen's pure logic (interaction-map §4.2 and §7): the PPE gate, which action the primary
@@ -112,8 +112,6 @@ export function splitFactorKey(key: string): { group: string; value: string } {
 /** The merged key for a hot-weather label and a temperature band that are both in the estimate. */
 export const WEATHER_HEAT_KEY = "weather_heat:combined";
 
-/** Source line for the merged weather and heat row: the label is the scenario, the temperature is Open-Meteo. */
-export const SCENARIO_WEATHER_SOURCE = "Scenario weather + Open-Meteo archive, CC BY 4.0";
 
 /**
  * The ETA model multiplies a `weather:hot|cold` label (the forecast category, e.g. hot +11 %) and a `heat:*` band (the

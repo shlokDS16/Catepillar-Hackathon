@@ -44,7 +44,7 @@
       "ready": "Ready",
       "working": "Working",
       "paused": "Paused",
-      "blocked": "Needs vest",
+      "blocked": "Needs PPE",
       "done": "Done",
       "fault": "Fault"
     },
@@ -73,7 +73,7 @@
       "paused": "Paused",
       "completed": "Done",
       "cancelled": "Cancelled",
-      "blocked_ppe": "Blocked"
+      "blocked_ppe": "Needs PPE"
     }
   },
   "nav": {
@@ -558,7 +558,7 @@
     "notChecked": "Not checked yet",
     "witnessLabel": "Telegram witness",
     "witnessAnswer": "The database matches what you received outside it",
-    "matches": "Matches your Telegram checkpoint · {n}",
+    "matches": "Matches the checkpoint line · {n}",
     "noMatch": "Does not match",
     "verifiedSealed": "{v} verified · {s} sealed, chain checked",
     "notRechecked": "Not re-checked in this browser",
@@ -571,7 +571,7 @@
     "pasteNeeded": "Paste the Telegram line to compare",
     "verify": "Verify ledger",
     "compareTitle": "Compare with Telegram",
-    "step1": "Open the SPOTTER-LEDGER message in your Telegram.",
+    "step1": "Get the SPOTTER-LEDGER checkpoint line (a live run sends it by Telegram; this demo sends nothing, copy it from /director).",
     "pasteLabel": "Telegram line",
     "from": "From",
     "to": "To",
@@ -583,7 +583,7 @@
     "busy": "Ledger is busy recording, try again",
     "network": "Could not reach the ledger.",
     "tryAgain": "Try again",
-    "fromTelegram": "From your Telegram",
+    "fromTelegram": "From the checkpoint line",
     "recomputed": "Recomputed from ledger rows now",
     "root": "Root",
     "head": "Head",

@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { CONTRACTS_VERSION } from "@cat/shared";
 import { seatbeltBreachEvent } from "@cat/shared/fixtures";
 import { MAX_EVENTS, PERSIST_KEY, clearPersisted, loadPersisted, parseState, savePersisted, serializeState } from "./fixture-persist";
 import type { AppEvent } from "@/data/types";
@@ -26,7 +27,7 @@ afterEach(() => vi.unstubAllGlobals());
 
 describe("serialize and restore", () => {
   it("round-trips the state", () => {
-    expect(parseState(serializeState(base))).toEqual({ v: 1, ...base });
+    expect(parseState(serializeState(base))).toEqual({ v: 1, contracts: CONTRACTS_VERSION, ...base });
   });
   it("keeps only the newest events", () => {
     const many = Array.from({ length: MAX_EVENTS + 20 }, (_, i) => ev(i + 1));
@@ -37,13 +38,21 @@ describe("serialize and restore", () => {
   it("rejects missing, malformed, other-version and wrongly shaped data", () => {
     expect(parseState(null)).toBeNull();
     expect(parseState("{nope")).toBeNull();
-    expect(parseState(JSON.stringify({ v: 2, ...base }))).toBeNull();
-    expect(parseState(JSON.stringify({ v: 1, ...base, ledgerScenario: "wild" }))).toBeNull();
-    expect(parseState(JSON.stringify({ v: 1, ...base, events: "x" }))).toBeNull();
-    expect(parseState(JSON.stringify({ v: 1, ...base, seq: "9" }))).toBeNull();
+    expect(parseState(JSON.stringify({ v: 2, contracts: CONTRACTS_VERSION, ...base }))).toBeNull();
+    expect(parseState(JSON.stringify({ v: 1, contracts: CONTRACTS_VERSION, ...base, ledgerScenario: "wild" }))).toBeNull();
+    expect(parseState(JSON.stringify({ v: 1, contracts: CONTRACTS_VERSION, ...base, events: "x" }))).toBeNull();
+    expect(parseState(JSON.stringify({ v: 1, contracts: CONTRACTS_VERSION, ...base, seq: "9" }))).toBeNull();
+  });
+  it("ignores state from another contract version", () => {
+    expect(parseState(JSON.stringify({ v: 1, contracts: "0.0.0", ...base }))).toBeNull();
+  });
+  it("drops a registered event whose payload no longer matches its schema", () => {
+    const bad = { ...ev(5), type: "ppe.restored", payload: { items: "vest" } };
+    const raw = serializeState({ ...base, events: [ev(4), bad as unknown as AppEvent] });
+    expect(parseState(raw)?.events.map((e) => e.seq)).toEqual([4]);
   });
   it("drops event rows that are not events", () => {
-    const raw = JSON.stringify({ v: 1, ...base, events: [ev(1), null, { nope: true }] });
+    const raw = JSON.stringify({ v: 1, contracts: CONTRACTS_VERSION, ...base, events: [ev(1), null, { nope: true }] });
     expect(parseState(raw)?.events).toHaveLength(1);
   });
 });

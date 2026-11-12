@@ -1,3 +1,4 @@
+import { CONTRACTS_VERSION, EVENT_REGISTRY, EVENT_TYPES, type EventType } from "@cat/shared";
 import type { AppEvent } from "@/data/types";
 import type { LedgerScenario } from "@/ledger/fixtures";
 
@@ -9,11 +10,14 @@ import type { LedgerScenario } from "@/ledger/fixtures";
  */
 export const PERSIST_KEY = "spotter-fixture-state";
 const VERSION = 1;
+/** State saved under another contract version is ignored, so a reshaped payload can never be replayed into the reducer. */
+const CONTRACTS = CONTRACTS_VERSION;
 /** Newest events kept; a demo run is a few dozen. */
 export const MAX_EVENTS = 150;
 
 export type PersistedState = {
   v: typeof VERSION;
+  contracts: string;
   events: AppEvent[];
   ledgerScenario: LedgerScenario;
   vestRestored: boolean;
@@ -25,8 +29,15 @@ export type PersistedState = {
 
 const SCENARIOS: readonly string[] = ["intact", "rewrite", "chain_break"];
 
-export function serializeState(s: Omit<PersistedState, "v">): string {
-  const state: PersistedState = { ...s, v: VERSION, events: s.events.slice(-MAX_EVENTS) };
+/** A registered event must still match its payload schema; anything that does not is dropped, never replayed. */
+function validEvent(e: AppEvent): boolean {
+  if (!e || typeof e.seq !== "number" || typeof e.type !== "string") return false;
+  if (!(EVENT_TYPES as readonly string[]).includes(e.type)) return true;
+  return EVENT_REGISTRY[e.type as EventType].payload.safeParse(e.payload).success;
+}
+
+export function serializeState(s: Omit<PersistedState, "v" | "contracts">): string {
+  const state: PersistedState = { ...s, v: VERSION, contracts: CONTRACTS, events: s.events.slice(-MAX_EVENTS) };
   return JSON.stringify(state);
 }
 
@@ -35,13 +46,13 @@ export function parseState(raw: string | null | undefined): PersistedState | nul
   if (!raw) return null;
   try {
     const o = JSON.parse(raw) as Partial<PersistedState> | null;
-    if (!o || o.v !== VERSION || !Array.isArray(o.events)) return null;
+    if (!o || o.v !== VERSION || o.contracts !== CONTRACTS || !Array.isArray(o.events)) return null;
     if (typeof o.ledgerScenario !== "string" || !SCENARIOS.includes(o.ledgerScenario)) return null;
     if (typeof o.seq !== "number" || typeof o.simMs !== "number" || typeof o.progress !== "number") return null;
     if (typeof o.vestRestored !== "boolean") return null;
     if (o.overrideUntilMs !== null && typeof o.overrideUntilMs !== "number") return null;
-    const events = o.events.filter((e) => e && typeof e.seq === "number" && typeof e.type === "string");
-    return { v: VERSION, events, ledgerScenario: o.ledgerScenario as LedgerScenario, vestRestored: o.vestRestored, overrideUntilMs: o.overrideUntilMs ?? null, seq: o.seq, simMs: o.simMs, progress: o.progress };
+    const events = o.events.filter(validEvent);
+    return { v: VERSION, contracts: CONTRACTS, events, ledgerScenario: o.ledgerScenario as LedgerScenario, vestRestored: o.vestRestored, overrideUntilMs: o.overrideUntilMs ?? null, seq: o.seq, simMs: o.simMs, progress: o.progress };
   } catch {
     return null;
   }
@@ -63,7 +74,7 @@ export function loadPersisted(): PersistedState | null {
   }
 }
 
-export function savePersisted(s: Omit<PersistedState, "v">): void {
+export function savePersisted(s: Omit<PersistedState, "v" | "contracts">): void {
   try {
     store()?.setItem(PERSIST_KEY, serializeState(s));
   } catch {

@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { SCENARIO_WEATHER_SOURCE, SOURCE_MESSAGE_KEY } from "@/data/provenance";
 import { derivePpe, elapsedMin, factorRows, taskActions, type PpeInput } from "./task-state";
 
 const T0 = Date.parse("2026-09-24T14:02:00.000+05:30");
@@ -85,6 +86,11 @@ describe("factor rows", () => {
     { key: "heat:extreme", multiplier: 1.22, assumed: false },
     { key: "circadian:post_lunch_dip", multiplier: 1.05, assumed: true },
   ];
+  it("the merged weather and heat row credits the scenario label and Open-Meteo", () => {
+    const merged = factorRows(factors, { all: true }).find((r) => r.group === "weather_heat");
+    expect(merged?.tag).toEqual({ kind: "source", label: SCENARIO_WEATHER_SOURCE });
+    expect(SOURCE_MESSAGE_KEY[SCENARIO_WEATHER_SOURCE]).toBe("sourceScenarioWeather");
+  });
   it("hot weather and the heat band merge into one factor with the product multiplier", () => {
     const rows = factorRows(factors, { all: true });
     expect(rows.map((r) => r.group)).not.toContain("heat");
