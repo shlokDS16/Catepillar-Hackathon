@@ -46,7 +46,7 @@
       "ready": "तैयार",
       "working": "चालू",
       "paused": "रुका",
-      "blocked": "अटका",
+      "blocked": "PPE चाहिए",
       "done": "पूरा",
       "fault": "ख़राबी"
     },
@@ -75,7 +75,7 @@
       "paused": "रुका",
       "completed": "पूरा",
       "cancelled": "रद्द",
-      "blocked_ppe": "अटका"
+      "blocked_ppe": "PPE चाहिए"
     }
   },
   "nav": {
@@ -141,7 +141,8 @@
     "simulated": "सिम्युलेटेड डेटा",
     "someAssumed": "कुछ मान अनुमानित हैं",
     "sourceWeather": "मौसम: Open-Meteo आर्काइव, CC BY 4.0",
-    "sourceOpenMeteo": "Open-Meteo आर्काइव, CC BY 4.0"
+    "sourceOpenMeteo": "Open-Meteo आर्काइव, CC BY 4.0",
+    "sourceScenarioWeather": "परिदृश्य मौसम + Open-Meteo, CC BY 4.0"
   },
   "hero": {
     "machine": "{code} · {model}",
@@ -602,7 +603,7 @@
     "notChecked": "अभी जाँचा नहीं गया",
     "witnessLabel": "टेलीग्राम साक्षी",
     "witnessAnswer": "डेटाबेस उससे मेल खाता है जो आपको बाहर मिला",
-    "matches": "आपके टेलीग्राम चेकपॉइंट से मेल खाता है · {n}",
+    "matches": "चेकपॉइंट पंक्ति से मेल खाता है · {n}",
     "noMatch": "मेल नहीं खाता",
     "verifiedSealed": "{v} जाँची गईं · {s} सीलबंद, शृंखला जाँची गई",
     "notRechecked": "इस ब्राउज़र में दोबारा नहीं जाँचा गया",
@@ -615,7 +616,7 @@
     "pasteNeeded": "तुलना के लिए टेलीग्राम की पंक्ति चिपकाएँ",
     "verify": "बही जाँचें",
     "compareTitle": "टेलीग्राम से तुलना करें",
-    "step1": "अपने टेलीग्राम में SPOTTER-LEDGER संदेश खोलें।",
+    "step1": "SPOTTER-LEDGER चेकपॉइंट पंक्ति लें (लाइव रन में टेलीग्राम से आती है; यह डेमो कुछ नहीं भेजता, /director से कॉपी करें)।",
     "pasteLabel": "टेलीग्राम की पंक्ति",
     "from": "से",
     "to": "तक",
@@ -627,7 +628,7 @@
     "busy": "बही अभी दर्ज कर रही है, फिर कोशिश करें",
     "network": "बही तक पहुँच नहीं हो सकी।",
     "tryAgain": "फिर कोशिश करें",
-    "fromTelegram": "आपके टेलीग्राम से",
+    "fromTelegram": "चेकपॉइंट पंक्ति से",
     "recomputed": "अभी बही की पंक्तियों से दोबारा गणना",
     "root": "रूट",
     "head": "शीर्ष",
@@ -638,6 +639,7 @@
     "serverAgrees": "इस ब्राउज़र जैसा ही रूट",
     "serverDiffers": "इस ब्राउज़र से अलग रूट",
     "tableTitle": "प्रविष्टियाँ",
+    "simulatedTag": "सिम्युलेटेड",
     "colSeq": "#",
     "colTime": "समय",
     "colType": "प्रकार",
@@ -721,7 +723,7 @@
       "no_answer": "जवाब नहीं",
       "failed": "असफल",
       "suppressed": "दबाया गया",
-      "dry_run": "ड्राई रन (भेजा नहीं गया)"
+      "dry_run": "ड्राई रन, कुछ भेजा नहीं गया"
     },
     "acknowledge": "स्वीकार करें",
     "grantOverride": "छूट दें",

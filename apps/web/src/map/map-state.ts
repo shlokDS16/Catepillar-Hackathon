@@ -36,6 +36,8 @@ export type MapActor = {
   health: Health;
   /** Oldest first. A machine with no fix at or before the cursor is not drawn yet. */
   track: Fix[];
+  /** When set, the machine state is known from the snapshot (my own machine) and wins over what the track suggests. */
+  moving?: boolean;
 };
 
 export type MapEventKind = "guardian_hazard" | "proximity_zone" | "anomaly_machine" | "idle_excess" | "seatbelt_off_moving";
@@ -240,7 +242,7 @@ export function mapStateAt(model: MapModel, t: number): MapState {
       lat: pos.lat,
       lon: pos.lon,
       heading_deg: headingOf(trail),
-      moving: movingAt(actor.track, tc, pos),
+      moving: actor.moving ?? movingAt(actor.track, tc, pos),
       health: actor.health,
       trail,
       ageMs,
@@ -315,6 +317,8 @@ type ModelInput = {
   events: MapEvent[];
   pins: Array<{ id: string; lat: number; lon: number }>;
   hazardCodes: string[];
+  /** Whether my own machine is moving, from the same state Home reads; omit to infer it from the track. */
+  ownMoving?: boolean | null;
 };
 
 /** Spread `points` evenly over [anchor - span, anchor]; the last point is the newest fix. */
@@ -346,7 +350,7 @@ export function buildMapModel(input: ModelInput): MapModel {
 
   const actors: MapActor[] = [];
   if (me) {
-    actors.push({ id: "own", code: ownCode ?? "", own: true, health: "ok", track: meFixes });
+    actors.push({ id: "own", code: ownCode ?? "", own: true, health: "ok", track: meFixes, moving: input.ownMoving ?? undefined });
   }
   for (const m of data.machines) {
     const source = m.track && m.track.length > 0 ? m.track : [{ ago_ms: 0, lat: m.lat, lon: m.lon }];

@@ -2,6 +2,7 @@ import {
   compareWitness, firstDifference, parseWitnessLine, verifyLedger,
   type LedgerExportRow, type LedgerVerifyResult, type WitnessComparison, type WitnessLine,
 } from "@cat/shared/ledger";
+import { DISPLAY_NAMES } from "@cat/shared/fixtures";
 import type { DataPort } from "@/data/port";
 import { RpcError } from "@/data/port";
 
@@ -239,6 +240,12 @@ export interface RowView {
   hashPrefix: string;
 }
 
+/** Fixture ids show as their names ("Ravi", "EXC-007"); any other id keeps its short prefix. */
+function displayName(id: string | null): string | null {
+  if (!id) return null;
+  return DISPLAY_NAMES[id] ?? id.slice(0, 8);
+}
+
 export function rowView(row: ExportRow): RowView {
   const hashPrefix = row.entry_hash.slice(0, 8);
   if (isSealed(row)) return { seq: row.seq, sealed: true, time: null, type: null, operator: null, machine: null, hashPrefix };
@@ -250,8 +257,8 @@ export function rowView(row: ExportRow): RowView {
     sealed: false,
     time: at ? at.slice(0, 16).replace("T", " ") : null,
     type: str(f.incident_type),
-    operator: str(f.operator_id)?.slice(0, 8) ?? null,
-    machine: str(f.machine_id)?.slice(0, 8) ?? null,
+    operator: displayName(str(f.operator_id)),
+    machine: displayName(str(f.machine_id)),
     hashPrefix,
   };
 }

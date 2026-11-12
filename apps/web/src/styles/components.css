@@ -722,11 +722,17 @@
 }
 @media (min-width: 1024px) {
   .takeover {
-    inset: var(--strip-h) 0 0 var(--rail-w);
+    /* Covers the whole viewport except the status strip (columns 2+, top 104 px), so the rail and its
+       top-left cell are not clickable. SOS (z 40) stays above it, so the content starts clear of the rail. */
+    inset: 0;
+    clip-path: polygon(0 0, var(--rail-w) 0, var(--rail-w) var(--strip-h), 100% var(--strip-h), 100% 100%, 0 100%);
+    padding-top: calc(var(--strip-h) + var(--s-4));
+    padding-left: calc(var(--rail-w) + var(--gutter));
     padding-bottom: var(--s-6);
   }
   .takeover[data-tier="critical"] {
-    inset: 0 0 0 var(--rail-w);
+    clip-path: none;
+    padding-top: var(--s-4);
   }
 }
 

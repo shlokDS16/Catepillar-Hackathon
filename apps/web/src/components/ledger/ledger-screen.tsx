@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useTranslations } from "next-intl";
 import { Button } from "@/components/ui/button";
+import { Chip } from "@/components/ui/chip";
 import { Mark } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import { verifyLedger, type LedgerVerifyResult } from "@cat/shared/ledger";
@@ -398,7 +399,9 @@ function EntriesTable({ state }: { state: VerifyState }) {
   const empty = state.s === "done" && rows.length === 0;
   return (
     <section aria-labelledby="ledger-entries" className="ledger-table-wrap">
-      <h2 id="ledger-entries" className="t-title">{t("tableTitle")}</h2>
+      <h2 id="ledger-entries" className="t-title">
+        {t("tableTitle")} <Chip tone="sunk">{t("simulatedTag")}</Chip>
+      </h2>
       {state.s === "done" && rows.length > 0 ? (
         <p className="t-meta">
           {t("showing", { n: rows.length })}{countSealed(rows) > 0 ? ` · ${t("sealedCount", { n: countSealed(rows) })}` : ""}

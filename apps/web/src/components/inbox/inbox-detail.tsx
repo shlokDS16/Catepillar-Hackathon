@@ -10,7 +10,7 @@ import { Pictogram } from "@/components/ui/pictogram";
 import { newRequestId } from "@/data/port";
 import { useAppState, useDataPort } from "@/data/store";
 import type { Lang } from "@/data/types";
-import { parseDispatch, rowActions, type InboxItem } from "@/inbox/inbox";
+import { dispatchLabel, parseDispatch, rowActions, type InboxItem } from "@/inbox/inbox";
 import { timelineSteps } from "@/inbox/split";
 
 export const ageMinutes = (simNow: string | null, firstSeen: string): number | null =>
@@ -168,7 +168,7 @@ export function InboxDetail({ item, live, simNow, lines, granted, onAcknowledged
                 {s.kind === "raised" ? (
                   <span>{item.nonPunitive ? t("raisedToday") : s.ageMin === null ? t("raised") : s.ageMin === 0 ? t("raisedNow") : t("raisedAgo", { m: s.ageMin })}</span>
                 ) : (
-                  <span>{t("dispatch", { channel: t(`channel.${s.channel}`), status: t(`dispatchStatus.${s.status}`) })}</span>
+                  <span>{dispatchLabel(t, `${s.channel}:${s.status}`)}</span>
                 )}
               </li>
             ))}

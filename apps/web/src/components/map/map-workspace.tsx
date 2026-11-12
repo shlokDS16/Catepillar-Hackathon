@@ -36,6 +36,7 @@ export function MapWorkspace({ variant, data, me, ownCode, selectedId, onSelect,
   const t = useTranslations("map");
   const reduced = useReducedMotion();
   const alerts = useAppState((s) => s.alerts);
+  const ownMoving = useAppState((s) => s.machine?.moving ?? null);
   const guardian = useAppState((s) => s.guardian);
   const guardianByAlert = useAppState((s) => s.guardianByAlert);
   const anomalies = useAppState((s) => s.anomalies);
@@ -69,8 +70,9 @@ export function MapWorkspace({ variant, data, me, ownCode, selectedId, onSelect,
       events: eventsFromAlerts(alerts, guardian, guardianByAlert, startMs, nowMs),
       pins: Object.values(anomalies).map((a) => ({ id: a.anomaly_id, lat: a.lat, lon: a.lon })),
       hazardCodes,
+      ownMoving,
     });
-  }, [data, me, ownCode, anchorMs, freshMs, nowMs, assumed, alerts, guardian, guardianByAlert, anomalies]);
+  }, [data, me, ownCode, anchorMs, freshMs, nowMs, assumed, alerts, guardian, guardianByAlert, anomalies, ownMoving]);
 
   const cursor = useMapCursor(model);
   const state = useMemo(() => mapStateAt(model, cursor.t), [model, cursor.t]);

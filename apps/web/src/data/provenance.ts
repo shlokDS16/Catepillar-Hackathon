@@ -15,10 +15,14 @@ const SOURCE_LABEL: Partial<Record<ProvenanceTable, string>> = {
   weather_snapshots: "Open-Meteo archive, CC BY 4.0",
 };
 
+/** Source line for the merged weather and heat row: the label is the scenario, the temperature is Open-Meteo. */
+export const SCENARIO_WEATHER_SOURCE = "Scenario weather + Open-Meteo archive, CC BY 4.0";
+
 /** Message key (under "provenance") for each source line, so the line can be translated. */
 export const SOURCE_MESSAGE_KEY: Record<string, string> = {
   "Weather: Open-Meteo archive, CC BY 4.0": "sourceWeather",
   "Open-Meteo archive, CC BY 4.0": "sourceOpenMeteo",
+  [SCENARIO_WEATHER_SOURCE]: "sourceScenarioWeather",
 };
 
 /** The raw registry answer, or null when the column is not listed (internal). */

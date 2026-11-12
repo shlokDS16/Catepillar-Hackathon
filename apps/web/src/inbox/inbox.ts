@@ -139,6 +139,16 @@ export function toggleExpanded(open: ReadonlySet<string>, id: string): Set<strin
   return next;
 }
 
+type Translator = ((key: string, values?: Record<string, string>) => string) & { has: (key: string) => boolean };
+
+/** "Telegram: dry run, nothing sent" from a "telegram:dry_run" line (inbox namespace translator); unknown parts show as they are. */
+export function dispatchLabel(t: Translator, line: string | null): string | null {
+  const p = parseDispatch(line);
+  if (!p) return null;
+  const part = (group: "channel" | "dispatchStatus", v: string) => (t.has(`${group}.${v}`) ? t(`${group}.${v}`) : v);
+  return t("dispatch", { channel: part("channel", p.channel), status: part("dispatchStatus", p.status) });
+}
+
 /** "telegram:sent" to its two parts; null for anything that is not a channel:status pair. */
 export function parseDispatch(line: string | null): { channel: string; status: string } | null {
   if (!line) return null;

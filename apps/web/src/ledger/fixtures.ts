@@ -1,3 +1,4 @@
+import { IDS } from "@cat/shared/fixtures";
 import { ZERO_HASH, entryHash, merkleRoot, npHash, verifyLedger } from "@cat/shared/ledger";
 import type { ExportRow } from "@/ledger/witness";
 
@@ -17,28 +18,54 @@ export const SEALED_SEQ = 7;
 export const BREAK_SEQ = 187;
 export const REWRITE_SEQ = 120;
 
-const TYPES = ["seatbelt_breach", "overspeed", "ppe_violation", "proximity"] as const;
+/** Weighted so the mix looks like a shift's record, not a rota: seatbelt and PPE lead, a few rarer types. */
+const TYPES = [
+  "seatbelt_breach", "seatbelt_breach", "seatbelt_breach", "ppe_violation", "ppe_violation", "overspeed", "overspeed",
+  "proximity", "proximity", "guardian_hazard", "first_aid", "property_damage", "ppe_override",
+] as const;
 const SITE = "11111111-1111-4111-8111-111111111111";
+const OPERATOR_IDS = [IDS.operator, "22222223-2222-4222-8222-222222222222", "22222224-2222-4222-8222-222222222222", "22222225-2222-4222-8222-222222222222"];
+const MACHINE_IDS = [IDS.machine, "e1e1e1e1-e1e1-4e1e-8e1e-e1e1e1e1e1e1", "e2e2e2e2-e2e2-4e2e-8e2e-e2e2e2e2e2e2", IDS.anomaly];
+const SHIFT_START_MS = Date.parse("2026-09-23T05:41:00.000Z");
+
+/** Deterministic pseudo-random in [0, 1) from the sequence number: the hashes must be stable across runs. */
+function unit(seq: number, salt: number): number {
+  const x = Math.sin(seq * 12.9898 + salt * 78.233) * 43758.5453;
+  return x - Math.floor(x);
+}
+
+/** Irregular gaps of 1 to 4 minutes (one shift, about 9 hours), so entries do not tick along at a fixed step. */
+const OCCURRED_MS: number[] = (() => {
+  const out: number[] = [];
+  let t = SHIFT_START_MS;
+  for (let seq = 1; seq <= LEDGER_ROWS; seq++) {
+    t += Math.floor(60_000 + unit(seq, 1) * 3 * 60_000) + Math.floor(unit(seq, 2) * 59) * 1000;
+    out.push(t);
+  }
+  return out;
+})();
+
+const iso = (ms: number) => new Date(ms).toISOString().replace("Z", "000Z");
 
 function fieldsFor(seq: number, prev: string, tweak = false): Record<string, unknown> {
   const sealed = seq === SEALED_SEQ;
-  const minute = String(seq % 60).padStart(2, "0");
+  const at = OCCURRED_MS[seq - 1]!;
   return {
     v: "1",
     seq: String(seq),
     prev_hash: prev,
     run_id: null,
-    occurred_at: `2026-09-23T${String(8 + Math.floor(seq / 60)).padStart(2, "0")}:${minute}:02.000000Z`,
-    recorded_at: `2026-09-23T${String(8 + Math.floor(seq / 60)).padStart(2, "0")}:${minute}:03.000000Z`,
-    incident_type: sealed ? "near_miss" : TYPES[seq % TYPES.length],
-    severity: String(1 + (seq % 4)),
+    occurred_at: iso(at),
+    recorded_at: iso(at + 1000 + Math.floor(unit(seq, 4) * 2000)),
+    incident_type: sealed ? "near_miss" : TYPES[Math.floor(unit(seq, 5) * TYPES.length)],
+    severity: String(1 + Math.floor(unit(seq, 6) * 4)),
     site_id: SITE,
-    operator_id: sealed ? null : `2222222${seq % 10}-2222-4222-8222-222222222222`,
-    machine_id: `3333333${seq % 10}-3333-4333-8333-333333333333`,
+    operator_id: sealed ? null : OPERATOR_IDS[Math.floor(unit(seq, 7) * OPERATOR_IDS.length)],
+    machine_id: MACHINE_IDS[Math.floor(unit(seq, 3) * MACHINE_IDS.length)],
     lat: "21.146300",
     lon: "79.088200",
     description: tweak ? "edited after the checkpoint" : `Entry ${seq}`,
-    context: { speed_kmh: String(seq % 9) },
+    context: { speed_kmh: String(Math.floor(unit(seq, 8) * 9)) },
     reported_by: null,
     reporter_kind: "detector",
     source_event_id: null,
