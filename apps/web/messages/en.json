@@ -406,6 +406,7 @@
       "practiseAgain": "Practise again",
       "player": {
         "caption": "Re-enactment from your recorded data · simulated · event marked at the last recorded position",
+        "captionExact": "Re-enactment from your recorded data · simulated",
         "mapLabel": "Re-enactment on the site plan",
         "readoutsLabel": "Readouts at this moment",
         "time": "Time",

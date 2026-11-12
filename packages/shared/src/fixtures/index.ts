@@ -161,8 +161,8 @@ export const replayScenario = {
         { id: "c", label: i18n("Resume", "फिर शुरू"), pictogram: "go" }] },
   ] },
   reenactment: {
-    duration_ms: 120000, trail: [pt(0, 21.1462, 79.0881), pt(60000, 21.1464, 79.0883)],
-    machine_track: [{ ...pt(0, 21.1463, 79.0882), speed_kmh: 6.2, pitch_deg: 17.4 }],
+    duration_ms: 120000, event_ms: 52000, trail: [pt(0, 21.1462, 79.0881), pt(60000, 21.1464, 79.0883)],
+    machine_track: [{ ...pt(0, 21.1463, 79.0882), speed_kmh: 6.2, pitch_deg: 17.4, seatbelt_fastened: false }],
     wind: [{ t_ms: 0, from_deg: 250, kmh: 12 }], real_response_ms: 8400,
   },
 };
