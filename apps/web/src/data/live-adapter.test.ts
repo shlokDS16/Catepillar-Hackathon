@@ -81,6 +81,18 @@ describe("LiveAdapter: fallback", () => {
   });
 });
 
+describe("LiveAdapter: stream", () => {
+  it("passes the heartbeat clock and connectivity but drops fixture events and machine deltas", () => {
+    const { live, fixtures } = setup(() => ok(null));
+    let handler: ((m: never) => void) | undefined;
+    vi.spyOn(fixtures, "subscribe").mockImplementation((h) => ((handler = h as never), () => {}));
+    const got: string[] = [];
+    live.subscribe((m) => got.push(m.kind));
+    for (const kind of ["clock", "event", "machines", "connectivity"]) handler!({ kind } as never);
+    expect(got).toEqual(["clock", "connectivity"]);
+  });
+});
+
 describe("LiveAdapter: everything else is fixtures", () => {
   it("SOS and the other methods never touch the network", async () => {
     const { live, rpc, fixtures } = setup(() => ok(null));

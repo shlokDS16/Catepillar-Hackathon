@@ -13,13 +13,14 @@ import { SUPABASE_PUBLISHABLE_KEY, SUPABASE_URL } from "@/data/live-config";
  * so the demo path never downloads it.
  */
 export type DataSource = "demo" | "live" | "fallback";
-export type LiveState = { source: DataSource; role: ShellRole | null };
+/** `failed` = the live calls currently answered from fixtures; each clears only when that same call succeeds. */
+export type LiveState = { source: DataSource; role: ShellRole | null; failed: readonly string[] };
 
-const DEMO: LiveState = { source: "demo", role: null };
+const DEMO: LiveState = { source: "demo", role: null, failed: [] };
 let state: LiveState = DEMO;
 const listeners = new Set<() => void>();
 const set = (next: LiveState) => {
-  if (next.source === state.source && next.role === state.role) return;
+  if (next.source === state.source && next.role === state.role && next.failed.join() === state.failed.join()) return;
   state = next;
   listeners.forEach((l) => l());
 };
@@ -33,11 +34,17 @@ export const subscribeLive = (l: () => void) => {
 };
 export const useLiveState = (): LiveState => useSyncExternalStore(subscribeLive, getLiveState, () => DEMO);
 
-export const reportFallback = () => {
-  if (state.role) set({ ...state, source: "fallback" });
+/** Switch Live on for a role (after a verified sign-in). */
+export const enterLive = (role: ShellRole) => set({ source: "live", role, failed: [] });
+export const reportFallback = (fn: string) => {
+  if (!state.role) return;
+  const failed = state.failed.includes(fn) ? state.failed : [...state.failed, fn];
+  set({ ...state, source: "fallback", failed });
 };
-export const reportLive = () => {
-  if (state.role) set({ ...state, source: "live" });
+export const reportLive = (fn: string) => {
+  if (!state.role) return;
+  const failed = state.failed.filter((f) => f !== fn);
+  set({ ...state, source: failed.length ? "fallback" : "live", failed });
 };
 
 type Client = import("@supabase/supabase-js").SupabaseClient;
@@ -65,19 +72,19 @@ async function roleOfSession(): Promise<ShellRole | null> {
   return role === "operator" || role === "fleet_manager" ? role : null;
 }
 
-export type SignInResult = { ok: true; role: ShellRole } | { ok: false; reason: "credentials" | "role" | "network" };
+export type SignInResult = { ok: true; role: ShellRole } | { ok: false; reason: "credentials" | "role" | "network" | "rate" };
 
 export async function signInLive(email: string, password: string): Promise<SignInResult> {
   try {
     const c = await client();
     const { error } = await c.auth.signInWithPassword({ email, password });
-    if (error) return { ok: false, reason: error.status && error.status < 500 ? "credentials" : "network" };
+    if (error) return { ok: false, reason: error.status === 429 ? "rate" : error.status && error.status < 500 ? "credentials" : "network" };
     const role = await roleOfSession();
     if (!role) {
-      await c.auth.signOut();
+      await c.auth.signOut({ scope: "local" });
       return { ok: false, reason: "role" };
     }
-    set({ source: "live", role });
+    enterLive(role);
     return { ok: true, role };
   } catch {
     return { ok: false, reason: "network" };
@@ -87,7 +94,7 @@ export async function signInLive(email: string, password: string): Promise<SignI
 export async function signOutLive(): Promise<void> {
   set(DEMO);
   try {
-    await (await client()).auth.signOut();
+    await (await client()).auth.signOut({ scope: "local" });
   } catch {
     // Already back on fixtures; a failed network sign-out leaves only a stored token that expires.
   }
@@ -104,7 +111,7 @@ export async function restoreLive(): Promise<void> {
     const { data } = await (await client()).auth.getSession();
     if (!data.session) return;
     const role = await roleOfSession();
-    if (role) set({ source: "live", role });
+    if (role) enterLive(role);
   } catch {
     // storage blocked or offline: stay on fixtures
   }

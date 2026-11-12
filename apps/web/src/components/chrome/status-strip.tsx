@@ -29,6 +29,7 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
   const serverLocked = useAppState((s) => s.operator?.motion_locked ?? false);
   const lockShown = useMotionLock(serverLocked);
   const source = useDataSource();
+  const runStatus = useAppState((s) => s.snapshot?.run?.status ?? null);
 
   const safetyWord = t(`enums.safety.${safety}`);
   const picto: PictogramName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? FALLBACK_PICTO.nosignal : FALLBACK_PICTO.clear;
@@ -49,7 +50,13 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
   }
 
   // D18: say which data this is. A failed live call shows the plain notice instead of the clock.
-  connText = source === "fallback" ? t("chrome.source.fallback") : `${t("chrome.source." + source)} · ${connText}`;
+  // Live: the run's own state, never the fixture clock. Tooltip names what is still demo data.
+  connText =
+    source === "fallback"
+      ? t("chrome.source.fallback")
+      : source === "live"
+        ? `${t("chrome.source.live")} · ${t(`chrome.source.run.${runStatus ?? "none"}`)}`
+        : `${t("chrome.source.demo")} · ${connText}`;
 
   return (
     <header className="strip" inert={lockShown || undefined}>
@@ -66,7 +73,7 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
         </Chip>
       ) : null}
       {title}
-      <span className="strip-cap t-caption" data-conn={connectivity.kind}>
+      <span className="strip-cap t-caption" data-conn={connectivity.kind} title={source === "live" ? t("chrome.source.liveParts") : undefined}>
         {connText}
       </span>
       <div className="strip-actions">{actions}</div>

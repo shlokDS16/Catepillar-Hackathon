@@ -12,10 +12,10 @@ export type RpcResult = { data: unknown; error: { message: string; code?: string
 export type RpcCaller = (fn: string, args?: Record<string, unknown>) => Promise<RpcResult>;
 
 export type LiveHooks = {
-  /** A live call failed and was answered from fixtures. */
-  onFallback: () => void;
-  /** A live call succeeded (clears the notice). */
-  onLive: () => void;
+  /** The live call `fn` failed and was answered from fixtures. */
+  onFallback: (fn: string) => void;
+  /** The live call `fn` succeeded (clears only its own notice). */
+  onLive: (fn: string) => void;
 };
 
 type Schema<T> = { safeParse(v: unknown): { success: true; data: T } | { success: false } };
@@ -34,10 +34,10 @@ export class LiveAdapter implements DataPort {
       if (error) throw new Error("rpc failed");
       const parsed = schema.safeParse(data);
       if (!parsed.success) throw new Error("contract mismatch");
-      this.hooks.onLive();
+      this.hooks.onLive(fn);
       return parsed.data;
     } catch {
-      this.hooks.onFallback();
+      this.hooks.onFallback(fn);
       return fallback();
     }
   }
@@ -59,7 +59,15 @@ export class LiveAdapter implements DataPort {
     this.live("ledger_verify", { p_from: input.p_from ?? 1, p_to: input.p_to ?? null }, LedgerVerifyOut, () => this.fixtures.ledgerVerify(input));
 
   // ── fixtures ───────────────────────────────────────────────────────────────────────────────
-  subscribe: DataPort["subscribe"] = (onMessage) => this.fixtures.subscribe(onMessage);
+  /**
+   * Live mode takes the fixture stream's clock (a heartbeat, so the band never claims NO SIGNAL for a
+   * backend that has no frames yet) and connectivity, and nothing else: director beats and fixture
+   * events must not leak into live screens. The band never shows the fixture clock text in live mode.
+   */
+  subscribe: DataPort["subscribe"] = (onMessage) =>
+    this.fixtures.subscribe((m) => {
+      if (m.kind === "clock" || m.kind === "connectivity") onMessage(m);
+    });
   protocolCard: DataPort["protocolCard"] = (id) => this.fixtures.protocolCard(id);
   siteMap: DataPort["siteMap"] = () => this.fixtures.siteMap();
   inbox: DataPort["inbox"] = () => this.fixtures.inbox();

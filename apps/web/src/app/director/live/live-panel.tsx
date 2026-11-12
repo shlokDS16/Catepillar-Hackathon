@@ -8,6 +8,7 @@ import { restoreLive, signInLive, signOutLive, useLiveState, type SignInResult }
 const REASONS: Record<Extract<SignInResult, { ok: false }>["reason"], string> = {
   credentials: "Email or password not accepted.",
   role: "This account is not an operator or fleet manager, so it cannot use the live switch.",
+  rate: "Too many attempts. Wait a minute and try again.",
   network: "Could not reach the backend. Still on demo data.",
 };
 
@@ -54,6 +55,12 @@ export function LivePanel() {
         Off by default. Sign in with a demo account to read the real backend in that role&apos;s screens: operator snapshot, Replay, Ledger
         verification. Everything else stays on demo data, and SOS never leaves the dry run. If a live call fails, that screen shows demo data and says so.
       </p>
+      <ul className="t-meta text-ink-2 list-disc pl-5">
+        <li>Live: operator snapshot, Replay (get and submit), Ledger verification.</li>
+        <li>Demo data even when Live is on: tasks, alerts, map, inbox, lessons (completing a lesson is not saved on the server), Ask, SOS (always a dry run).</li>
+        <li>The seeded run is paused and not current, so the live Home has no machine or clock; the Loop card and Replay are the live parts.</li>
+        <li>If a Replay submit reaches the server but its reply fails the contract check, the scores shown are demo scores and the stored attempt may differ.</li>
+      </ul>
 
       {live.role ? (
         <section aria-label="Signed in" className="flex flex-col gap-3">

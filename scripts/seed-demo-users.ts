@@ -8,19 +8,28 @@
  *    `private.apply_frame` and `private.step_loop` builds Ravi's lesson assignment and replay. Alert
  *    dispatches are always 'dry_run' (007); nothing here calls sos_raise or sends a message.
  * 2. Auth users for the operator (Ravi) and the fleet manager (Anita): created or updated through the
- *    Auth admin API with email_confirm; profiles bound to the seeded site / operator. Sign-up stays closed.
+ *    Auth admin API with email_confirm; profiles bound to the seeded site / operator. This script never changes auth settings (confirm sign-up is off in the dashboard).
  * 3. Credentials go ONLY to the git-ignored .env as DEMO_OPERATOR_EMAIL / DEMO_OPERATOR_PASSWORD /
  *    DEMO_FM_EMAIL / DEMO_FM_PASSWORD (existing values are reused, so a re-run keeps the logins). Never printed.
  */
 import { randomBytes } from "node:crypto";
+import { spawnSync } from "node:child_process";
 import { existsSync, readFileSync, writeFileSync } from "node:fs";
-import { join } from "node:path";
+import { basename, dirname, join } from "node:path";
 import { createClient, type SupabaseClient } from "@supabase/supabase-js";
 import { connect } from "./lib/db.ts";
 import { loadEnv, repoRoot, requireEnv } from "./lib/env.ts";
 
 const SITE_CODE = "DEMO-LIVE";
 const KEYS = ["DEMO_OPERATOR_EMAIL", "DEMO_OPERATOR_PASSWORD", "DEMO_FM_EMAIL", "DEMO_FM_PASSWORD"] as const;
+
+/** Only throwaway demo addresses may be created or overwritten; a real account in .env is refused. */
+export const isDemoEmail = (e: string) => /^[a-z0-9._-]+@spotter-demo\.test$/i.test(e);
+
+/** A credentials file must be git-ignored (never write passwords to a tracked path). */
+function gitIgnored(file: string): boolean {
+  return spawnSync("git", ["check-ignore", "-q", basename(file)], { cwd: dirname(file) }).status === 0;
+}
 
 export const newPassword = () => randomBytes(18).toString("base64url");
 
@@ -91,6 +100,8 @@ async function seedReference(sql: ReturnType<typeof connect>): Promise<{ siteId:
     if (rs && rs.n > 0) break;
     await sql`select private.step_loop(20)`;
   }
+  const [built] = await sql`select count(*)::int n from public.replay_scenarios where operator_id = ${op.id}`;
+  if (!built || built.n === 0) throw new Error("no replay was built for the demo operator (check private.loop_queue errors)");
   return { siteId: siteId ?? (await sql`select id from public.sites where code = ${SITE_CODE}`)[0]!.id, operatorId: op.id as string };
 }
 
@@ -119,6 +130,13 @@ async function main() {
     DEMO_FM_EMAIL: env.DEMO_FM_EMAIL || "anita.manager@spotter-demo.test",
     DEMO_FM_PASSWORD: env.DEMO_FM_PASSWORD || newPassword(),
   };
+  for (const e of [creds.DEMO_OPERATOR_EMAIL, creds.DEMO_FM_EMAIL]) {
+    if (!isDemoEmail(e)) throw new Error("demo emails must end in @spotter-demo.test; refusing to touch another account");
+  }
+  const targets = [join(repoRoot(), ".env")];
+  const also = process.argv.indexOf("--also-env");
+  if (also >= 0 && process.argv[also + 1]) targets.push(process.argv[also + 1]!);
+  for (const file of targets) if (!gitIgnored(file)) throw new Error("a credentials file is not git-ignored; refusing to write passwords there");
   const sql = connect({ quiet: true });
   try {
     const { siteId, operatorId } = await seedReference(sql);
@@ -135,9 +153,6 @@ async function main() {
     await sql.end();
   }
 
-  const targets = [join(repoRoot(), ".env")];
-  const also = process.argv.indexOf("--also-env");
-  if (also >= 0 && process.argv[also + 1]) targets.push(process.argv[also + 1]!);
   for (const file of targets) {
     const text = existsSync(file) ? readFileSync(file, "utf8") : "";
     writeFileSync(file, upsertEnv(text, creds), "utf8");
