@@ -52,13 +52,18 @@ export function missingFields(s: Pick<IncidentState, "kind" | "severity">): Arra
 }
 
 /**
- * An injury is never sealed (the supervisor must learn of it): a near miss cannot be level 5, and a
- * level 5 cannot be a near miss. The sheet disables the other choice and says why; the reducer and
- * the payload enforce it as well, so no path can send p_non_punitive=true with an injury.
+ * Harm is never sealed (migration 003h, data-model 2.10): an incident of type first_aid or sos, or of
+ * severity 5, always goes to the supervisor. So a near miss (non_punitive) is impossible with any of
+ * them. The sheet disables the near-miss choice, and the severity 5 choice while near miss is chosen,
+ * and says why; the reducer and the payload enforce it as well.
  */
+const HARM_KINDS: readonly string[] = ["first_aid", "sos"];
 export const isInjury = (severity: Severity | null) => severity === 5;
-export const kindAllowed = (kind: IncidentKind, severity: Severity | null) => !(kind === "near_miss" && isInjury(severity));
-export const severityAllowed = (severity: Severity, kind: IncidentKind | null) => !(kind === "near_miss" && isInjury(severity));
+export const isHarm = (kind: string | null, severity: Severity | null) => (kind !== null && HARM_KINDS.includes(kind)) || isInjury(severity);
+/** May this combination be sealed (p_non_punitive=true)? Only a near miss with no harm. */
+export const canSeal = (kind: string | null, severity: Severity | null) => kind === "near_miss" && !isHarm(kind, severity);
+export const kindAllowed = (kind: IncidentKind, severity: Severity | null) => !(kind === "near_miss" && isHarm(kind, severity));
+export const severityAllowed = (severity: Severity, kind: IncidentKind | null) => !(kind === "near_miss" && isHarm(kind, severity));
 
 const locked = (s: IncidentState) => s.phase === "sending" || s.phase === "sent";
 
@@ -83,7 +88,7 @@ export function incidentReducer(s: IncidentState, a: IncidentAction): IncidentSt
       // A restored draft only fills a sheet nobody has touched yet.
       if (s.phase !== "editing" || s.kind !== null || s.severity !== null || s.note !== "") return s;
       // A stored draft that breaks the injury rule loses its severity, so the person must choose again.
-      return { ...s, kind: a.draft.kind, severity: a.draft.kind === "near_miss" && isInjury(a.draft.severity) ? null : a.draft.severity, note: a.draft.note.slice(0, NOTE_MAX), requestId: a.draft.requestId };
+      return { ...s, kind: a.draft.kind, severity: !kindAllowed(a.draft.kind ?? "manual", a.draft.severity) ? null : a.draft.severity, note: a.draft.note.slice(0, NOTE_MAX), requestId: a.draft.requestId };
     case "reset":
       return initialIncident(a.requestId);
   }
@@ -101,6 +106,8 @@ export type Place = { lat: number; lon: number } | null;
 export function buildPayload(s: IncidentState, place: Place): z.input<typeof IncidentLogIn> {
   if (s.kind === null || s.severity === null) throw new Error("incident draft is incomplete");
   if (!kindAllowed(s.kind, s.severity)) throw new Error("an injury cannot be reported as a near miss");
+  // Belt and braces for a hand-built state: harm is never sealed, whatever the type says.
+  if (s.kind === "near_miss" && isHarm(s.kind, s.severity)) throw new Error("harm is never sealed");
   return {
     p_request_id: s.requestId,
     p_incident_type: s.kind,
@@ -108,7 +115,7 @@ export function buildPayload(s: IncidentState, place: Place): z.input<typeof Inc
     p_description: cleanNote(s.note),
     p_lat: place?.lat ?? null,
     p_lon: place?.lon ?? null,
-    p_non_punitive: s.kind === "near_miss" && !isInjury(s.severity),
+    p_non_punitive: canSeal(s.kind, s.severity),
     p_source_event_id: null,
   };
 }
