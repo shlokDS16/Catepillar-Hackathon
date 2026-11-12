@@ -79,3 +79,7 @@ in `claude/`. End-of-session routine runs before any session finishes.
 - Unmerged at pause: Track B B4 (migration 002/002b applied to Supabase; reviews pending), Track F F06/F07 in progress. Both tracks asked to leave a WIP commit + stop note and push.
 - Track F stopped at 8c1a019 (F06-F08 + partial F12, green, code review pending). Not merged.
 - Track B stopped at 76e6278 (WIP; 002/002b live on Supabase; B4 review fixes drafted in supabase/wip/002c, not applied). Not merged. Both tracks stopped; integrator idle.
+
+## 2026-11-12 — Final build window (lead L0 session)
+- Merged and deployed: landing v1+v2, portal B phases 1-4, map redesign, animated lessons, R3/R4 Replay, F10, F11, F14, F15, F20; backend near-miss privacy 003d-003h, B10 detectors, B10b replay + scoring, B12 alert engine (dry run).
+- SECURITY NOTE: a backend subagent (lane/l1-safety-seeds) sourced .env into its shell and the secret values were printed into that agent's local transcript. Nothing was committed (diff scanned). Shlok to decide on rotation: Supabase secret key + DB password, Twilio auth token, Telegram bot token, Groq/Gemini/Pinecone/Voyage/LlamaCloud/Sarvam keys.
