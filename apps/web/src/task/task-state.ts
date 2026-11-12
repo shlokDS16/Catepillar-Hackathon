@@ -113,14 +113,14 @@ export function splitFactorKey(key: string): { group: string; value: string } {
 export const WEATHER_HEAT_KEY = "weather_heat:combined";
 
 /**
- * The ETA model multiplies a `weather:*` label (the forecast category, e.g. hot +11 %) and a `heat:*` band (the
+ * The ETA model multiplies a `weather:hot|cold` label (the forecast category, e.g. hot +11 %) and a `heat:*` band (the
  * temperature, e.g. extreme +17 %). Both describe a hot day, so listing them apart reads as a double count
  * (judge review #8). When both are present and not clear/normal they are shown as ONE factor whose multiplier
  * is their product, which is exactly what the estimate applies. Other factors pass through unchanged.
  */
 export function mergeWeatherHeat(factors: readonly EtaFactor[] | null | undefined): EtaFactor[] {
   const list = [...(factors ?? [])];
-  const w = list.find((f) => f.key.startsWith("weather:") && f.multiplier !== 1);
+  const w = list.find((f) => (f.key === "weather:hot" || f.key === "weather:cold") && f.multiplier !== 1);
   const h = list.find((f) => f.key.startsWith("heat:") && f.multiplier !== 1);
   if (!w || !h) return list;
   const merged: EtaFactor = { key: WEATHER_HEAT_KEY, multiplier: w.multiplier * h.multiplier, assumed: Boolean(w.assumed || h.assumed) };

@@ -803,6 +803,7 @@
         "circadian": "Shift hour"
       },
       "value": {
+        "weather_heat": { "combined": "weather label and temperature band, multiplied" },
         "weather": {
           "clear": "clear",
           "hot": "hot",
@@ -1185,14 +1186,15 @@
       "none": "Not computed yet",
       "inProgress": "Evaluation in progress",
       "illustrative": "Illustrative, not measured: typed demo values, not computed from any run in this repository.",
-      "popDetection": "Population: {n_idle} idle-excess and {n_over} overheat test events, simulated cohort, period not recorded.",
-      "thresholds": "Alarm thresholds in use: idle excess raises caution at 40 % idle of engine hours and warning at 50 %, over a rolling 60 simulated minutes (at least 30). Overheat: no threshold is defined in the shipped detector.",
+      "popDetection": "Typed with the figure: n = {n} (idle excess). No events or run sit behind it.",
+      "thresholds": "Idle excess: caution from 40 % idle of engine hours over a rolling 60 simulated minutes (at least 30). Severity rises at 50 %, but the alert stays at caution (site defaults, configurable). Overheat: no detector is shipped, so there is no threshold.",
       "driftLabel": "Hydraulic drift (EWMA)",
+      "noDetector": "no detector shipped",
       "driftNone": "not evaluated yet",
-      "popEta": "Population: {n} tasks, all conditions, typed demo value. It is not derived from the per-condition rows above (n = {rows}) and does not equal the weighted figure in the banner.",
+      "popEta": "n = {n}, typed with the figure; no tasks sit behind it. It is not derived from the per-condition rows above (n = {rows}) and is not the banner's weighted figure.",
       "illustrativeTag": "illustrative, not measured",
-      "popImpact": "Population: {n} operators per arm, simulated cohort, period not recorded. Illustrative, not measured.",
-      "popOps": "Population: {n} machines, simulated, period not recorded.",
+      "popImpact": "n = {n} per arm, typed; no run sits behind it.",
+      "popOps": "n = {n}, typed; the demo fixtures hold fewer machines.",
       "detection": "Detection",
       "precision": "Precision",
       "recall": "Recall",

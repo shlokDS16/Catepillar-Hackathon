@@ -219,12 +219,16 @@ function EvidenceCard({ evidence, rowsN }: { evidence: EvidenceLite[]; rowsN: nu
       <div className="an-ev-grid">
         <div className="an-ev-block">
           <h3 className="t-label">{t("detection")}</h3>
-          <p className="t-meta">{t("popDetection", { n_idle: get("detector.precision", "idle_excess")?.n ?? 0, n_over: get("detector.precision", "overheat")?.n ?? 0 })}</p>
+          <p className="t-meta">{t("popDetection", { n: get("detector.precision", "idle_excess")?.n ?? 0 })}</p>
           <ul className="an-ev-list">
-            {(["idle_excess", "overheat"] as const).flatMap((ty) => [
+            {(["idle_excess"] as const).flatMap((ty) => [
               meter(`${t("precision")} · ${t(`type.${ty}`)}`, get("detector.precision", ty)),
               meter(`${t("recall")} · ${t(`type.${ty}`)}`, get("detector.recall", ty)),
             ])}
+            <li className="an-ev-row">
+              <span className="t-label">{t("type.overheat")}</span>
+              <span className="t-meta an-ev-none">{t("noDetector")}</span>
+            </li>
             <li className="an-ev-row">
               <span className="t-label">{t("driftLabel")}</span>
               <span className="t-meta an-ev-none">{t("driftNone")}</span>

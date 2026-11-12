@@ -1,6 +1,7 @@
 import { demoReplayScenario } from "@/replay/fixture-recording";
 import { AnomalyDetected, MySnapshotOut } from "@cat/shared";
 import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, swingLessonContent, protocolCard, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
+import { fixtureProtocolCard } from "@/replay/protocol-cards";
 import { RpcError, type DataPort, type PortMessage, type RecurrenceHint } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
 import type { SiteMapData } from "@/map/site-map";
@@ -203,7 +204,7 @@ export class FixtureAdapter implements DataPort {
 
   async protocolCard(id: string) {
     await wait(this.latencyMs);
-    return id === protocolCard.id ? protocolCard : { ...protocolCard, id };
+    return fixtureProtocolCard(id, protocolCard);
   }
 
   /**

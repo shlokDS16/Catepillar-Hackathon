@@ -49,4 +49,16 @@ describe("AnalyticsScreen render", () => {
     expect(out).toContain("MAE ours: 4.7 min");
     expect(out).toContain("Repeat rate, control: 27%");
   });
+  it("states populations and what the detector does (judge review #6, #7)", () => {
+    const text = strip(out);
+    expect(text).toContain("Hot condition, all task types, n = 152 tasks");
+    expect(text).toContain("The banner uses 128 of those 152 tasks");
+    expect(text).toContain("typed with the figure");
+    expect(text).toContain("illustrative figures, not yet measured");
+    expect(text).toContain("the alert stays at caution");
+    expect(text).not.toContain("warning at 50");
+    expect(text).not.toMatch(/Precision · overheat/);
+    expect(text).toContain("no detector shipped");
+    expect(text).toContain("Hydraulic drift (EWMA) not evaluated yet");
+  });
 });

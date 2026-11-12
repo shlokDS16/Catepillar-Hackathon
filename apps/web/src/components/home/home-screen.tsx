@@ -39,7 +39,7 @@ export function HomeScreen() {
     );
   }
 
-  const etaImpact = mergeWeatherHeat(current?.eta_factors).find((f) => f.key.startsWith("weather_heat:") || f.key.startsWith("heat:") || f.key.startsWith("weather:"));
+  const etaImpact = mergeWeatherHeat(current?.eta_factors).find((f) => (f.key.startsWith("weather_heat:") || f.key.startsWith("heat:") || f.key.startsWith("weather:")) && f.multiplier > 1);
 
   return (
     <div className="home">

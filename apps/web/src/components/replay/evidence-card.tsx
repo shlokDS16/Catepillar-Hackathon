@@ -8,7 +8,6 @@ import { TrendChart } from "@/components/replay/trend-chart";
 import { Plate } from "@/components/ui/plate";
 import { useDataPort } from "@/data/store";
 import type { Lang, ProtocolCard } from "@/data/types";
-import { localProtocolCard } from "@/replay/protocol-cards";
 import { compassKey } from "@/map/site-map";
 import { severityWord, windArrowDeg } from "@/replay/evidence";
 import type { EvidenceCard } from "@cat/shared";
@@ -84,9 +83,7 @@ function ProtocolCardEvidence({ card }: { card: Extract<EvidenceCard, { type: "p
   const [loaded, setLoaded] = useState<{ id: string; card: ProtocolCard | null } | null>(null);
 
   const cardId = card.card_id;
-  const local = localProtocolCard(cardId);
   useEffect(() => {
-    if (local) return;
     let live = true;
     void port
       .protocolCard(cardId)
@@ -99,9 +96,9 @@ function ProtocolCardEvidence({ card }: { card: Extract<EvidenceCard, { type: "p
     return () => {
       live = false;
     };
-  }, [cardId, port, local]);
+  }, [cardId, port]);
 
-  const ready = local ? { id: cardId, card: local } : loaded?.id === cardId ? loaded : null;
+  const ready = loaded?.id === cardId ? loaded : null;
   if (!ready) return <Plate loading className="min-h-hit" aria-label={t("protocol.loading")} />;
   if (!ready.card) return <p className="t-body">{t("protocol.failed")}</p>;
 

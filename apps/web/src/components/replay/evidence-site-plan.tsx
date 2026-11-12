@@ -50,7 +50,7 @@ export function SitePlanFrame({
     <svg viewBox={`${box.x} ${box.y} ${box.w} ${box.h}`} role="img" aria-label={label} className="site-plan-svg">
       {zones.map((z) => {
         const c0 = planCentroid(z.polygon, center);
-        // A flag stands 3u above its point and 1.8u to the right; a name within that box drops 4u below it.
+        // A flag stands 3u above its point and 1.8u to the right; a name inside that box (within 3.5u of the cloth, from 4u above to 1.5u below the foot) drops to 3.2u below the foot.
         const hit = c0 ? (avoid ?? []).map(toXY).find((a) => Math.abs(c0.x - (a.x + 0.9 * u)) < 3.5 * u && c0.y > a.y - 4 * u && c0.y < a.y + 1.5 * u) : undefined;
         const c = c0 && hit ? { x: c0.x, y: hit.y + 3.2 * u } : c0;
         return (
