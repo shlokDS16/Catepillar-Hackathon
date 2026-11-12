@@ -1,0 +1,177 @@
+import {
+  compareWitness, firstDifference, parseWitnessLine, verifyLedger,
+  type LedgerExportRow, type LedgerVerifyResult, type WitnessComparison, type WitnessLine,
+} from "@cat/shared/ledger";
+import type { DataPort } from "@/data/port";
+import { RpcError } from "@/data/port";
+
+/**
+ * F15 helpers for /fm/ledger (S9): the paste parser, the range check, the first-difference locator,
+ * the ledger_busy retry and the compare flow. Pure and port-driven so every branch is unit-tested.
+ *
+ * The published side (root, head, n) comes ONLY from the pasted line; it never reads the database.
+ * The recomputed side is computed here in the browser by `verifyLedger` from exported rows.
+ * `ledger_recompute` is a secondary "server says" line and never decides the verdict.
+ */
+
+export type PasteState =
+  | { state: "empty" }
+  | { state: "ok"; witness: WitnessLine }
+  | { state: "malformed" };
+
+/** Telegram messages can carry text around the checkpoint, so each line is tried in turn. */
+export function parsePaste(text: string): PasteState {
+  if (text.trim() === "") return { state: "empty" };
+  for (const line of text.split(/\r?\n/)) {
+    const w = parseWitnessLine(line);
+    if (w && w.first_seq >= 1 && w.first_seq <= w.last_seq) return { state: "ok", witness: w };
+  }
+  return { state: "malformed" };
+}
+
+export type RangeCheck = { ok: true; first: number; last: number } | { ok: false; field: "from" | "to" | "order" };
+
+const INT = /^\d{1,9}$/;
+
+/** `validation` per interaction-map A23: not a positive integer, or first > last. */
+export function checkRange(from: string, to: string): RangeCheck {
+  const f = from.trim();
+  const t = to.trim();
+  if (!INT.test(f) || Number(f) < 1) return { ok: false, field: "from" };
+  if (!INT.test(t) || Number(t) < 1) return { ok: false, field: "to" };
+  if (Number(f) > Number(t)) return { ok: false, field: "order" };
+  return { ok: true, first: Number(f), last: Number(t) };
+}
+
+export function groupsOf4(hex: string): string[] {
+  const out: string[] = [];
+  for (let i = 0; i < hex.length; i += 4) out.push(hex.slice(i, i + 4));
+  return out;
+}
+
+export interface DiffAt {
+  /** Index into the 64-character string. */
+  index: number;
+  group: number;
+  char: number;
+}
+
+/** Where the boxed group and the ▲ go; null when the two strings are equal. */
+export function diffAt(a: string, b: string): DiffAt | null {
+  const index = firstDifference(a, b);
+  if (index === -1) return null;
+  return { index, group: Math.floor(index / 4), char: index % 4 };
+}
+
+export const BUSY_RETRY_MS = 2000;
+
+export class LedgerBusyError extends Error {
+  constructor() {
+    super("ledger_busy");
+    this.name = "LedgerBusyError";
+  }
+}
+
+const isBusy = (e: unknown) => e instanceof RpcError && e.code === "ledger_busy";
+
+/** ledger_busy: retry once after 2 s, then give up with LedgerBusyError (handoff R2-5). Other errors pass through. */
+export async function withBusyRetry<T>(
+  fn: () => Promise<T>,
+  sleep: (ms: number) => Promise<void> = (ms) => new Promise((r) => setTimeout(r, ms)),
+): Promise<T> {
+  try {
+    return await fn();
+  } catch (e) {
+    if (!isBusy(e)) throw e;
+  }
+  await sleep(BUSY_RETRY_MS);
+  try {
+    return await fn();
+  } catch (e) {
+    if (isBusy(e)) throw new LedgerBusyError();
+    throw e;
+  }
+}
+
+/** Sealed near-miss rows (backend privacy): the export marks them `sealed: true` and withholds content. */
+export type ExportRow = LedgerExportRow & { sealed?: boolean };
+
+export const isSealed = (row: ExportRow): boolean => row.sealed === true;
+export const countSealed = (rows: readonly ExportRow[]): number => rows.filter(isSealed).length;
+
+export type CompareOutcome =
+  | { kind: "validation"; field: "from" | "to" | "order" }
+  | { kind: "busy" }
+  | { kind: "network" }
+  | {
+      kind: "done";
+      first: number;
+      last: number;
+      /** Recomputed in this browser from the exported rows. */
+      local: LedgerVerifyResult;
+      /** Sealed rows are chain-linked only; they are never counted as verified content. */
+      sealed: number;
+      /** null when no line was pasted: "Paste the Telegram line to compare". */
+      witness: WitnessLine | null;
+      comparison: WitnessComparison | null;
+      /** The server's own recompute, secondary; null when unavailable. */
+      server: { root_hex: string; head_hash: string; leaf_count: number } | null;
+    };
+
+export async function runCompare(
+  port: Pick<DataPort, "ledgerExport" | "ledgerRecompute">,
+  input: { from: string; to: string; paste: PasteState },
+  sleep?: (ms: number) => Promise<void>,
+): Promise<CompareOutcome> {
+  const range = checkRange(input.from, input.to);
+  if (!range.ok) return { kind: "validation", field: range.field };
+  try {
+    const rows = (await withBusyRetry(
+      () => port.ledgerExport({ p_first_seq: range.first, p_last_seq: range.last }),
+      sleep,
+    )) as ExportRow[];
+    const local = await verifyLedger(rows);
+    const witness = input.paste.state === "ok" ? input.paste.witness : null;
+    const comparison = witness ? compareWitness(local, witness) : null;
+    let server: { root_hex: string; head_hash: string; leaf_count: number } | null = null;
+    try {
+      const r = await port.ledgerRecompute({ p_first_seq: range.first, p_last_seq: range.last });
+      server = { root_hex: r.root_hex, head_hash: r.head_hash, leaf_count: r.leaf_count };
+    } catch {
+      server = null; // secondary line only; the verdict never depends on it
+    }
+    return { kind: "done", first: range.first, last: range.last, local, sealed: countSealed(rows), witness, comparison, server };
+  } catch (e) {
+    if (e instanceof LedgerBusyError) return { kind: "busy" };
+    return { kind: "network" };
+  }
+}
+
+/** Entries-table cells. Sealed and near-miss rows expose no operator, machine, place or text. */
+export interface RowView {
+  seq: string;
+  sealed: boolean;
+  time: string | null;
+  type: string | null;
+  operator: string | null;
+  machine: string | null;
+  hashPrefix: string;
+}
+
+export function rowView(row: ExportRow): RowView {
+  const hashPrefix = row.entry_hash.slice(0, 8);
+  if (isSealed(row)) return { seq: row.seq, sealed: true, time: null, type: null, operator: null, machine: null, hashPrefix };
+  const f = row.canonical_fields;
+  const str = (v: unknown) => (typeof v === "string" && v.length > 0 ? v : null);
+  const nearMiss = f.non_punitive === true || f.incident_type === "near_miss";
+  const at = str(f.occurred_at);
+  return {
+    seq: row.seq,
+    sealed: false,
+    time: at ? at.slice(0, 16).replace("T", " ") : null,
+    type: str(f.incident_type),
+    operator: nearMiss ? null : str(f.operator_id)?.slice(0, 8) ?? null,
+    machine: str(f.machine_id)?.slice(0, 8) ?? null,
+    hashPrefix,
+  };
+}
