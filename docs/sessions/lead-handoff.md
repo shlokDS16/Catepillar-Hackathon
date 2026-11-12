@@ -25,6 +25,8 @@ B10b replay build + server scoring 006/006b/006c (parity with web scoring; rando
 - Wave: phase-5 QA (browser, every screen), F11 Safety, F20 Analytics (check branches lane/l2-qa2, lane/l2-f11, lane/l2-f20).
 
 ## Queue (priority order)
+- L1 SAFETY: `incident_log` must refuse p_non_punitive=true for an injury (an injury is never sealed; F11 review). New migration + SQL test.
+- L1: seed the two lesson pictograms (belt_compare, blindspot) and the swing-radius lesson in the DB so the animated diagrams show on the live path.
 0. DONE (map redesign + animated lessons merged). Was: Shlok feedback (2026-11-12, relayed): (a) "Map could be better" (op /op/map and FM /fm/map: design pass in the B ink frame, fix the ~400x320 FM canvas, richer Guardian rings/trail within Site Signage); (b) "visual animated learning": animated lesson cards and illustrations on the Lesson route (motion carve-out, visual-language §5.1; reduced-motion stills; no autoplay audio). Check with the Track F session first that it is not already building either.
 3. L1 B10b/B11: replay scoring server-side (must match apps/web/src/replay/fixture-scoring.ts scoreReplay and data-model §2.8; weights chosen there because §2.8 gives none: procedure = 1/2 protocol Kendall pairs + 1/2 investigation, investigation = 1/2 net relevance + 1/2 order agreement with ideal; safety over safety-axis steps; efficiency = ms within time_limit_s; record them in §2.8 as the canonical weights); add additive contract fields reenactment.event_ms and machine_track[].seatbelt_fastened.
 4. Portal B phase 4: FM Inbox split view / mobile triage, FM map sizing fix, Ledger auto-verify on open.

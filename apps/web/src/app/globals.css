@@ -14,6 +14,7 @@
 @import "../styles/debrief-ink.css" layer(components);
 @import "../styles/portal-fm.css" layer(components);
 @import "../styles/ledger.css" layer(components);
+@import "../styles/analytics.css" layer(components);
 @import "../styles/map-stage.css" layer(components);
 @import "../styles/map-overlay.css" layer(components);
 @import "../styles/map-timeline.css" layer(components);
