@@ -162,6 +162,7 @@ select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_f
 do $$
 begin
   assert (select count(*) from public.anomalies) = 0, 'the FM of another site reads none of site 1''s anomalies';
+  assert (select count(*) from public.operator_pairings) = 0, 'the FM of another site reads none of site 1''s pairings (005c)';
 end $$;
 select set_config('request.jwt.claims', json_build_object('sub', pg_temp.id('u_fm1'), 'role', 'authenticated')::text, true);
 do $$
