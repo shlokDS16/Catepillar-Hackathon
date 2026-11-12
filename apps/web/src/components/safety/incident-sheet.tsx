@@ -7,11 +7,14 @@ import { Button } from "@/components/ui/button";
 import { Mark } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import { Sheet } from "@/components/ui/sheet";
+import { newRequestId } from "@/data/port";
 import {
   INCIDENT_KINDS,
+  kindAllowed,
   missingFields,
   NOTE_MAX,
   SEVERITIES,
+  severityAllowed,
   type IncidentAction,
   type IncidentKind,
   type IncidentState,
@@ -86,7 +89,7 @@ export function IncidentSheet({ open, onClose, state, dispatch, onSubmit, offlin
           <Button variant="primary" onClick={onClose}>
             {t("done")}
           </Button>
-          <Button onClick={() => dispatch({ type: "reset", requestId: crypto.randomUUID() })}>{t("another")}</Button>
+          <Button onClick={() => dispatch({ type: "reset", requestId: newRequestId() })}>{t("another")}</Button>
         </div>
       </Sheet>
     );
@@ -113,7 +116,7 @@ export function IncidentSheet({ open, onClose, state, dispatch, onSubmit, offlin
           <div className="choice-grid">
             {INCIDENT_KINDS.map((k) => (
               <label key={k} className="choice">
-                <input type="radio" name="incident-kind" className="choice-input" checked={state.kind === k} onChange={() => dispatch({ type: "kind", kind: k })} />
+                <input type="radio" name="incident-kind" className="choice-input" checked={state.kind === k} disabled={!kindAllowed(k, state.severity)} onChange={() => dispatch({ type: "kind", kind: k })} />
                 <span className="choice-body">
                   {KIND_ICON[k]}
                   <span className="t-label">{t(`type.${k}.label`)}</span>
@@ -122,6 +125,11 @@ export function IncidentSheet({ open, onClose, state, dispatch, onSubmit, offlin
               </label>
             ))}
           </div>
+          {state.severity === 5 ? (
+            <p className="t-label" role="note">
+              {t("injuryNoNearMiss")}
+            </p>
+          ) : null}
           {missing.includes("kind") ? (
             <p className="t-label" role="alert">
               {t("missingKind")}
@@ -141,7 +149,7 @@ export function IncidentSheet({ open, onClose, state, dispatch, onSubmit, offlin
           <div className="choice-grid" data-cols="3">
             {SEVERITIES.map((n) => (
               <label key={n} className="choice" data-sev={n}>
-                <input type="radio" name="incident-severity" className="choice-input" checked={state.severity === n} onChange={() => dispatch({ type: "severity", severity: n })} />
+                <input type="radio" name="incident-severity" className="choice-input" checked={state.severity === n} disabled={!severityAllowed(n, state.kind)} onChange={() => dispatch({ type: "severity", severity: n })} />
                 <span className="choice-body">
                   <SeverityGlyph level={n} />
                   <span className="t-label">{t(`severity.${n}.label`)}</span>
@@ -150,6 +158,11 @@ export function IncidentSheet({ open, onClose, state, dispatch, onSubmit, offlin
               </label>
             ))}
           </div>
+          {state.kind === "near_miss" ? (
+            <p className="t-label" role="note">
+              {t("injuryNoNearMissHint")}
+            </p>
+          ) : null}
           {state.severity === 5 ? (
             <p className="t-label" role="note">
               {t("injuryNote")}

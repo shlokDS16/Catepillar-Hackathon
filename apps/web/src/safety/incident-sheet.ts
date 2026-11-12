@@ -27,6 +27,8 @@ export type IncidentState = {
 };
 
 export type IncidentDraft = { kind: IncidentKind | null; severity: Severity | null; note: string; requestId: string };
+/** What is stored: the draft plus the user it belongs to, so a shared phone never shows it to someone else. */
+type StoredDraft = IncidentDraft & { owner: string };
 
 export type IncidentAction =
   | { type: "kind"; kind: IncidentKind }
@@ -49,14 +51,23 @@ export function missingFields(s: Pick<IncidentState, "kind" | "severity">): Arra
   return out;
 }
 
+/**
+ * An injury is never sealed (the supervisor must learn of it): a near miss cannot be level 5, and a
+ * level 5 cannot be a near miss. The sheet disables the other choice and says why; the reducer and
+ * the payload enforce it as well, so no path can send p_non_punitive=true with an injury.
+ */
+export const isInjury = (severity: Severity | null) => severity === 5;
+export const kindAllowed = (kind: IncidentKind, severity: Severity | null) => !(kind === "near_miss" && isInjury(severity));
+export const severityAllowed = (severity: Severity, kind: IncidentKind | null) => !(kind === "near_miss" && isInjury(severity));
+
 const locked = (s: IncidentState) => s.phase === "sending" || s.phase === "sent";
 
 export function incidentReducer(s: IncidentState, a: IncidentAction): IncidentState {
   switch (a.type) {
     case "kind":
-      return locked(s) ? s : { ...s, kind: a.kind };
+      return locked(s) || !kindAllowed(a.kind, s.severity) ? s : { ...s, kind: a.kind };
     case "severity":
-      return locked(s) ? s : { ...s, severity: a.severity };
+      return locked(s) || !severityAllowed(a.severity, s.kind) ? s : { ...s, severity: a.severity };
     case "note":
       return locked(s) ? s : { ...s, note: a.note.slice(0, NOTE_MAX) };
     case "submit":
@@ -71,7 +82,8 @@ export function incidentReducer(s: IncidentState, a: IncidentAction): IncidentSt
     case "restore":
       // A restored draft only fills a sheet nobody has touched yet.
       if (s.phase !== "editing" || s.kind !== null || s.severity !== null || s.note !== "") return s;
-      return { ...s, kind: a.draft.kind, severity: a.draft.severity, note: a.draft.note.slice(0, NOTE_MAX), requestId: a.draft.requestId };
+      // A stored draft that breaks the injury rule loses its severity, so the person must choose again.
+      return { ...s, kind: a.draft.kind, severity: a.draft.kind === "near_miss" && isInjury(a.draft.severity) ? null : a.draft.severity, note: a.draft.note.slice(0, NOTE_MAX), requestId: a.draft.requestId };
     case "reset":
       return initialIncident(a.requestId);
   }
@@ -88,6 +100,7 @@ export type Place = { lat: number; lon: number } | null;
 /** The `incident_log` arguments, exactly as the contract has them. A null note gets the type label server-side (UI-15). */
 export function buildPayload(s: IncidentState, place: Place): z.input<typeof IncidentLogIn> {
   if (s.kind === null || s.severity === null) throw new Error("incident draft is incomplete");
+  if (!kindAllowed(s.kind, s.severity)) throw new Error("an injury cannot be reported as a near miss");
   return {
     p_request_id: s.requestId,
     p_incident_type: s.kind,
@@ -95,7 +108,7 @@ export function buildPayload(s: IncidentState, place: Place): z.input<typeof Inc
     p_description: cleanNote(s.note),
     p_lat: place?.lat ?? null,
     p_lon: place?.lon ?? null,
-    p_non_punitive: s.kind === "near_miss",
+    p_non_punitive: s.kind === "near_miss" && !isInjury(s.severity),
     p_source_event_id: null,
   };
 }
@@ -108,22 +121,35 @@ export function isEmptyDraft(s: Pick<IncidentState, "kind" | "severity" | "note"
   return s.kind === null && s.severity === null && s.note.trim() === "";
 }
 
-export function saveDraft(store: StorageLike | null, s: IncidentState): void {
+export function saveDraft(store: StorageLike | null, owner: string, s: IncidentState): void {
   if (!store) return;
   try {
     if (s.phase === "sent" || isEmptyDraft(s)) store.removeItem(DRAFT_KEY);
-    else store.setItem(DRAFT_KEY, JSON.stringify({ kind: s.kind, severity: s.severity, note: s.note, requestId: s.requestId } satisfies IncidentDraft));
+    else store.setItem(DRAFT_KEY, JSON.stringify({ owner, kind: s.kind, severity: s.severity, note: s.note, requestId: s.requestId } satisfies StoredDraft));
   } catch {
     /* storage can be blocked or full: the draft then lives in memory only */
   }
 }
 
-export function loadDraft(store: StorageLike | null): IncidentDraft | null {
+/** Sign-out: nothing of the last person's report may stay behind. */
+export function clearDraft(store: StorageLike | null): void {
+  try {
+    store?.removeItem(DRAFT_KEY);
+  } catch {
+    /* ignore */
+  }
+}
+
+export function loadDraft(store: StorageLike | null, owner: string): IncidentDraft | null {
   if (!store) return null;
   try {
     const raw = store.getItem(DRAFT_KEY);
     if (!raw) return null;
     const v = JSON.parse(raw) as Record<string, unknown>;
+    if (v.owner !== owner) {
+      store.removeItem(DRAFT_KEY); // someone else's draft is deleted, never shown
+      return null;
+    }
     const kind = INCIDENT_KINDS.includes(v.kind as IncidentKind) ? (v.kind as IncidentKind) : null;
     const severity = SEVERITIES.includes(v.severity as Severity) ? (v.severity as Severity) : null;
     const note = typeof v.note === "string" ? v.note.slice(0, NOTE_MAX) : "";

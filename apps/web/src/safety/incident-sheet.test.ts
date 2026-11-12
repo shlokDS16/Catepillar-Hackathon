@@ -2,6 +2,7 @@ import { IncidentLogIn } from "@cat/shared";
 import { describe, expect, it } from "vitest";
 import {
   buildPayload,
+  clearDraft,
   cleanNote,
   DRAFT_KEY,
   incidentReducer,
@@ -17,6 +18,7 @@ import {
 } from "./incident-sheet";
 
 const ID = "11111111-1111-4111-8111-111111111111";
+const OWNER = "user-1";
 const run = (actions: IncidentAction[], from = initialIncident(ID)) => actions.reduce(incidentReducer, from);
 const filled = () => run([{ type: "kind", kind: "near_miss" }, { type: "severity", severity: 3 }]);
 
@@ -53,6 +55,7 @@ describe("payload follows the incident_log contract", () => {
   it("every kind and severity passes the shared schema, with and without a note or place", () => {
     for (const kind of ["near_miss", "first_aid", "property_damage", "manual"] as const) {
       for (const severity of [1, 3, 5] as const) {
+        if (kind === "near_miss" && severity === 5) continue; // not allowed, see "an injury is never sealed"
         for (const note of ["", "Reversing truck, 5 m.\nSecond line"]) {
           const s = run([{ type: "kind", kind }, { type: "severity", severity }, { type: "note", note }]);
           expect(IncidentLogIn.safeParse(buildPayload(s, null)).success).toBe(true);
@@ -68,6 +71,27 @@ describe("payload follows the incident_log contract", () => {
   });
   it("refuses to build from an incomplete draft", () => {
     expect(() => buildPayload(initialIncident(ID), null)).toThrow();
+  });
+});
+
+describe("an injury is never sealed", () => {
+  it("level 5 cannot be chosen for a near miss, and a near miss cannot be chosen for level 5", () => {
+    const nm = run([{ type: "kind", kind: "near_miss" }, { type: "severity", severity: 5 }]);
+    expect(nm.severity).toBeNull();
+    const inj = run([{ type: "severity", severity: 5 }, { type: "kind", kind: "near_miss" }]);
+    expect(inj.kind).toBeNull();
+    expect(run([{ type: "severity", severity: 5 }, { type: "kind", kind: "first_aid" }]).kind).toBe("first_aid");
+  });
+  it("no kind and severity combination sends p_non_punitive=true with level 5", () => {
+    for (const kind of ["near_miss", "first_aid", "property_damage", "manual"] as const) {
+      const s: IncidentState = { ...initialIncident(ID), kind, severity: 5 };
+      if (kind === "near_miss") expect(() => buildPayload(s, null)).toThrow();
+      else expect(buildPayload(s, null).p_non_punitive).toBe(false);
+    }
+  });
+  it("a restored near-miss draft at level 5 loses its severity", () => {
+    const s = run([{ type: "restore", draft: { kind: "near_miss", severity: 5, note: "", requestId: ID } }]);
+    expect(s.severity).toBeNull();
   });
 });
 
@@ -111,8 +135,8 @@ describe("draft in sessionStorage", () => {
   it("saves while editing and restores into an untouched sheet, request id included", () => {
     const store = memory();
     const s = run([{ type: "note", note: "wet floor" }], filled());
-    saveDraft(store, s);
-    const draft = loadDraft(store);
+    saveDraft(store, OWNER, s);
+    const draft = loadDraft(store, OWNER);
     expect(draft).toEqual({ kind: "near_miss", severity: 3, note: "wet floor", requestId: ID });
     const restored = run([{ type: "restore", draft: draft! }], initialIncident("other"));
     expect(restored).toMatchObject({ kind: "near_miss", severity: 3, note: "wet floor", requestId: ID, phase: "editing" });
@@ -120,33 +144,42 @@ describe("draft in sessionStorage", () => {
   it("keeps a failed draft, and a restore never overwrites what is already typed", () => {
     const store = memory();
     const failed = run([{ type: "submit" }, { type: "failed", code: "network" }], filled());
-    saveDraft(store, failed);
+    saveDraft(store, OWNER, failed);
     expect(store.data.has(DRAFT_KEY)).toBe(true);
     const typing = run([{ type: "note", note: "mine" }]);
-    expect(run([{ type: "restore", draft: loadDraft(store)! }], typing)).toEqual(typing);
+    expect(run([{ type: "restore", draft: loadDraft(store, OWNER)! }], typing)).toEqual(typing);
   });
   it("is cleared after a send and when the draft is empty", () => {
     const store = memory();
-    saveDraft(store, filled());
+    saveDraft(store, OWNER, filled());
     expect(store.data.has(DRAFT_KEY)).toBe(true);
-    saveDraft(store, run([{ type: "submit" }, { type: "sent", eventId: "e" }], filled()));
+    saveDraft(store, OWNER, run([{ type: "submit" }, { type: "sent", eventId: "e" }], filled()));
     expect(store.data.has(DRAFT_KEY)).toBe(false);
-    saveDraft(store, filled());
-    saveDraft(store, initialIncident(ID));
+    saveDraft(store, OWNER, filled());
+    saveDraft(store, OWNER, initialIncident(ID));
     expect(store.data.has(DRAFT_KEY)).toBe(false);
+  });
+  it("never shows one user's draft to another, and deletes it", () => {
+    const store = memory();
+    saveDraft(store, OWNER, filled());
+    expect(loadDraft(store, "user-2")).toBeNull();
+    expect(store.data.has(DRAFT_KEY)).toBe(false);
+    saveDraft(store, OWNER, filled());
+    clearDraft(store);
+    expect(loadDraft(store, OWNER)).toBeNull();
   });
   it("survives blocked storage and a corrupt entry", () => {
     const deny = () => {
       throw new Error("denied");
     };
     const blocked: StorageLike = { getItem: deny, setItem: deny, removeItem: deny };
-    expect(() => saveDraft(blocked, filled())).not.toThrow();
-    expect(loadDraft(blocked)).toBeNull();
-    expect(loadDraft(null)).toBeNull();
+    expect(() => saveDraft(blocked, OWNER, filled())).not.toThrow();
+    expect(loadDraft(blocked, OWNER)).toBeNull();
+    expect(loadDraft(null, OWNER)).toBeNull();
     const store = memory();
     store.setItem(DRAFT_KEY, "{not json");
-    expect(loadDraft(store)).toBeNull();
+    expect(loadDraft(store, OWNER)).toBeNull();
     store.setItem(DRAFT_KEY, JSON.stringify({ kind: "bogus", severity: 4, note: "", requestId: ID }));
-    expect(loadDraft(store)).toBeNull();
+    expect(loadDraft(store, OWNER)).toBeNull();
   });
 });

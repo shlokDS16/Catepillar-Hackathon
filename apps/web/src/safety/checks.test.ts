@@ -17,7 +17,7 @@ describe("deriveChecks", () => {
     const op = { ppe: { helmet: true, vest: false }, nearest: { kind: "person", id: "x", distance_m: 22.4, zone: "awareness" } } as never;
     const c = deriveChecks(null, op, { wbgt_c: 31.2 } as never);
     expect(c.ppe.map((p) => `${p.item}:${p.state}`)).toEqual(["helmet:on", "vest:off", "boots:unknown", "gloves:unknown"]);
-    expect(c.proximity).toEqual({ kind: "near", what: "person", distance_m: 22 });
+    expect(c.proximity).toEqual({ kind: "near", what: "person", distance_m: 22, zone: "awareness" });
     expect(c.wbgt_c).toBe(31.2);
     expect(deriveChecks(null, { ppe: {}, nearest: null } as never, null).proximity).toEqual({ kind: "none" });
   });

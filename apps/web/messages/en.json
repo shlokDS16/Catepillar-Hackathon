@@ -1004,7 +1004,8 @@
       "escalating": "Your supervisor will be alerted soon.",
       "escalated": "Your supervisor has been alerted.",
       "acknowledged": "You acknowledged this.",
-      "resolved": "Done. This is closed."
+      "resolved": "Done. This is closed.",
+      "info": "This is for your information. Nothing to tap."
     },
     "at": "{time}",
     "seatbelt": {
@@ -1067,7 +1068,7 @@
         "hint": "Something else"
       }
     },
-    "nearMissPrivacy": "A near miss is not a report against anyone. Your supervisor sees it without your name. It helps the site fix the cause, not blame a person.",
+    "nearMissPrivacy": "Your supervisor does not see this report. The safety trainer sees only the day, the type and how serious. Nobody sees your name or your note.",
     "severityLegend": "How serious?",
     "severity": {
       "1": {
@@ -1101,9 +1102,9 @@
     "recorded": "Recorded #{seq}",
     "nextTitle": "What happens next",
     "nextNearMiss": [
-      "Your supervisor sees what happened, without your name.",
-      "It is added to the site record. It cannot be changed later.",
-      "Nobody is blamed. It helps the site fix the cause."
+      "Your supervisor does not see this report.",
+      "The safety trainer sees only the day, the type and how serious. Nobody sees your name or your note.",
+      "It is added to the site record. It cannot be changed later."
     ],
     "nextOther": [
       "Your supervisor is told now.",
@@ -1111,7 +1112,9 @@
       "If someone still needs help, hold the SOS button."
     ],
     "done": "Done",
-    "another": "Report another"
+    "another": "Report another",
+    "injuryNoNearMiss": "Injuries always go to your supervisor, so Near miss is off.",
+    "injuryNoNearMissHint": "Someone hurt? Choose First aid. Injuries always go to your supervisor."
   },
   "analytics": {
     "title": "Task time: estimate vs actual",

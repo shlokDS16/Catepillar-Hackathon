@@ -6,7 +6,7 @@ import { visibleAlerts } from "@/alerts/selectors";
 export type SeatbeltCheck = "fastened" | "off" | "unknown";
 export type PpeItemState = "on" | "off" | "unknown";
 export const PPE_ORDER = ["helmet", "vest", "boots", "gloves"] as const;
-export type ProximityCheck = { kind: "none" } | { kind: "near"; what: "person" | "machine"; distance_m: number };
+export type ProximityCheck = { kind: "none" } | { kind: "near"; what: "person" | "machine"; distance_m: number; zone: "awareness" | "warning" | "danger" };
 
 export type SafetyChecks = {
   seatbelt: SeatbeltCheck;
@@ -23,7 +23,7 @@ export function deriveChecks(machine: Machine | null, operator: OperatorState | 
       const v = operator?.ppe[item];
       return { item, state: v === true ? "on" : v === false ? "off" : "unknown" };
     }),
-    proximity: operator?.nearest ? { kind: "near", what: operator.nearest.kind, distance_m: Math.round(operator.nearest.distance_m) } : { kind: "none" },
+    proximity: operator?.nearest ? { kind: "near", what: operator.nearest.kind, distance_m: Math.round(operator.nearest.distance_m), zone: operator.nearest.zone } : { kind: "none" },
     wbgt_c: weather?.wbgt_c ?? null,
   };
 }

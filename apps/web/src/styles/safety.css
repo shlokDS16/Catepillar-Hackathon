@@ -155,6 +155,22 @@
 .incident-form {
   /* the dock and SOS rail sit above the sheet; keep the last line clear of them */
   padding-bottom: var(--dock-total);
+  max-width: 40rem;
+}
+/* the tick is cut out of a filled square in the plate's own colour, or it vanishes on the CLEAR plate */
+.plate[data-tone="clear"] {
+  --mark-bg: var(--state-clear);
+}
+.check-ppe li {
+  align-items: flex-start;
+}
+.check-ppe li > span {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+.choice-input:disabled + .choice-body {
+  border-style: dashed;
 }
 .incident-next {
   margin: 0;

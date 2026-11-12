@@ -24,8 +24,8 @@ import {
   sessionStore,
 } from "@/safety/incident-sheet";
 
-type Ui = { open: boolean; restored: boolean; hydrated: boolean };
-type UiAction = { type: "open" } | { type: "close" } | { type: "hydrated"; restored: boolean } | { type: "clearRestored" };
+type Ui = { open: boolean; restored: boolean; /** the user whose draft was loaded; saving waits for it */ hydratedFor: string | null };
+type UiAction = { type: "open" } | { type: "close" } | { type: "hydrated"; restored: boolean; owner: string } | { type: "clearRestored" };
 function uiReducer(s: Ui, a: UiAction): Ui {
   switch (a.type) {
     case "open":
@@ -33,7 +33,7 @@ function uiReducer(s: Ui, a: UiAction): Ui {
     case "close":
       return { ...s, open: false };
     case "hydrated":
-      return { open: a.restored, restored: a.restored, hydrated: true };
+      return { open: a.restored, restored: a.restored, hydratedFor: a.owner };
     case "clearRestored":
       return { ...s, restored: false };
   }
@@ -55,25 +55,28 @@ export function SafetyScreen() {
   const machine = useAppState((s) => s.machine);
   const operator = useAppState((s) => s.operator);
   const snapshot = useAppState((s) => s.snapshot);
-  const ledgerSeq = useAppState((s) => s.ledgerSeq);
+  const ledgerSeq = useAppState((s) => s.ledgerSeqByCause);
   const offline = useAppState((s) => s.connectivity.kind === "nosignal");
 
   const [incident, dispatch] = useReducer(incidentReducer, undefined, () => initialIncident(newRequestId()));
-  const [ui, uiDispatch] = useReducer(uiReducer, { open: false, restored: false, hydrated: false });
-  const { open, restored, hydrated } = ui;
+  const [ui, uiDispatch] = useReducer(uiReducer, { open: false, restored: false, hydratedFor: null });
+  const { open, restored } = ui;
+  const owner = snapshot?.profile.user_id ?? null;
+  const hydrated = owner !== null && ui.hydratedFor === owner;
 
-  // Restore an unfinished report after a reload, then start saving. Saving waits for this so the
-  // empty first render never wipes the stored draft.
+  // Restore this user's unfinished report after a reload, then start saving. A draft that belongs to
+  // someone else is deleted unseen, and a different user starts from an empty sheet. Saving waits for
+  // the load so the empty first render never wipes the stored draft.
   useEffect(() => {
-    const draft = loadDraft(sessionStore());
-    if (draft) {
-      dispatch({ type: "restore", draft });
-    }
-    uiDispatch({ type: "hydrated", restored: draft !== null });
-  }, []);
+    if (owner === null) return;
+    dispatch({ type: "reset", requestId: newRequestId() });
+    const draft = loadDraft(sessionStore(), owner);
+    if (draft) dispatch({ type: "restore", draft });
+    uiDispatch({ type: "hydrated", restored: draft !== null, owner });
+  }, [owner]);
   useEffect(() => {
-    if (hydrated) saveDraft(sessionStore(), incident);
-  }, [hydrated, incident]);
+    if (hydrated && owner) saveDraft(sessionStore(), owner, incident);
+  }, [hydrated, owner, incident]);
 
   const place = operator?.location ?? machine?.location ?? null;
   const submit = () => {
@@ -155,7 +158,7 @@ export function SafetyScreen() {
               <p className="t-title tnum">
                 {checks.proximity.kind === "none"
                   ? t("proximity.none")
-                  : `${t(`proximity.${checks.proximity.what}`, { m: checks.proximity.distance_m })} · ${t(`proximity.zone.${operator?.nearest?.zone ?? "awareness"}`)}`}
+                  : `${t(`proximity.${checks.proximity.what}`, { m: checks.proximity.distance_m })} · ${t(`proximity.zone.${checks.proximity.zone}`)}`}
               </p>
               <ProvenanceChip table="operator_state" field="nearest" />
             </CheckPlate>
@@ -191,7 +194,11 @@ export function SafetyScreen() {
 
       <IncidentSheet
         open={open}
-        onClose={() => uiDispatch({ type: "close" })}
+        onClose={() => {
+          // After "Report sent" the next opening is a fresh sheet, not the old confirmation.
+          if (incident.phase === "sent") dispatch({ type: "reset", requestId: newRequestId() });
+          uiDispatch({ type: "close" });
+        }}
         state={incident}
         dispatch={dispatch}
         onSubmit={submit}
@@ -245,7 +252,7 @@ function ActiveAlertRow({ alert, time }: { alert: AlertRecord; time: string }) {
           </p>
         </div>
       </div>
-      <p className="t-body">{t(`status.${alert.status === "suppressed" || alert.status === "resolved" || alert.status === "acknowledged" ? "open" : alert.status}`)}</p>
+      <p className="t-body">{t(`status.${canAck ? "open" : alert.status === "escalating" || alert.status === "escalated" ? alert.status : "info"}`)}</p>
       {canAck ? (
         <Button variant="primary" status={status} note={status === "error" ? tc("alerts.notSent") : undefined} onClick={ack}>
           {tc("alerts.acknowledge")}
