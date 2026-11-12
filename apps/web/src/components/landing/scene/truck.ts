@@ -62,7 +62,6 @@ export function buildHaulTruck(): HaulTruck {
   k.add(paint, extrudeShape(roundRect(1.95, 1.05, 3.1, 2.7, 0.12), -1.55, -0.2, 0.04, 4));
   k.add(graphite, box(0.3, 0.3, 2.0, [3.3, 1.25, 0]), box(0.2, 0.4, 0.2, [-2.8, 2.9, 1.2]));
   // Wheels: tyre, hub and a ring of lug nuts.
-  const wheels: THREE.Group[] = [];
   const wheelPos: Array<[number, number]> = [
     [2.0, -1.4],
     [2.0, 1.4],
@@ -79,14 +78,33 @@ export function buildHaulTruck(): HaulTruck {
     wk.add(graphite, box(0.14, 0.34, 0.05, [Math.cos(a) * 0.62, Math.sin(a) * 0.62, 0.32], [0, 0, a + Math.PI / 2]));
     wk.add(graphite, box(0.14, 0.34, 0.05, [Math.cos(a) * 0.62, Math.sin(a) * 0.62, -0.32], [0, 0, a + Math.PI / 2]));
   }
+  // One instanced mesh per wheel material (tyre, hub, nuts): 3 draws for all six wheels.
   const wheelProto = new THREE.Group();
   wk.flush(wheelProto);
-  for (const [x, z] of wheelPos) {
-    const w = wheelProto.clone(true);
-    w.position.set(x, WHEEL_R, z);
-    group.add(w);
-    wheels.push(w);
+  const wheelMeshes: THREE.InstancedMesh[] = [];
+  for (const child of [...wheelProto.children] as THREE.Mesh[]) {
+    const im = new THREE.InstancedMesh(child.geometry, child.material as THREE.Material, wheelPos.length);
+    im.castShadow = true;
+    im.receiveShadow = true;
+    im.frustumCulled = false;
+    group.add(im);
+    wheelMeshes.push(im);
   }
+  const wm = new THREE.Matrix4();
+  const wq = new THREE.Quaternion();
+  const wp = new THREE.Vector3();
+  const ws = new THREE.Vector3(1, 1, 1);
+  const wz = new THREE.Vector3(0, 0, 1);
+  const setWheels = (angle: number) => {
+    wq.setFromAxisAngle(wz, angle);
+    wheelPos.forEach(([x, z], i) => {
+      wp.set(x, WHEEL_R, z);
+      wm.compose(wp, wq, ws);
+      for (const im of wheelMeshes) im.setMatrixAt(i, wm);
+    });
+    for (const im of wheelMeshes) im.instanceMatrix.needsUpdate = true;
+  };
+  setWheels(0);
   k.flush(group, (x, y, z, o) => dirt(x, y, z, o));
 
   const g = new Kit();
@@ -101,8 +119,7 @@ export function buildHaulTruck(): HaulTruck {
     }
   });
   const spin = (d: number) => {
-    const a = -d / WHEEL_R;
-    for (const w of wheels) w.rotation.z = a;
+    setWheels(-d / WHEEL_R);
   };
   return { group, spin, triangles: () => triangleCount(group) };
 }

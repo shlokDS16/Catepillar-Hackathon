@@ -18,17 +18,21 @@ export type SceneOptions = {
   snap?: boolean;
   onRing?: (level: number) => void;
   onReady?: () => void;
+  /** Called after every render. */
+  onFrame?: () => void;
+  /** The WebGL context was lost; the loop is stopped. */
+  onLost?: () => void;
 };
 
 /** A screen-space point in CSS pixels relative to the canvas. */
-export type SceneAnchor = { x: number; y: number; visible: boolean };
+export type SceneAnchor = { id: "cylinder" | "cab" | "beacon"; x: number; y: number; visible: boolean };
 
 export type SceneController = {
   setProgress: (ps: number[]) => void;
   setRunning: (on: boolean) => void;
   resize: () => void;
   renderOnce: () => void;
-  /** The cab, the boom cylinder and the bucket, in that order. Returns the last rendered frame's points. */
+  /** The boom cylinder, the cab and the cab-roof beacon, in that order. Returns the last rendered frame's points (a shared array, do not mutate). */
   getAnchors: () => SceneAnchor[];
   dispose: () => void;
 };
@@ -215,7 +219,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   const fog = new THREE.FogExp2(0x9a8176, 0.0048);
   scene.fog = fog;
 
-  const terrain = buildTerrain(compact ? 240 : 340);
+  const terrain = buildTerrain(compact ? 200 : 260);
   scene.add(terrain);
   const rocks = buildRocks(compact ? 260 : 400, compact ? 200 : 320);
   scene.add(rocks);
@@ -420,6 +424,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   const wantAux = new THREE.Vector3();
   const tmp = new THREE.Vector3();
   const tmp2 = new THREE.Vector3();
+  const camOff = new THREE.Vector3();
+  const trailPt = new THREE.Vector3();
   const tan = new THREE.Vector3();
   const rt = new THREE.Vector3();
   const quat = new THREE.Quaternion();
@@ -433,10 +439,11 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   const pose: Pose = { boom: 0, stick: 0, bucket: 0 };
   const pulses = [0, 0, 0, 0];
   const anchorOut: SceneAnchor[] = [
-    { x: 0, y: 0, visible: false },
-    { x: 0, y: 0, visible: false },
-    { x: 0, y: 0, visible: false },
+    { id: "cylinder", x: 0, y: 0, visible: false },
+    { id: "cab", x: 0, y: 0, visible: false },
+    { id: "beacon", x: 0, y: 0, visible: false },
   ];
+  const anchorObjs = [exc.anchors.cylinder, exc.anchors.cab, exc.anchors.beacon];
   let wantAnchors = false;
   const H = new THREE.Vector2(0.878, -0.479);
   const sunDir = new THREE.Vector3();
@@ -445,6 +452,14 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     pointerX = (e.clientX / window.innerWidth - 0.5) * 2;
     pointerY = (e.clientY / window.innerHeight - 0.5) * 2;
   };
+  const onContextLost = (e: Event) => {
+    e.preventDefault();
+    running = false;
+    if (raf) cancelAnimationFrame(raf);
+    raf = 0;
+    opts.onLost?.();
+  };
+  canvas.addEventListener("webglcontextlost", onContextLost);
   if (pointerOk) window.addEventListener("pointermove", onPointer, { passive: true });
 
   function dawnValue(): number {
@@ -509,7 +524,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     // Drive along the trail.
     const t = trailT();
     const tc = Math.min(0.9999, Math.max(0, t));
-    const pt = curve.getPointAt(tc);
+    const pt = curve.getPointAt(tc, trailPt);
     curve.getTangentAt(tc, tan);
     let heading = Math.atan2(-tan.z, tan.x);
     const h0v = Math.atan2(-startTan.z, startTan.x);
@@ -632,7 +647,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     if (pointerOk && !snap) {
       const ax = parX.to(pointerX, 0.7, d) * THREE.MathUtils.degToRad(1.5);
       const ay = parY.to(pointerY, 0.7, d) * THREE.MathUtils.degToRad(1.0);
-      const off = camera.position.clone().sub(target);
+      const off = camOff.subVectors(camera.position, target);
       off.applyAxisAngle(_up, -ax);
       rt.set(off.z, 0, -off.x).normalize();
       off.applyQuaternion(quat.setFromAxisAngle(rt, ay));
@@ -653,8 +668,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   function computeAnchors() {
     camera.updateMatrixWorld();
     exc.group.updateMatrixWorld(true);
-    const objs = [exc.anchors.cab, exc.anchors.cylinder, exc.anchors.bucket];
-    objs.forEach((o, i) => {
+    anchorObjs.forEach((o, i) => {
       o.getWorldPosition(tmp);
       tmp.project(camera);
       const a = anchorOut[i];
@@ -680,6 +694,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     updateCamera(0, snap);
     renderer.render(scene, camera);
     if (wantAnchors) computeAnchors();
+    opts.onFrame?.();
     if (!ready) {
       ready = true;
       opts.onReady?.();
@@ -689,18 +704,21 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   function tick(now: number) {
     if (!running) return;
     raf = requestAnimationFrame(tick);
-    const dt = Math.min(0.25, (now - last) / 1000 || 0.016);
+    const dt = Math.max(0, Math.min(0.25, (now - last) / 1000 || 0.016));
     last = now;
     time += dt;
     updateWorld(dt);
     updateCamera(dt, false);
     renderer.render(scene, camera);
     if (wantAnchors) computeAnchors();
+    opts.onFrame?.();
     if (!ready) {
       ready = true;
       opts.onReady?.();
     }
     // Governor: 30 slow frames drop the pixel ratio to 1.0; another 60 drop it to 0.75.
+    // Rolling window: a good frame bleeds the slow count, so isolated hitches never add up.
+    if (dt * 1000 <= 22) slow = Math.max(0, slow - 0.5);
     if (dt * 1000 > 22 && renderer.getPixelRatio() > 0.75) {
       slow += 1;
       const need = governorStep === 0 ? 30 : 60;
@@ -738,12 +756,13 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
         wantAnchors = true;
         computeAnchors();
       }
-      return anchorOut.map((a) => ({ ...a }));
+      return anchorOut;
     },
     dispose() {
       running = false;
       if (raf) cancelAnimationFrame(raf);
       window.removeEventListener("pointermove", onPointer);
+      canvas.removeEventListener("webglcontextlost", onContextLost);
       scene.traverse((o) => {
         const m = o as THREE.Mesh;
         m.geometry?.dispose?.();

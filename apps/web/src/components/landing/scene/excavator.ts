@@ -30,7 +30,7 @@ export type Excavator = {
   /** Scroll the track shoes: `d` is the distance travelled forward in metres. */
   setTrack: (d: number) => void;
   /** Anchor objects for the stage-2 callouts. */
-  anchors: { cab: THREE.Object3D; cylinder: THREE.Object3D; bucket: THREE.Object3D };
+  anchors: { cab: THREE.Object3D; cylinder: THREE.Object3D; bucket: THREE.Object3D; beacon: THREE.Object3D };
   triangles: () => number;
 };
 
@@ -471,6 +471,10 @@ export function buildExcavator(): Excavator {
   bucket.add(bucketA);
   bucketA.position.set(1.4, 0.1, 0);
 
+  const beaconA = new THREE.Object3D();
+  beaconA.position.set(beaconPos[0], beaconPos[1] + 0.1, beaconPos[2]);
+  house.add(beaconA);
+
   const out: Excavator = {
     group,
     house,
@@ -483,7 +487,7 @@ export function buildExcavator(): Excavator {
     setPose,
     updateCylinders,
     setTrack,
-    anchors: { cab: cabA, cylinder: cylA, bucket: bucketA },
+    anchors: { cab: cabA, cylinder: cylA, bucket: bucketA, beacon: beaconA },
     triangles: () => triangleCount(group),
   };
   group.traverse((o) => {
