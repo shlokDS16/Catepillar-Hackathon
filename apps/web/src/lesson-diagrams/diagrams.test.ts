@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { blindAt, blindspot, inBlindCone, inSwingRing, BLIND_DURATION } from "./blindspot";
+import { BOOM_REACH, RING_R, TRACKS, blindAt, blindspot, inBlindCone, inSwingRing, BLIND_DURATION } from "./blindspot";
 import { compareAt, compare, COMPARE_DURATION } from "./compare";
 import { clockReduce, cueAt, solveTime, startClock, type Clock } from "./core";
 import { diagramFor } from "./registry";
@@ -20,11 +20,14 @@ describe("rollover diagram", () => {
       prev = f.tilt;
       if (crossed < 0 && f.overLimit) crossed = t;
     }
-    expect(crossed).toBeGreaterThan(4);
-    expect(crossed).toBeLessThan(5.5);
-    expect(rolloverAt(3.9).overLimit).toBe(false);
-    expect(rolloverAt(3.9).tilt).toBeLessThanOrEqual(GROUND_DEG);
+    // the needle crosses the limit while the machine is still standing on the ground, before the tip begins
+    expect(crossed).toBeGreaterThan(2);
+    expect(crossed).toBeLessThan(5.1);
+    expect(rolloverAt(crossed).tilt).toBeLessThanOrEqual(GROUND_DEG);
+    expect(rolloverAt(crossed).ground).toBeGreaterThan(LIMIT_DEG);
+    expect(rolloverAt(2).overLimit).toBe(false);
     expect(rolloverAt(crossed + 0.2).tilt).toBeGreaterThan(LIMIT_DEG);
+    expect(rolloverAt(5.1).tilt).toBeCloseTo(GROUND_DEG, 5); // holds on the slope before it goes
   });
   it("the ground holds at the slope while the machine tips past it", () => {
     expect(rolloverAt(10).ground).toBe(GROUND_DEG);
@@ -41,7 +44,7 @@ describe("rollover diagram", () => {
   it("a cue exists for every phase and the stills fall inside the duration", () => {
     expect(cueAt(rollover.cues, 0).key).toBe("rollover.c1");
     expect(cueAt(rollover.cues, ROLLOVER_DURATION).key).toBe("rollover.c5");
-    for (const s of rollover.stills) expect(s).toBeLessThanOrEqual(ROLLOVER_DURATION);
+    for (const s of rollover.stills) expect(s.t).toBeLessThanOrEqual(ROLLOVER_DURATION);
     expect(rollover.cues.map((c) => c.at)).toEqual([...rollover.cues.map((c) => c.at)].sort((a, b) => a - b));
   });
 });
@@ -64,6 +67,15 @@ describe("belted vs unbelted diagram", () => {
 });
 
 describe("blind spot diagram", () => {
+  it("the ring reaches at least as far as the arm and bucket", () => {
+    expect(RING_R).toBeGreaterThanOrEqual(BOOM_REACH);
+  });
+  it("the person never stands on a track", () => {
+    for (let t = 0; t <= BLIND_DURATION; t += 0.05) {
+      const { x, y } = blindAt(t).worker;
+      for (const k of TRACKS) expect(x >= k.x && x <= k.x + k.w && y >= k.y && y <= k.y + k.h).toBe(false);
+    }
+  });
   it("the person starts outside the ring and the cones", () => {
     const f = blindAt(0);
     expect(f.inRing).toBe(false);
@@ -84,7 +96,8 @@ describe("blind spot diagram", () => {
     const p = { x: 180, y: 112 + 60 }; // straight behind the machine
     expect(inBlindCone(p, 0)).toBe(true);
     expect(inBlindCone(p, 180)).toBe(false);
-    expect(inSwingRing(p)).toBe(false);
+    expect(inSwingRing(p)).toBe(true);
+    expect(inSwingRing({ x: 180, y: 112 + RING_R + 5 })).toBe(false);
     expect(blindspot.cues.at(-1)?.key).toBe("blindspot.c5");
   });
 });
@@ -126,5 +139,21 @@ describe("player clock", () => {
   it("scrubbing pauses and clamps", () => {
     expect(run(startClock(true), { type: "seek", t: -3 })).toEqual({ t: 0, playing: false, ended: false });
     expect(run(startClock(true), { type: "seek", t: 4 })).toEqual({ t: 4, playing: false, ended: false });
+  });
+});
+
+describe("reduced-motion stills", () => {
+  it("every cue of every diagram is covered by the captions of the three stills", () => {
+    for (const d of [rollover, compare, blindspot]) {
+      const shown = new Set(d.stills.flatMap((st) => st.keys));
+      for (const c of d.cues) expect(shown.has(c.key)).toBe(true);
+      for (const st of d.stills) expect(st.t).toBeLessThanOrEqual(d.duration);
+    }
+  });
+  it("compare captions follow the throw: the throw caption appears at the detach, before the landing ends", () => {
+    const thrown = compare.cues.find((c) => c.key === "compare.c3")!;
+    expect(compareAt(thrown.at + 0.05).unbelted.thrown).toBe(true);
+    expect(compareAt(thrown.at - 0.3).unbelted.thrown).toBe(false);
+    expect(compare.cues.map((c) => c.at)).toEqual([...compare.cues.map((c) => c.at)].sort((a, b) => a - b));
   });
 });

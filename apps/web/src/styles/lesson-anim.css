@@ -2,19 +2,25 @@
 .lesson-anim {
   grid-column: 1 / -1;
   min-width: 0;
-  max-width: 540px;
+  max-width: 560px;
 }
+/* The words come first in the DOM (heading before the picture on a phone); a wide screen puts the picture left. */
 @media (min-width: 900px) {
   .lesson-card-anim {
-    grid-template-columns: minmax(0, 540px) minmax(0, 1fr);
+    grid-template-columns: minmax(0, 560px) minmax(0, 1fr);
     column-gap: var(--s-6);
     align-items: start;
   }
   .lesson-card-anim > .lesson-anim {
     grid-column: 1;
+    grid-row: 2;
   }
   .lesson-card-anim > .lesson-text {
     grid-column: 2;
+    grid-row: 2;
+  }
+  .lesson-card-anim > .lesson-actions {
+    grid-row: 3;
   }
 }
 .dg {
@@ -59,9 +65,24 @@
 .dg-solid {
   fill: var(--ink);
 }
-.dg-danger {
-  stroke: var(--state-critical);
-  --cone-stroke: var(--state-critical);
+/* hazard in ink: a hatched band, a heavier needle, solid people, inverted chips */
+.dg-band {
+  fill: none;
+  stroke-width: 9;
+  stroke-linecap: butt;
+}
+.dg-hatch-band {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+.dg-needle-over {
+  stroke-width: 8;
+}
+.dg-limb-solid {
+  stroke-width: 5;
+}
+.dg-dashed {
+  stroke-dasharray: 4 3;
 }
 .dg-text {
   font-family: var(--ff-body);
@@ -74,8 +95,26 @@
   stroke-linejoin: round;
   paint-order: stroke fill;
 }
-.dg-text.dg-danger-fill {
-  fill: var(--state-critical);
+.dg-text.dg-on-ink {
+  fill: var(--on-ink);
+  stroke: var(--ink);
+  stroke-width: 1px;
+}
+.dg-mono {
+  font-family: var(--ff-mono);
+  font-size: 15px;
+  letter-spacing: 0.04em;
+}
+/* the blind-spot view is zoomed in (240 wide), so its words are set smaller in its own units */
+.dg-blind .dg-text {
+  font-size: 12px;
+  stroke-width: 4px;
+}
+.dg-blind .dg-text.dg-on-ink {
+  stroke-width: 1px;
+}
+.dg-roll .dg-num {
+  font-size: 20px;
 }
 .dg-num {
   font-family: var(--ff-mono);
@@ -88,18 +127,17 @@
   stroke-dasharray: 9 7;
 }
 .dg-cone {
-  stroke: var(--cone-stroke, var(--ink));
+  stroke: var(--ink);
   stroke-width: 2;
   stroke-dasharray: 5 4;
+}
+.dg-cone[data-hot] {
+  stroke-width: 4;
+  stroke-dasharray: none;
 }
 .dg-hatch {
   stroke: var(--ink);
   stroke-width: 1.5;
-}
-.dg-halo {
-  fill: none;
-  stroke: var(--state-critical);
-  stroke-width: 3;
 }
 .dg-pair {
   display: grid;
@@ -146,7 +184,16 @@
 }
 .dg-play {
   flex: none;
-  min-width: 128px;
+  min-width: 112px;
+}
+.dg-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
 }
 .dg-scrub {
   flex: 1;

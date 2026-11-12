@@ -4,6 +4,7 @@
  * elsewhere, so every frame is unit-testable. Motion budget: visual-language §5.1 (lessons).
  */
 export type Cue = { at: number; key: string };
+export type Still = { t: number; keys: string[] };
 
 export type Diagram<F> = {
   id: string;
@@ -11,8 +12,8 @@ export type Diagram<F> = {
   duration: number;
   /** caption cues by start time (seconds), in order; `key` is a message id under lesson.anim. */
   cues: Cue[];
-  /** three times (seconds) whose frames stand in for the animation under reduced motion. */
-  stills: [number, number, number];
+  /** three frames that stand in for the animation under reduced motion; between them the keys cover every cue. */
+  stills: [Still, Still, Still];
   at: (t: number) => F;
 };
 

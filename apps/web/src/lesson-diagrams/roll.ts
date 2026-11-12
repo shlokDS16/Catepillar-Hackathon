@@ -6,13 +6,13 @@ import { clamp, solveTime } from "./core";
  * is negative x, up is negative y; a clockwise rotation about P lifts the uphill track and lays the
  * machine down the slope. Units are SVG user units.
  */
-export const GROUND_DEG = 24; // the slope the machine stands on
-export const LIMIT_DEG = 30; // the pitch gauge limit mark
+export const GROUND_DEG = 34; // the slope the machine stands on: steeper than the limit, so the needle crosses it on the ground
+export const LIMIT_DEG = 30; // the tilt gauge limit mark
 export const FINAL_DEG = 90 + GROUND_DEG; // the machine ends lying on its side along the slope
 export const DETACH_DEG = 45; // an unbelted operator leaves the seat past this tilt
 export const GAUGE_MAX_DEG = 60;
 
-export const P = { x: 215, y: 160 };
+export const P = { x: 185, y: 135 };
 export const SEAT = { x: -40, y: -48 };
 const G = 260; // fall acceleration in units/s^2
 const THROW = { vx: 90, vy: -40 };

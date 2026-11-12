@@ -863,16 +863,18 @@
       "compare": {
         "c1": "Same slope, same rollover. Left: belt on. Right: no belt.",
         "c2": "The machine tips over.",
-        "c3": "Belt on: the operator stays in the seat, inside the cab frame.",
-        "c4": "No belt: the operator is thrown out and lands in the machine's path."
+        "c3": "No belt: the operator is thrown out and lands in the machine's path.",
+        "c4": "Belt on: the operator stays in the seat, inside the cab frame."
       },
       "blindspot": {
         "c1": "An excavator, seen from above.",
-        "c2": "The dashed ring is the swing radius. The back of the machine sweeps it.",
+        "c2": "The dashed ring is the swing radius. The machine and its arm sweep this ring.",
         "c3": "The shaded wedges are blind spots. The operator cannot see here.",
         "c4": "The machine swings. The blind spots swing with it.",
         "c5": "A person inside the ring and a blind spot is not seen. Stay outside the ring."
-      }
+      },
+      "tilt": "TILT",
+      "valueText": "{t} of {total} s. {caption}"
     }
   }
 }

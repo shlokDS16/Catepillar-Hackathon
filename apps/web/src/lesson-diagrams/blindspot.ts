@@ -6,10 +6,18 @@ import { clamp, easeInOut, lerp, seg, type Diagram } from "./core";
  * inside the ring and a cone, the operator cannot see them.
  */
 export const C = { x: 180, y: 112 }; // machine centre
-export const RING_R = 58; // swing radius
-export const CONE_R = 104; // how far a blind cone reaches
+export const RING_R = 110; // swing radius: at least the arm and bucket reach (about 102)
+export const CONE_R = 140; // how far a blind cone reaches
 export const CONE_HALF = 32; // half-angle of a cone, degrees
 export const SWING_END = 70; // degrees, clockwise
+/** Where the tracks stand (x, y, w, h), for the person to keep off. */
+export const TRACKS = [
+  { x: C.x - 48, y: C.y - 46, w: 20, h: 92 },
+  { x: C.x + 28, y: C.y - 46, w: 20, h: 92 },
+] as const;
+/** Distance from the centre to the bucket tip (boom 100 up, bucket 18 wide). */
+export const BOOM_REACH = Math.hypot(18, 100);
+
 /** Cone axes in the upper structure's frame, degrees clockwise from screen-right: rear (down) and the side away from the cab (right). */
 export const CONE_AXES = [90, 0] as const;
 
@@ -18,14 +26,15 @@ export type BlindFrame = {
   ring: number; // 0..1 how much of the swing ring is drawn
   cones: number; // 0..1 cone opacity/reveal
   swing: number; // degrees
+  walk: number; // 0..1 how far the person has walked
   worker: Pt;
   inRing: boolean;
   inCone: boolean;
 };
 
 export const BLIND_DURATION = 11;
-export const WORKER_FROM: Pt = { x: 300, y: 196 };
-export const WORKER_TO: Pt = { x: 211, y: 150 };
+export const WORKER_FROM: Pt = { x: 288, y: 216 };
+export const WORKER_TO: Pt = { x: 250, y: 185 };
 
 const deg = (r: number) => (r * 180) / Math.PI;
 const wrap = (d: number) => ((d % 360) + 540) % 360 - 180;
@@ -46,7 +55,7 @@ export function blindAt(t: number): BlindFrame {
   const swing = SWING_END * easeInOut(seg(tt, 5, 8.5));
   const k = seg(tt, 4.2, 7.8);
   const worker = { x: lerp(WORKER_FROM.x, WORKER_TO.x, k), y: lerp(WORKER_FROM.y, WORKER_TO.y, k) };
-  return { ring: seg(tt, 1.2, 3), cones: seg(tt, 3.4, 4.6), swing, worker, inRing: inSwingRing(worker), inCone: inBlindCone(worker, swing) };
+  return { ring: seg(tt, 1.2, 3), cones: seg(tt, 3.4, 4.6), swing, walk: k, worker, inRing: inSwingRing(worker), inCone: inBlindCone(worker, swing) };
 }
 
 export const blindspot: Diagram<BlindFrame> = {
@@ -59,6 +68,10 @@ export const blindspot: Diagram<BlindFrame> = {
     { at: 5, key: "blindspot.c4" },
     { at: 8.5, key: "blindspot.c5" },
   ],
-  stills: [2.6, 5.6, 10.5],
+  stills: [
+    { t: 2.6, keys: ["blindspot.c1", "blindspot.c2"] },
+    { t: 4.2, keys: ["blindspot.c3"] },
+    { t: 10.5, keys: ["blindspot.c4", "blindspot.c5"] },
+  ],
   at: blindAt,
 };

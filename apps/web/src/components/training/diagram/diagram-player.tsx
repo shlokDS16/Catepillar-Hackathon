@@ -1,31 +1,20 @@
 "use client";
 
-import { useEffect, useReducer, useSyncExternalStore, type CSSProperties, type ReactNode } from "react";
+import { useEffect, useReducer, type CSSProperties, type KeyboardEvent, type ReactNode } from "react";
 import { useTranslations } from "next-intl";
+import { takeoverQueue } from "@/alerts/selectors";
+import { useAppState } from "@/data/store";
+import { useReducedMotion } from "@/replay/use-reenactment";
+import { useDocumentHidden } from "@/replay/use-replay-timer";
 import { Button } from "@/components/ui/button";
 import { clockReduce, cueAt, startClock } from "@/lesson-diagrams/core";
 import { diagramFor, type AnyDiagram } from "@/lesson-diagrams/registry";
 import { BlindScene, CompareScene, RolloverScene } from "./scenes";
 
-const QUERY = "(prefers-reduced-motion: reduce)";
-function subscribe(cb: () => void) {
-  const m = window.matchMedia(QUERY);
-  m.addEventListener("change", cb);
-  return () => m.removeEventListener("change", cb);
-}
-/** True under prefers-reduced-motion; the server render assumes motion is allowed. */
-export function useReducedMotion(): boolean {
-  return useSyncExternalStore(
-    subscribe,
-    () => window.matchMedia(QUERY).matches,
-    () => false,
-  );
-}
-
 /** Draws one frame of a registered diagram; the labels come from the lesson.anim messages. */
 function Frame({ entry, t }: { entry: AnyDiagram; t: number }) {
   const tr = useTranslations("lesson.anim");
-  if (entry.kind === "rollover") return <RolloverScene f={entry.diagram.at(t)} labels={{ limit: tr("limit") }} />;
+  if (entry.kind === "rollover") return <RolloverScene f={entry.diagram.at(t)} labels={{ limit: tr("limit"), tilt: tr("tilt") }} />;
   if (entry.kind === "blindspot") return <BlindScene f={entry.diagram.at(t)} labels={{ ring: tr("swingRadius"), unseen: tr("notSeen") }} />;
   const f = entry.diagram.at(t);
   return (
@@ -66,6 +55,12 @@ function Moving({ entry, title }: { entry: AnyDiagram; title: string }) {
   const tr = useTranslations("lesson.anim");
   const [clock, dispatch] = useReducer((c: ReturnType<typeof startClock>, a: Parameters<typeof clockReduce>[1]) => clockReduce(c, a, diagram.duration), true, startClock);
 
+  // A live Warning or Critical takes over the screen, and a hidden page stops the clock; it stays
+  // paused until the operator presses Play (the same sources the Replay uses).
+  const liveAlert = useAppState((st) => takeoverQueue(st.alerts).length > 0);
+  const hidden = useDocumentHidden();
+  if ((liveAlert || hidden) && clock.playing) dispatch({ type: "pause" });
+
   useEffect(() => {
     if (!clock.playing) return;
     let raf = 0;
@@ -83,10 +78,14 @@ function Moving({ entry, title }: { entry: AnyDiagram; title: string }) {
   const caption = tr(cue.key);
   const pct = (clock.t / diagram.duration) * 100;
   return (
-    <figure className="dg" aria-label={title}>
-      <div className="dg-stage" role="img" aria-label={`${title}. ${caption}`}>
+    <figure className="dg">
+      <div className="dg-stage" role="img" aria-label={title}>
         <Frame entry={entry} t={clock.t} />
       </div>
+      {/* one polite live region: the caption text changes only at a cue, never per frame */}
+      <p className="dg-sr" aria-live="polite">
+        {caption}
+      </p>
       {/* every caption sits in one grid cell, so the box keeps the height of the longest and nothing jumps */}
       <figcaption className="t-body dg-caption" aria-hidden="true">
         {diagram.cues.map((c) => (
@@ -96,7 +95,7 @@ function Moving({ entry, title }: { entry: AnyDiagram; title: string }) {
         ))}
       </figcaption>
       <div className="dg-controls">
-        <Button variant="secondary" onClick={() => dispatch({ type: "toggle" })} className="dg-play">
+        <Button variant="secondary" size="dense" onClick={() => dispatch({ type: "toggle" })} className="dg-play">
           {clock.playing ? tr("pause") : clock.ended ? tr("replay") : tr("play")}
         </Button>
         <input
@@ -104,11 +103,17 @@ function Moving({ entry, title }: { entry: AnyDiagram; title: string }) {
           className="dg-scrub"
           min={0}
           max={Math.round(diagram.duration * 100)}
-          step={25}
+          step={1}
           value={Math.round(clock.t * 100)}
           style={{ "--p": `${pct}%` } as CSSProperties}
           aria-label={tr("scrubber")}
-          aria-valuetext={caption}
+          aria-valuetext={tr("valueText", { t: Math.round(clock.t), total: Math.round(diagram.duration), caption })}
+          onKeyDown={(e: KeyboardEvent<HTMLInputElement>) => {
+            const dir = e.key === "ArrowRight" || e.key === "ArrowUp" ? 1 : e.key === "ArrowLeft" || e.key === "ArrowDown" ? -1 : 0;
+            if (!dir) return;
+            e.preventDefault(); // a native step of 0.01 s is too fine: move a quarter second
+            dispatch({ type: "seek", t: clock.t + dir * 0.25 });
+          }}
           onChange={(e) => dispatch({ type: "seek", t: Number(e.currentTarget.value) / 100 })}
         />
       </div>
@@ -122,13 +127,17 @@ function Stills({ entry, title }: { entry: AnyDiagram; title: string }) {
   const tr = useTranslations("lesson.anim");
   return (
     <ol className="dg-stills" aria-label={title}>
-      {diagram.stills.map((t, i) => (
+      {diagram.stills.map((still, i) => (
         <li key={i} className="dg-still">
           <p className="t-caption dg-step">{tr("step", { n: i + 1, total: diagram.stills.length })}</p>
           <div className="dg-stage">
-            <Frame entry={entry} t={t} />
+            <Frame entry={entry} t={still.t} />
           </div>
-          <p className="t-body dg-caption">{tr(cueAt(diagram.cues, t).key)}</p>
+          <div className="t-body dg-still-caps">
+            {still.keys.map((k) => (
+              <p key={k}>{tr(k)}</p>
+            ))}
+          </div>
         </li>
       ))}
     </ol>

@@ -187,26 +187,34 @@ function CardView({ lesson, index, onNext, onBack }: { lesson: LessonContent; in
   const body = localText(card.body, lang);
   useAutoplay(card.audio_id);
   const animated = diagramFor(card.pictogram) !== null;
+  const text = (
+    <div className="lesson-text">
+      <h2 id="lesson-card-title" className="t-title" lang={title.english ? "en" : undefined}>
+        {title.value}
+      </h2>
+      <p className="t-body lesson-body" lang={body.english ? "en" : undefined}>
+        {body.value}
+      </p>
+    </div>
+  );
   return (
     <Plate as="section" className={cx("lesson-card", animated && "lesson-card-anim")} aria-labelledby="lesson-card-title">
       <p className="t-caption lesson-kind">{t(`kind.${card.kind}`)}</p>
       {animated ? (
-        <div className="lesson-anim">
-          <DiagramPlayer pictogram={card.pictogram} title={title.value} />
-        </div>
+        <>
+          {text}
+          <div className="lesson-anim">
+            <DiagramPlayer pictogram={card.pictogram} title={title.value} />
+          </div>
+        </>
       ) : (
-        <div className="lesson-glyph">
-          <Glyph name={card.pictogram} />
-        </div>
+        <>
+          <div className="lesson-glyph">
+            <Glyph name={card.pictogram} />
+          </div>
+          {text}
+        </>
       )}
-      <div className="lesson-text">
-        <h2 id="lesson-card-title" className="t-title" lang={title.english ? "en" : undefined}>
-          {title.value}
-        </h2>
-        <p className="t-body lesson-body" lang={body.english ? "en" : undefined}>
-          {body.value}
-        </p>
-      </div>
       <div className="lesson-actions">
         <Button variant="primary" onClick={onNext}>
           {t("next")}

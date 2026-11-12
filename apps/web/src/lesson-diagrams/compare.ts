@@ -1,5 +1,5 @@
 import { clamp, seg, type Diagram } from "./core";
-import { FINAL_DEG, GROUND_DEG, detachTime, figureAt, groundDeg, type Figure } from "./roll";
+import { FINAL_DEG, GROUND_DEG, THROWN, detachTime, figureAt, groundDeg, type Figure } from "./roll";
 
 /**
  * Diagram (b), WHY card: the same rollover twice, side by side. Belt on: the operator stays in
@@ -35,9 +35,13 @@ export const compare: Diagram<CompareFrame> = {
   cues: [
     { at: 0, key: "compare.c1" },
     { at: HOLD, key: "compare.c2" },
-    { at: 5.2, key: "compare.c3" },
-    { at: 7, key: "compare.c4" },
+    { at: TD, key: "compare.c3" },
+    { at: TD + THROWN.landTau + 0.5, key: "compare.c4" },
   ],
-  stills: [1, 3.4, 9.5],
+  stills: [
+    { t: 1, keys: ["compare.c1"] },
+    { t: 5, keys: ["compare.c2", "compare.c3"] },
+    { t: 9.5, keys: ["compare.c4"] },
+  ],
   at: compareAt,
 };

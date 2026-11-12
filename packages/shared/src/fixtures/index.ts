@@ -194,9 +194,7 @@ export const lessonContent = {
       pictogram: "rollover", image_path: null, audio_id: null },
     { id: "k3", kind: "example" as const, title: i18n("With and without", "बेल्ट के साथ और बिना"), body: i18n("Same slope, same rollover. Only the belt is different.", "वही ढलान, वही पलटना। फ़र्क़ सिर्फ़ बेल्ट का है।"),
       pictogram: "belt_compare", image_path: null, audio_id: null },
-    { id: "k4", kind: "how" as const, title: i18n("Watch the swing", "घूमने का ध्यान रखें"), body: i18n("Stay outside the swing ring. If the operator cannot see you, you are not safe.", "घूमने के घेरे के बाहर रहें। ऑपरेटर को आप न दिखें तो आप सुरक्षित नहीं हैं।"),
-      pictogram: "blindspot", image_path: null, audio_id: null },
-    { id: "k5", kind: "check" as const, title: i18n("Check", "जाँच"), body: i18n("Click, tug, go.", "क्लिक, खींचो, चलो।"),
+    { id: "k4", kind: "check" as const, title: i18n("Check", "जाँच"), body: i18n("Click, tug, go.", "क्लिक, खींचो, चलो।"),
       pictogram: "check", image_path: null, audio_id: null },
   ],
   quiz: [
@@ -223,6 +221,40 @@ export const lessonContent = {
       why: i18n("A belt that will not click is a fault. Do not use the machine until it is fixed.", "जो बेल्ट नहीं लगती वह ख़राबी है। ठीक होने तक मशीन न चलाएँ।") },
   ],
   video_path: null, source_refs: ["osha:1926.602"],
+};
+
+/** A second lesson, so the swing-radius animation sits in a lesson on that one topic (mirrors the seed's faulty_machine_nearby). */
+export const swingLessonContent = {
+  code: "faulty_machine_nearby", title: i18n("Stay out of the swing", "घूमने के घेरे से बाहर रहें"), duration_s: 90,
+  cards: [
+    { id: "k1", kind: "rule" as const, title: i18n("The rule", "नियम"), body: i18n("Stay out of a machine's swing ring. If the operator cannot see you, you are not safe.", "मशीन के घूमने के घेरे से बाहर रहें। ऑपरेटर को आप न दिखें तो आप सुरक्षित नहीं हैं।"),
+      pictogram: "blindspot", image_path: null, audio_id: null },
+    { id: "k2", kind: "how" as const, title: i18n("Step away", "दूर हटें"), body: i18n("Move out of the ring, make yourself seen, and tell your supervisor.", "घेरे से बाहर जाएँ, खुद को दिखाएँ और सुपरवाइज़र को बताएँ।"),
+      pictogram: "proximity", image_path: null, audio_id: null },
+    { id: "k3", kind: "check" as const, title: i18n("Check", "जाँच"), body: i18n("Before you walk near a machine, look for its ring.", "मशीन के पास चलने से पहले उसका घेरा देखें।"),
+      pictogram: "check", image_path: null, audio_id: null },
+  ],
+  quiz: [
+    { id: "q1", prompt: i18n("A machine nearby is swinging. Where do you stand?", "पास की मशीन घूम रही है। आप कहाँ खड़े हों?"),
+      choices: [
+        { id: "out", label: i18n("Outside the ring", "घेरे के बाहर"), pictogram: "proximity" },
+        { id: "in", label: i18n("Near the cab", "केबिन के पास"), pictogram: "info" },
+      ],
+      correct_id: "out", why: i18n("The back and the arm sweep the whole ring. Outside it you are out of harm.", "पिछला हिस्सा और बाजू पूरे घेरे में घूमते हैं। बाहर आप सुरक्षित हैं।") },
+    { id: "q2", prompt: i18n("Can the operator see you behind the machine?", "क्या ऑपरेटर आपको मशीन के पीछे देख सकता है?"),
+      choices: [
+        { id: "yes", label: i18n("Yes, always", "हाँ, हमेशा"), pictogram: "info" },
+        { id: "no", label: i18n("Not in a blind spot", "अंधे क्षेत्र में नहीं"), pictogram: "proximity" },
+      ],
+      correct_id: "no", why: i18n("Behind and beside the cab are blind spots. Do not count on being seen.", "केबिन के पीछे और बगल में अंधे क्षेत्र होते हैं। दिखने पर भरोसा न करें।") },
+    { id: "q3", prompt: i18n("Who do you tell about a machine with a fault?", "ख़राब मशीन के बारे में किसे बताएँ?"),
+      choices: [
+        { id: "sup", label: i18n("My supervisor", "सुपरवाइज़र को"), pictogram: "sos" },
+        { id: "none", label: i18n("No one", "किसी को नहीं"), pictogram: "info" },
+      ],
+      correct_id: "sup", why: i18n("They can stop and tag the machine.", "वे मशीन रोककर टैग कर सकते हैं।") },
+  ],
+  video_path: null, source_refs: [],
 };
 
 // ── Edge Functions and Realtime ─────────────────────────────────────────────────────────────────────
@@ -307,6 +339,7 @@ export const FIXTURES: Fixture[] = [
   { name: "replay_scenario", schema: ReplayScenario, value: replayScenario, broken: "decide.steps.0.kind" },
   { name: "replay_debrief", schema: ReplayDebriefResult, value: replayDebrief, broken: "scores.safety" },
   { name: "lesson_content", schema: LessonContent, value: lessonContent, broken: "quiz.0.correct_id" },
+  { name: "lesson_content.swing", schema: LessonContent, value: swingLessonContent, broken: "quiz.0.correct_id" },
   { name: "ask_request", schema: AskRequest, value: askRequest, broken: "photo_path" },
   { name: "ask_response", schema: AskResponse, value: askResponse, broken: "citations.0.kind" },
   { name: "director_request", schema: DirectorRequest, value: directorRequest, broken: "command.speed" },
