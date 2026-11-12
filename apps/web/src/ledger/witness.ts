@@ -24,12 +24,14 @@ export function parsePaste(text: string): PasteState {
   if (text.trim() === "") return { state: "empty" };
   for (const line of text.split(/\r?\n/)) {
     const w = parseWitnessLine(line);
-    if (w && w.first_seq >= 1 && w.first_seq <= w.last_seq) return { state: "ok", witness: w };
+    // The shared regex has no end anchor: a head longer than 64 hex characters must not be cut to fit.
+    if (w && /head=[0-9a-f]{64}(\s|$)/.test(line.trim()) &&w.first_seq >= 1 && w.first_seq <= w.last_seq) return { state: "ok", witness: w };
   }
   return { state: "malformed" };
 }
 
-export type RangeCheck = { ok: true; first: number; last: number } | { ok: false; field: "from" | "to" | "order" };
+export type RangeField = "from" | "to" | "order" | "range";
+export type RangeCheck = { ok: true; first: number; last: number } | { ok: false; field: Exclude<RangeField, "range"> };
 
 const INT = /^\d{1,9}$/;
 
@@ -96,11 +98,16 @@ export async function withBusyRetry<T>(
 /** Sealed near-miss rows (backend privacy): the export marks them `sealed: true` and withholds content. */
 export type ExportRow = LedgerExportRow & { sealed?: boolean };
 
-export const isSealed = (row: ExportRow): boolean => row.sealed === true;
+/**
+ * Every near-miss is treated as sealed in the UI, whether or not the backend set `sealed`: keyed on
+ * `non_punitive` and the near_miss type too, so a row that arrives with its content still never shows it.
+ */
+export const isSealed = (row: ExportRow): boolean =>
+  row.sealed === true || row.canonical_fields?.non_punitive === true || row.canonical_fields?.incident_type === "near_miss";
 export const countSealed = (rows: readonly ExportRow[]): number => rows.filter(isSealed).length;
 
 export type CompareOutcome =
-  | { kind: "validation"; field: "from" | "to" | "order" }
+  | { kind: "validation"; field: RangeField }
   | { kind: "busy" }
   | { kind: "network" }
   | {
@@ -143,8 +150,24 @@ export async function runCompare(
     return { kind: "done", first: range.first, last: range.last, local, sealed: countSealed(rows), witness, comparison, server };
   } catch (e) {
     if (e instanceof LedgerBusyError) return { kind: "busy" };
+    if (e instanceof RpcError && e.code === "validation") return { kind: "validation", field: "range" };
     return { kind: "network" };
   }
+}
+
+/** Rows the table asks for: the newest N, or a window around the broken row so #N is on screen. */
+export function tableWindow(head: number, badSeq: number | null, size = 25): { first: number; last: number } {
+  if (badSeq === null || badSeq > head || badSeq < 1) return { first: Math.max(1, head - size + 1), last: head };
+  const first = Math.max(1, Math.min(badSeq - Math.floor(size / 2), head - size + 1));
+  return { first, last: Math.min(head, first + size - 1) };
+}
+
+/** Rows whose content this browser actually checked. Sealed rows are chain-linked only, never "verified". */
+export const verifiedCount = (checked: number, sealed: number): number => Math.max(0, checked - sealed);
+
+/** A clean full match: the chain verified in the browser AND the witness comparison matched. Nothing else reads as verified. */
+export function isCleanMatch(out: Extract<CompareOutcome, { kind: "done" }>): boolean {
+  return out.local.ok && out.comparison?.match === true;
 }
 
 /** Entries-table cells. Sealed and near-miss rows expose no operator, machine, place or text. */
@@ -163,14 +186,13 @@ export function rowView(row: ExportRow): RowView {
   if (isSealed(row)) return { seq: row.seq, sealed: true, time: null, type: null, operator: null, machine: null, hashPrefix };
   const f = row.canonical_fields;
   const str = (v: unknown) => (typeof v === "string" && v.length > 0 ? v : null);
-  const nearMiss = f.non_punitive === true || f.incident_type === "near_miss";
   const at = str(f.occurred_at);
   return {
     seq: row.seq,
     sealed: false,
     time: at ? at.slice(0, 16).replace("T", " ") : null,
     type: str(f.incident_type),
-    operator: nearMiss ? null : str(f.operator_id)?.slice(0, 8) ?? null,
+    operator: str(f.operator_id)?.slice(0, 8) ?? null,
     machine: str(f.machine_id)?.slice(0, 8) ?? null,
     hashPrefix,
   };

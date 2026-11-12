@@ -3,8 +3,7 @@ import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, protocol
 import { RpcError, type DataPort, type PortMessage } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
 import type { SiteMapData } from "@/map/site-map";
-import { ledgerRows, ledgerVerdict, type LedgerScenario } from "@/ledger/fixtures";
-import { merkleRoot } from "@cat/shared/ledger";
+import type { LedgerScenario } from "@/ledger/fixtures";
 
 /**
  * The FixtureAdapter: every read answers from @cat/shared/fixtures, every RPC succeeds after a short
@@ -15,7 +14,8 @@ const wait = (ms: number) => new Promise<void>((r) => setTimeout(r, ms));
 
 type Listener = (m: PortMessage) => void;
 
-export type Beat = 1 | 2 | 3 | 4 | 5;
+/** 6 and 7 are Ledger-only helpers: 6 = tamper with a re-hash (rewrite), 7 = reset the ledger to intact. */
+export type Beat = 1 | 2 | 3 | 4 | 5 | 6 | 7;
 
 export class FixtureAdapter implements DataPort {
   private listeners = new Set<Listener>();
@@ -164,6 +164,12 @@ export class FixtureAdapter implements DataPort {
           this.event("training.replay_ready", EVENT_PAYLOADS["training.replay_ready"]),
         );
         return;
+      case 6:
+        this.ledgerScenario = "rewrite";
+        return;
+      case 7:
+        this.ledgerScenario = "intact";
+        return;
       case 5: // Ledger: the checkpoint is published, then a tamper is detected.
         this.ledgerScenario = "chain_break";
         this.push(
@@ -288,16 +294,20 @@ export class FixtureAdapter implements DataPort {
   }
   async ledgerVerify() {
     await wait(this.latencyMs);
+    // Dynamic import: the ledger generator and verifier stay out of every other page's bundle.
+    const { ledgerVerdict } = await import("@/ledger/fixtures");
     return ledgerVerdict(this.ledgerScenario);
   }
   async ledgerExport(input: { p_first_seq: number; p_last_seq: number }) {
     await wait(this.latencyMs);
+    const { ledgerRows } = await import("@/ledger/fixtures");
     const rows = await ledgerRows(this.ledgerScenario);
-    if (input.p_first_seq > rows.length) throw new RpcError("validation");
+    if (input.p_first_seq > rows.length || input.p_last_seq > rows.length) throw new RpcError("validation");
     return rows.slice(input.p_first_seq - 1, input.p_last_seq);
   }
   async ledgerRecompute(input: { p_first_seq: number; p_last_seq: number }) {
     await wait(this.latencyMs);
+    const [{ ledgerRows }, { merkleRoot }] = await Promise.all([import("@/ledger/fixtures"), import("@cat/shared/ledger")]);
     const rows = (await ledgerRows(this.ledgerScenario)).slice(input.p_first_seq - 1, input.p_last_seq);
     if (rows.length === 0) throw new RpcError("validation");
     return {

@@ -3,7 +3,8 @@ import { WITNESS_LINE } from "@cat/shared";
 import { RpcError } from "@/data/port";
 import { BREAK_SEQ, LEDGER_ROWS, SEALED_SEQ, ledgerRows, ledgerVerdict, witnessLineFor, type LedgerScenario } from "@/ledger/fixtures";
 import {
-  BUSY_RETRY_MS, LedgerBusyError, checkRange, diffAt, groupsOf4, parsePaste, rowView, runCompare, withBusyRetry,
+  BUSY_RETRY_MS, LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, isCleanMatch, isSealed, parsePaste, rowView,
+  runCompare, tableWindow, verifiedCount, withBusyRetry,
 } from "@/ledger/witness";
 
 const H = "ab".repeat(32);
@@ -154,8 +155,45 @@ describe("rowView privacy", () => {
     const rows = await ledgerRows("intact");
     const sealed = rowView(rows[SEALED_SEQ - 1]!);
     expect(sealed).toEqual({ seq: String(SEALED_SEQ), sealed: true, time: null, type: null, operator: null, machine: null, hashPrefix: sealed.hashPrefix });
-    const nm = rowView({ ...rows[0]!, canonical_fields: { ...rows[0]!.canonical_fields, non_punitive: true, operator_id: "22222222-2222-4222-8222-222222222222" } });
-    expect(nm.operator).toBeNull();
+    // HIGH review fix: a non_punitive row WITHOUT the sealed flag is still sealed in the UI.
+    const nmRow = { ...rows[0]!, canonical_fields: { ...rows[0]!.canonical_fields, non_punitive: true, operator_id: "22222222-2222-4222-8222-222222222222" } };
+    expect(isSealed(nmRow)).toBe(true);
+    expect(rowView(nmRow)).toEqual({ seq: "1", sealed: true, time: null, type: null, operator: null, machine: null, hashPrefix: nmRow.entry_hash.slice(0, 8) });
+    expect(countSealed([nmRow, rows[1]!])).toBe(1);
+    const typed = { ...rows[0]!, canonical_fields: { ...rows[0]!.canonical_fields, incident_type: "near_miss" } };
+    expect(rowView(typed).sealed).toBe(true);
     expect(rowView(rows[0]!).operator).toBe("22222221");
+  });
+});
+
+describe("review fixes", () => {
+  it("tableWindow shows the broken row, else the newest rows", () => {
+    expect(tableWindow(214, null)).toEqual({ first: 190, last: 214 });
+    const w = tableWindow(214, 187);
+    expect(w.first).toBeLessThanOrEqual(187);
+    expect(w.last).toBeGreaterThanOrEqual(187);
+    expect(w.last - w.first + 1).toBe(25);
+    expect(tableWindow(10, 3)).toEqual({ first: 1, last: 10 });
+  });
+  it("a head longer than 64 hex characters is rejected", () => {
+    expect(parsePaste(`SPOTTER-LEDGER v1 seq=1..2 n=2 root=${H} head=${"cd".repeat(32)}e`).state).toBe("malformed");
+    expect(parsePaste(`${LINE} `).state).toBe("ok");
+  });
+  it("a range outside the ledger is a validation outcome, not a network error", async () => {
+    const out = await runCompare(portFor("intact"), { from: "1", to: "999", paste: { state: "empty" } }, async () => {});
+    expect(out.kind).toBe("done"); // portFor slices silently; the fixture adapter raises validation, covered next
+    const failing = { ...portFor("intact"), ledgerExport: async () => { throw new RpcError("validation"); } };
+    expect(await runCompare(failing, { from: "500", to: "600", paste: { state: "empty" } }, async () => {})).toEqual({ kind: "validation", field: "range" });
+    const down = { ...portFor("intact"), ledgerExport: async () => { throw new Error("offline"); } };
+    expect((await runCompare(down, { from: "1", to: "5", paste: { state: "empty" } }, async () => {})).kind).toBe("network");
+  });
+  it("sealed rows are not counted as verified, and only a clean full match reads as verified", async () => {
+    expect(verifiedCount(214, 1)).toBe(213);
+    const line = await witnessLineFor();
+    const good = await runCompare(portFor("intact"), { from: "1", to: "214", paste: parsePaste(line) }, async () => {});
+    const bad = await runCompare(portFor("rewrite"), { from: "1", to: "214", paste: parsePaste(line) }, async () => {});
+    const broken = await runCompare(portFor("chain_break"), { from: "1", to: "214", paste: parsePaste(line) }, async () => {});
+    if (good.kind !== "done" || bad.kind !== "done" || broken.kind !== "done") throw new Error("expected done");
+    expect([isCleanMatch(good), isCleanMatch(bad), isCleanMatch(broken)]).toEqual([true, false, false]);
   });
 });

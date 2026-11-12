@@ -7,7 +7,8 @@ import { Mark } from "@/components/ui/pictogram";
 import { Plate } from "@/components/ui/plate";
 import { useDataPort } from "@/data/store";
 import {
-  LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, parsePaste, rowView, runCompare, withBusyRetry,
+  LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, isCleanMatch, parsePaste, rowView, runCompare, tableWindow,
+  verifiedCount, withBusyRetry,
   type CompareOutcome, type ExportRow,
 } from "@/ledger/witness";
 
@@ -52,7 +53,10 @@ function HashPair({
   );
   return (
     <div className="hash-pair" role="group" aria-label={ariaLabel}>
-      <div className="hash-grid">
+      <p className="sr-only">
+        {t("hashSr", { label: topLabel, hash: top })} {t("hashSr", { label: bottomLabel, hash: bottom })}
+      </p>
+      <div className="hash-grid" aria-hidden="true">
         <span className="hash-rowlabel t-meta" data-side="published">{topLabel}</span>
         <span className="hash-rowlabel t-meta" data-side="computed">{bottomLabel}</span>
         {[0, 1, 2, 3].flatMap((c) => [chunk(tg, c, "published", topLabel), chunk(bg, c, "computed", bottomLabel)])}
@@ -108,8 +112,8 @@ export function LedgerScreen() {
       let rows: ExportRow[] = [];
       if (out.head_seq > 0) {
         try {
-          const first = Math.max(1, out.head_seq - TABLE_ROWS + 1);
-          rows = (await port.ledgerExport({ p_first_seq: first, p_last_seq: out.head_seq })) as ExportRow[];
+          const w = tableWindow(out.head_seq, out.first_bad_seq, TABLE_ROWS);
+          rows = (await port.ledgerExport({ p_first_seq: w.first, p_last_seq: w.last })) as ExportRow[];
         } catch {
           rows = [];
         }
@@ -131,7 +135,7 @@ export function LedgerScreen() {
   const done = compare.s === "done" ? compare.out : null;
   const rangeError =
     done?.kind === "validation"
-      ? done.field === "from" ? t("rangeFrom") : done.field === "to" ? t("rangeTo") : t("rangeOrder")
+      ? done.field === "from" ? t("rangeFrom") : done.field === "to" ? t("rangeTo") : done.field === "range" ? t("rangeOut") : t("rangeOrder")
       : null;
 
   return (
@@ -212,7 +216,12 @@ export function LedgerScreen() {
           </Button>
         </div>
         {done?.kind === "busy" ? <p className="t-body" role="status">{t("busy")}</p> : null}
-        {done?.kind === "network" ? <p className="t-body" role="status">{t("network")}</p> : null}
+        {done?.kind === "network" ? (
+          <p className="t-body" role="status">
+            {t("network")}{" "}
+            <button type="button" className="btn" data-variant="secondary" data-size="dense" onClick={() => void runWitness()}>{t("tryAgain")}</button>
+          </p>
+        ) : null}
         {done?.kind === "done" ? <CompareDetail out={done} /> : null}
       </Plate>
 
@@ -274,12 +283,14 @@ function WitnessPlate({ state }: { state: CompareState }) {
       </Plate>
     );
   }
-  const ok = out.comparison.match;
+  // Only a clean full match reads as verified; any other status is "Does not match".
+  const ok = isCleanMatch(out);
+  const verified = verifiedCount(out.local.checked, out.sealed);
   return (
     <Plate as="section" className="ledger-plate" tone={ok ? "clear" : "critical"} stamp aria-label={t("witnessLabel")} key={ok ? "ok" : "bad"}>
       {base}
-      <Verdict ok={ok}>{ok ? t("matches", { n: out.local.checked }) : t("noMatch")}</Verdict>
-      {ok && out.sealed > 0 ? <p className="t-meta">{t("sealedCount", { n: out.sealed })}</p> : null}
+      <Verdict ok={ok}>{ok ? t("matches", { n: verified }) : t("noMatch")}</Verdict>
+      {ok && out.sealed > 0 ? <p className="t-meta">{t("verifiedSealed", { v: verified, s: out.sealed })}</p> : null}
       {!ok && !out.local.ok && out.local.first_bad_seq !== null ? (
         <p className="t-meta">{t("witnessBroken", { seq: out.local.first_bad_seq })}</p>
       ) : null}
@@ -294,7 +305,9 @@ function CompareDetail({ out }: { out: Extract<CompareOutcome, { kind: "done" }>
   const serverState = server ? (server.root_hex === local.root_hex ? t("serverAgrees") : t("serverDiffers")) : null;
   return (
     <div className="hash-pair" data-testid="ledger-compare-detail">
-      {witness ? (
+      {!local.ok && local.first_bad_seq !== null ? (
+        <p className="t-body">{t("stoppedAt", { seq: local.first_bad_seq })}</p>
+      ) : witness ? (
         <>
           <h3 className="t-label">{t("root")}</h3>
           <HashPair topLabel={t("fromTelegram")} bottomLabel={t("recomputed")} top={witness.root_hex} bottom={local.root_hex} ariaLabel={t("root")} />
