@@ -1,5 +1,7 @@
 import type { z } from "zod";
 import type {
+  AskRequest,
+  AskResponse,
   AlertAckIn,
   AlertAckOut,
   ConsentSetIn,
@@ -79,6 +81,9 @@ export type DataPort = {
   sosRaise(input: In<typeof SosRaiseIn>): Promise<Out<typeof SosRaiseOut>>;
   sosCancel(input: In<typeof SosCancelIn>): Promise<void>;
   incidentLog(input: In<typeof IncidentLogIn>): Promise<Out<typeof IncidentLogOut>>;
+
+  /** Ask Spotter (A17). A model or provider problem comes back as a refusal, not a throw. */
+  ask(input: AskRequest): Promise<AskResponse>;
 
   ppeOverride(input: In<typeof PpeOverrideIn>): Promise<Out<typeof PpeOverrideOut>>;
   ledgerVerify(input: In<typeof LedgerVerifyIn>): Promise<Out<typeof LedgerVerifyOut>>;

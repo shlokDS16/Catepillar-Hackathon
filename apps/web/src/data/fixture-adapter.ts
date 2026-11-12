@@ -1,6 +1,6 @@
 import { demoReplayScenario } from "@/replay/fixture-recording";
-import { AnomalyDetected, MySnapshotOut } from "@cat/shared";
-import { EVENT_PAYLOADS, IDS, evidenceCards, lessonContent, mySnapshot, swingLessonContent, protocolCard, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
+import { AnomalyDetected, MySnapshotOut, type AskRequest, type AskResponse } from "@cat/shared";
+import { EVENT_PAYLOADS, IDS, pickAskFixture, evidenceCards, lessonContent, mySnapshot, swingLessonContent, protocolCard, rpc, seatbeltBreachEvent } from "@cat/shared/fixtures";
 import { RpcError, type DataPort, type PortMessage, type RecurrenceHint } from "@/data/port";
 import type { AppEvent, Snapshot } from "@/data/types";
 import type { SiteMapData } from "@/map/site-map";
@@ -439,6 +439,12 @@ export class FixtureAdapter implements DataPort {
     await wait(this.latencyMs);
     // Scripted: the demo run has no repeat of the seatbelt event after its lesson.
     return lessonCode === lessonContent.code ? { lesson_code: lessonCode, repeats: 0, days: 7, simulated: true } : null;
+  }
+
+  /** Ask Spotter (F19): a keyword-routed fixture answer. Nothing is sent anywhere; `model` is "fixture". */
+  async ask(input: AskRequest): Promise<AskResponse> {
+    await wait(this.latencyMs);
+    return pickAskFixture(input);
   }
 
   /** Beat 1's "vest on" also unblocks Start for the fixture's PPE check. */
