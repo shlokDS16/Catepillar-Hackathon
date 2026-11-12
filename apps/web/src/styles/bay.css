@@ -18,7 +18,9 @@
 .bay-svg .bay-p > .bay-ram { fill: var(--ink-2); }
 
 /* Live state fills: a part is coloured only while it has a live state other than ok. */
-.bay-svg [data-state="caution"] > :is(path, rect):not(.bay-ram) { fill: var(--state-caution); }
+/* Caution is a pale tint, never a solid fill: a large caution-yellow body with ink edges would read as
+   yellow-and-black machine livery (no brand trade dress). The tag and the parts list carry the full colour. */
+.bay-svg [data-state="caution"] > :is(path, rect):not(.bay-ram) { fill: color-mix(in srgb, var(--state-caution) 30%, var(--surface)); }
 .bay-svg [data-state="warning"] > :is(path, rect):not(.bay-ram) { fill: var(--state-warning); }
 .bay-svg [data-state="critical"] > :is(path, rect):not(.bay-ram) { fill: var(--state-critical); }
 /* The highlighted part: heavier outline (replay: dashed ink, never a state colour). */
