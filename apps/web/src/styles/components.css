@@ -455,8 +455,36 @@
   text-transform: uppercase;
   color: var(--on-frame);
 }
-.strip-cap {
+.strip-cells {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+/* Sync cell: low priority while Saved, so it hides below 760 px; queued and offline always show. */
+.strip-sync {
+  color: var(--on-frame-2);
+  overflow-wrap: anywhere;
+}
+.strip-sync[data-state="saved"]::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-inline-end: var(--s-2);
+  border: var(--bw-hair) solid var(--on-frame);
+  background: var(--on-frame);
+}
+.strip-sync:not([data-state="saved"]) {
+  color: var(--on-frame);
+}
+@media (max-width: 759px) {
+  .strip-sync[data-state="saved"] {
+    display: none;
+  }
+}
+.strip-cap {
   min-width: 0;
   color: var(--on-frame-2);
   overflow-wrap: anywhere;

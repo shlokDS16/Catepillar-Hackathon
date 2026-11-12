@@ -8,6 +8,8 @@ import { useSafetyState } from "@/alerts/use-safety-state";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram, type PictogramName } from "@/components/ui/pictogram";
 import { useAppState } from "@/data/store";
+import { dataLabel } from "@/chrome/data-label";
+import { syncState } from "@/chrome/sync-state";
 import { useMotionLock } from "@/hero/use-motion-lock";
 
 const FALLBACK_PICTO: Record<"clear" | "nosignal", PictogramName> = { clear: "seatbelt", nosignal: "sos" };
@@ -31,20 +33,9 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
   const safetyWord = t(`enums.safety.${safety}`);
   const picto: PictogramName = topAlert ? KIND_PICTO[topAlert.kind] : safety === "nosignal" ? FALLBACK_PICTO.nosignal : FALLBACK_PICTO.clear;
 
-  let connText: string;
-  switch (connectivity.kind) {
-    case "live":
-      connText = clock ? t("chrome.simStatus", { time: format.dateTime(new Date(clock.sim_now), "time"), speed: clock.speed }) : t("chrome.live");
-      break;
-    case "reconnecting":
-      connText = t("chrome.reconnecting");
-      break;
-    case "nosignal":
-      connText = t("chrome.noSignalStatus", { time: format.dateTime(new Date(connectivity.syncedAtMs), "time") });
-      break;
-    default:
-      connText = clock ? t("chrome.fixtureStatus", { time: format.dateTime(new Date(clock.sim_now), "time"), speed: clock.speed }) : t("chrome.fixture");
-  }
+  const connText = dataLabel({ connectivity, clock, t, formatTime: (ms) => format.dateTime(new Date(ms), "time") });
+  const sync = syncState(connectivity);
+  const syncText = sync.kind === "saved" ? t("chrome.syncSaved") : sync.kind === "queued" ? t("chrome.syncQueued", { n: sync.n }) : t("chrome.syncOffline", { n: sync.n });
 
   return (
     <header className="strip" inert={lockShown || undefined}>
@@ -61,9 +52,14 @@ export function StatusStrip({ showSafety = true, title, actions }: { showSafety?
         </Chip>
       ) : null}
       {title}
-      <span className="strip-cap t-caption" data-conn={connectivity.kind}>
-        {connText}
-      </span>
+      <div className="strip-cells">
+        <span className="strip-cap t-caption" data-conn={connectivity.kind}>
+          {connText}
+        </span>
+        <span className="strip-sync t-caption" data-state={sync.kind} aria-label={`${t("chrome.syncLabel")}: ${syncText}`}>
+          {syncText}
+        </span>
+      </div>
       <div className="strip-actions">{actions}</div>
     </header>
   );
