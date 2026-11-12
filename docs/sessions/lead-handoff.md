@@ -13,20 +13,19 @@ Paste this into a fresh Claude Code session (model Opus, never Fable) opened in 
 > soft stop 92 % weekly, hard stop 96 %. ABSOLUTE: no Twilio call, SMS, Telegram or SOS trigger.
 > Continue from "Queue" below.
 
-## Merged and deployed (main)
-R3 Decide, R4 Debrief (stateAt re-enactment), F10 Task, F14 Inbox, F15 + F15b Ledger (verified_with_sealed,
-np= witness, full-range browser re-check), L1 near-miss privacy 003d-003g (contracts 2.0.0), L3 landing v1,
-portal redesign study (docs). Decisions D14 (portal direction B), D15 (no calls), D16 (privacy).
+## Merged and deployed (main, 7fed17b; 59 % weekly)
+R3 Decide, R4 Debrief, F10 Task, F14 Inbox, F15 + F15b Ledger, QA1 fixes (Debrief scored from real answers per
+data-model §2.8), L1 near-miss privacy 003d-003g (contracts 2.0.0), L1 B10 detectors 005/005b/005c (sqltest 9/9),
+L3 landing v1, portal B phase 1 chrome (afb4f07) and phase 2 Debrief ink theatre (7fed17b). Decisions D14-D16.
 
-## In flight when this was written (branches; check each for a newer head)
-- lane/l2-qa1: browser-QA fixes; review asked for spec scoring per data-model §2.8 and a lazy-loaded answer key.
-- lane/l1-b10: rule detectors, migration 005 APPLIED to the DB; Opus backend review running.
-- lane/l2-portal-chrome: portal B phase 1 (ink band, 4-slot dock + SOS slot, FM rail).
-- lane/l3-landing-v2: owned by the "Spotter frontend Track F" session (Shlok asked it directly); lead merges.
+## In flight (check each branch for a newer head)
+- lane/l1-b10b: replay build + server scoring (migration 006 APPLIED; contract 2.1.0 adds reenactment.event_ms,
+  machine_track[].seatbelt_fastened; parity test vs web scoreReplay over 258 answer sets). Opus backend review running.
+- lane/l2-portal-loop: phase 3 learning loop (Home loop card, Training assignment list, Lesson route). Opus review running.
+- lane/l3-landing-v2: Track F session; lead merges through the gate.
+- After B10b merges: the web Debrief should read event_ms / seatbelt_fastened (TODO in apps/web/src/replay/reenact.ts).
 
 ## Queue (priority order)
-1. Portal B phase 2: Debrief on the ink theatre + plain words + [Listen] per section; no per-step feedback in Decide (D14).
-2. Portal B phase 3: learning loop (Home loop card, Training assignment list, Lesson route) so a replay is reachable from the UI.
 3. L1 B10b/B11: replay scoring server-side (must match apps/web/src/replay/fixture-scoring.ts scoreReplay and data-model §2.8; weights chosen there because §2.8 gives none: procedure = 1/2 protocol Kendall pairs + 1/2 investigation, investigation = 1/2 net relevance + 1/2 order agreement with ideal; safety over safety-axis steps; efficiency = ms within time_limit_s; record them in §2.8 as the canonical weights); add additive contract fields reenactment.event_ms and machine_track[].seatbelt_fastened.
 4. Portal B phase 4: FM Inbox split view / mobile triage, FM map sizing fix, Ledger auto-verify on open.
 5. F11 Safety + A13, F17 Lessons, F20 Analytics (currently a stub), F19 Ask.
