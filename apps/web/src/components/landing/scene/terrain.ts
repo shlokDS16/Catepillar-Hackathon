@@ -76,8 +76,8 @@ export function buildTerrain(): THREE.Mesh {
 
   const nrm = geo.attributes.normal as THREE.BufferAttribute;
   const colors = new Float32Array(pos.count * 3);
-  const floor = new THREE.Color("#5e5650");
-  const bench = new THREE.Color("#7b705f");
+  const floor = new THREE.Color("#7a6e62");
+  const bench = new THREE.Color("#8c7f6b");
   const wall = new THREE.Color("#34303a");
   const hill = new THREE.Color("#4c4a64");
   const c = new THREE.Color();
@@ -90,7 +90,7 @@ export function buildTerrain(): THREE.Mesh {
     c.lerp(hill, smooth(RIM - 6, RIM + 90, r));
     const steep = clamp((1 - nrm.getY(i) - 0.06) * 3.2, 0, 1);
     c.lerp(wall, steep);
-    const n = 0.88 + fbm(x * 0.15, z * 0.15) * 0.24;
+    const n = 0.88 + fbm(x * 0.15, z * 0.15) * 0.24 + (fbm(x * 1.2, z * 1.2) - 0.5) * 0.12;
     colors[i * 3] = c.r * n;
     colors[i * 3 + 1] = c.g * n;
     colors[i * 3 + 2] = c.b * n;

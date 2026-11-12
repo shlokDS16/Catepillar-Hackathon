@@ -5,7 +5,7 @@ import { DawnPoster } from "@/components/landing/dawn-poster";
 import { LandingEngine } from "@/components/landing/landing-engine";
 import { Chip } from "@/components/ui/chip";
 import { Pictogram, type SignShape } from "@/components/ui/pictogram";
-import { buildLedgerDemo, groups } from "@/components/landing/ledger-demo";
+import { TAMPER_AT, buildLedgerDemo, groups } from "@/components/landing/ledger-demo";
 import { WipeLink } from "@/components/landing/wipe-link";
 
 type Style = CSSProperties & Record<`--${string}`, string | number>;
@@ -43,7 +43,7 @@ export async function Landing() {
   const t = await getTranslations("landing");
   const te = await getTranslations("enums.safety");
   const caption = t("caption");
-  const ledger = await buildLedgerDemo();
+  const { rows: ledger } = await buildLedgerDemo();
   return (
     <div className="landing" data-landing>
       <noscript>
@@ -54,9 +54,10 @@ export async function Landing() {
         <LanguageChip />
       </header>
 
-      <div className="l-body">
-      <main className="l-scene">
+      <main className="l-body">
+      <div className="l-scene">
         <canvas className="l-canvas" aria-hidden="true" />
+        <div className="l-grade" aria-hidden="true" />
 
         {/* 1 · Dawn over the bench */}
         <section className="stage" data-stage="1" style={{ "--h": 400 } as Style}>
@@ -67,7 +68,7 @@ export async function Landing() {
               <p className="l-kicker">{t("kicker")}</p>
               <h1 className="l-h1 rv rv-out">{t("headline")}</h1>
               <p className="l-sub rv rv-out">{t("sub")}</p>
-              <div className="l-actions rv rv-out">
+              <div className="l-actions rv rv-out" data-inert-after="0.44">
                 <WipeLink className="l-cta" href="/op">
                   <span>{t("cta")}</span>
                   <span className="l-arrow" aria-hidden="true">
@@ -92,7 +93,7 @@ export async function Landing() {
           <div className="pin">
             <Poster n={2} />
             <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.2, "--b": 0.32 } as Style}>
-              <p className="l-kicker">02</p>
+              <p className="l-kicker">02 / 07</p>
               <h2 className="l-h2">{t("s2.title")}</h2>
               <p className="l-sub">{t("s2.body")}</p>
             </div>
@@ -113,7 +114,7 @@ export async function Landing() {
           <div className="pin">
             <Poster n={3} />
             <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.08, "--b": 0.2 } as Style}>
-              <p className="l-kicker">03</p>
+              <p className="l-kicker">03 / 07</p>
               <h2 className="l-h2">{t("s3.title")}</h2>
               <p className="l-sub">{t("s3.body")}</p>
               <dl className="l-stats">
@@ -140,11 +141,10 @@ export async function Landing() {
           <div className="pin">
             <Poster n={4} />
             <div className="l-copy l-copy-left rv rv-io" style={{ "--a": 0.05, "--b": 0.17 } as Style}>
-              <p className="l-kicker">04</p>
+              <p className="l-kicker">04 / 07</p>
               <h2 className="l-h2">{t("s4.title")}</h2>
               <p className="l-sub">{t("s4.body")}</p>
-            </div>
-            <ul className="l-legend rv rv-io" style={{ "--a": 0.12, "--b": 0.24 } as Style}>
+              <ul className="l-legend">
               {RING_STATES.map((s) => (
                 <li key={s.lv} className="lg" data-lv={s.lv}>
                   <Chip tone={s.tone} word icon={<Pictogram name="proximity" shape={s.shape} />}>
@@ -153,6 +153,7 @@ export async function Landing() {
                 </li>
               ))}
             </ul>
+            </div>
             <Caption text={caption} />
           </div>
         </section>
@@ -162,7 +163,7 @@ export async function Landing() {
           <div className="pin">
             <Poster n={5} />
             <div className="l-card rv rv-io" style={{ "--a": 0.45, "--b": 0.6, "--c": 0.97, "--d": 1 } as Style}>
-              <p className="l-kicker">05</p>
+              <p className="l-kicker">05 / 07</p>
               <h2 className="l-h2">{t("s5.title")}</h2>
               <p className="l-sub">{t("s5.body")}</p>
               <div className="scrub rv" style={{ "--a": 0.05, "--b": 0.9 } as Style}>
@@ -183,14 +184,14 @@ export async function Landing() {
             <Caption text={caption} />
           </div>
         </section>
-      </main>
+      </div>
 
         {/* 6 · Tamper-evident ledger (DOM, light stage) */}
         <section className="stage stage-light" data-stage="6" style={{ "--h": 180 } as Style}>
           <div className="pin">
             <div className="l-ledger-wrap">
               <div className="l-copy-light rv rv-io" style={{ "--a": 0.02, "--b": 0.14, "--c": 0.94, "--d": 1 } as Style}>
-                <p className="l-kicker">06</p>
+                <p className="l-kicker">06 / 07</p>
                 <h2 className="l-h2">{t("s6.title")}</h2>
                 <p className="l-sub">{t("s6.body")}</p>
                 <div className="l-status rv" style={{ "--a": 0.6, "--b": 0.72 } as Style}>
@@ -201,7 +202,7 @@ export async function Landing() {
                   </span>
                   <span className="st-bad">
                     <Chip tone="critical" word icon={<Pictogram name="proximity" shape="octagon" />}>
-                      {t("s6.chainBroken")}
+                      {t("s6.chainBroken", { n: TAMPER_AT })}
                     </Chip>
                   </span>
                 </div>
@@ -214,13 +215,13 @@ export async function Landing() {
                     style={{ "--a": 0.1 + i * 0.07, "--b": 0.22 + i * 0.07, "--k": 0.6 + Math.max(0, r.seq - 4) * 0.04, "--m": 0.72 + Math.max(0, r.seq - 4) * 0.04 } as Style}
                   >
                     <span className="lrow-n">{`${t("s6.row")} ${r.seq}`}</span>
-                    <span className="lrow-type">{r.type}</span>
-                    <span className="lrow-sev">sev {r.severity}</span>
+                    <span className="lrow-type">{t(`s6.types.${r.type}`)}</span>
+                    <span className="lrow-sev">{t("s6.sev", { n: r.severity })}</span>
                     <span className="lrow-hash">{groups(r.stored)}</span>
                     <span className="lrow-prev">
                       {t("s6.prev")} {groups(r.prev)}
                     </span>
-                    {r.tampered ? <span className="lrow-flag">{t("s6.tamper")}</span> : null}
+                    {r.tampered ? <span className="lrow-flag">{t("s6.tamper", { n: TAMPER_AT })}</span> : null}
                   </li>
                 ))}
               </ol>
@@ -243,7 +244,7 @@ export async function Landing() {
             <Caption text={caption} />
           </div>
         </section>
-      </div>
+      </main>
 
       <footer className="l-foot">
         <p className="l-foot-brand">{t("brand")}</p>

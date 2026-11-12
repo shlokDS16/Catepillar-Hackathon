@@ -17,7 +17,8 @@ export function LandingEngine() {
     const root = document.querySelector<HTMLElement>("[data-landing]");
     if (!root) return;
     const reduced = window.matchMedia("(prefers-reduced-motion: reduce)");
-    const still = new URLSearchParams(window.location.search).get("still");
+    // `?still=<stage>:<p>` renders the poster states; it exists only outside production builds.
+    const still = process.env.NODE_ENV !== "production" ? new URLSearchParams(window.location.search).get("still") : null;
     if (reduced.matches && !still) {
       root.dataset.motion = "reduced";
       return;
@@ -25,6 +26,12 @@ export function LandingEngine() {
 
     const stages = Array.from(root.querySelectorAll<HTMLElement>(".stage"));
     const canvas = root.querySelector<HTMLCanvasElement>("canvas.l-canvas");
+    // Faded-out controls leave the tab order and the accessibility tree once they are invisible.
+    const gated = Array.from(root.querySelectorAll<HTMLElement>("[data-inert-after]")).map((el) => ({
+      el,
+      stage: stages.indexOf(el.closest<HTMLElement>(".stage") as HTMLElement),
+      after: Number(el.dataset.inertAfter),
+    }));
     let bands: Array<{ el: HTMLElement; top: number; travel: number; last: number }> = [];
     const ps = [0, 0, 0, 0, 0];
     let raf = 0;
@@ -52,6 +59,7 @@ export function LandingEngine() {
         }
         if (i < ps.length) ps[i] = p;
       });
+      for (const g of gated) g.el.inert = g.stage >= 0 && (bands[g.stage]?.last ?? 0) >= g.after;
       // Stage 5 shrinks the shared canvas to a card: f = p^2 over .4-.8 (dossier §1.2).
       const w = Math.min(1, Math.max(0, (ps[4] - 0.4) / 0.4));
       root.style.setProperty("--f", (w * w).toFixed(4));

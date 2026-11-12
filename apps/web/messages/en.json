@@ -750,9 +750,17 @@
       "body": "Each entry carries the hash of the one before it. Change one row after the fact and the chain stops verifying, and the changed row is named.",
       "row": "Entry",
       "prev": "previous",
-      "tamper": "Row 4 changed after the fact",
+      "tamper": "Row {n} changed after the fact",
       "chainOk": "Chain verified",
-      "chainBroken": "Chain broken at row 4"
+      "chainBroken": "Chain broken at row {n}",
+      "types": {
+        "seatbelt_breach": "Seatbelt off",
+        "idle_excess": "Idle too long",
+        "overspeed": "Overspeed",
+        "proximity_warning": "Proximity warning",
+        "slope_alert": "Slope alert"
+      },
+      "sev": "Severity {n}"
     },
     "s7": {
       "title": "Start the shift.",

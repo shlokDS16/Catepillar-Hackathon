@@ -27,6 +27,7 @@
   align-items: center;
   gap: var(--s-4);
   max-width: calc(100vw - 2 * var(--gutter));
+  min-height: 52px;
   padding: var(--s-1) var(--s-1) var(--s-1) var(--s-5);
   transform: translateX(-50%);
   border-radius: 16px;
@@ -100,6 +101,16 @@
   font-variant-numeric: tabular-nums;
 }
 
+.l-kicker::before {
+  content: "";
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  margin-right: 10px;
+  vertical-align: middle;
+  background: currentColor;
+}
+
 .l-kicker {
   text-transform: uppercase;
   color: color-mix(in srgb, var(--on-ink) 78%, transparent);
@@ -131,6 +142,7 @@
 }
 
 .l-b {
+  pointer-events: none;
   position: absolute;
   left: 0;
   right: 0;
@@ -262,7 +274,8 @@
 /* The language chip inside the pill: a compact 48 px target, rounded to match. */
 .l-nav .chip {
   min-height: var(--hit-dense);
-  border-width: var(--bw-hair);
+  border-width: 0;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
   border-radius: 12px;
   padding: 0 var(--s-4);
   font-size: 15px;
@@ -308,24 +321,34 @@
 /* Left text blocks for stages 2-5. A soft shade keeps white type legible over the bright sky. */
 .l-copy-left {
   max-width: 440px;
-  bottom: calc(var(--s-8) + var(--s-2));
+  bottom: calc(var(--s-8) + var(--s-5));
 }
 
-.l-copy-left::before {
-  content: "";
-  position: absolute;
-  z-index: -1;
-  inset: calc(-1 * var(--s-7)) calc(-1 * var(--s-7)) calc(-1 * var(--s-6)) calc(-1 * var(--gutter));
-  background: radial-gradient(ellipse at 30% 60%, color-mix(in srgb, var(--rock-front) 72%, transparent), transparent 72%);
+.l-copy-left .l-sub {
+  max-width: 38ch;
+}
+
+/* One full-frame grade over the canvas replaces per-block shading. */
+.l-grade {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: block;
+  height: 100svh;
+  margin-bottom: -100svh;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, color-mix(in srgb, var(--rock-front) 48%, transparent), transparent 58%),
+    radial-gradient(120% 90% at 60% 45%, transparent 55%, color-mix(in srgb, var(--rock-front) 55%, transparent));
 }
 
 .l-h2 {
   margin: 0;
   font-family: var(--ff-display);
   font-weight: 700;
-  font-size: clamp(38px, 5.4vw, 66px);
-  line-height: 1;
-  letter-spacing: -0.04em;
+  font-size: clamp(44px, 5.3vw, 76.8px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
   text-wrap: balance;
   overflow-wrap: anywhere;
 }
@@ -434,43 +457,51 @@
   font-variant-numeric: tabular-nums;
 }
 
-/* Guardian legend: dim until the walker's distance puts the scene in that state. */
+/* Guardian legend: one row under the body copy; the active state is the only filled plate. */
 .l-legend {
-  position: absolute;
-  right: var(--gutter);
-  top: 50%;
   display: flex;
-  flex-direction: column;
-  gap: var(--s-3);
-  margin: 0;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: var(--s-2) 0 0;
   padding: 0;
   list-style: none;
-  translate: 0 -50%;
 }
 
-.lg {
-  opacity: 0.4;
+.lg .chip {
+  min-width: 148px;
+  justify-content: center;
+  border: 1.5px solid color-mix(in srgb, var(--on-ink) 65%, transparent);
+  background: transparent;
+  color: var(--on-ink);
   transition:
-    opacity var(--dur-lhover) var(--ease-quint),
-    transform var(--dur-lhover) var(--ease-quint);
+    background var(--dur-lhover) var(--ease-quint),
+    color var(--dur-lhover) var(--ease-quint);
 }
 
-.landing[data-ring="1"] .lg[data-lv="1"],
-.landing[data-ring="2"] .lg[data-lv="2"],
-.landing[data-ring="3"] .lg[data-lv="3"],
-.landing[data-ring="4"] .lg[data-lv="4"] {
-  opacity: 1;
-  transform: scale(1.08) translateX(calc(-1 * var(--s-2)));
+.landing[data-ring="1"] .lg[data-lv="1"] .chip {
+  background: var(--state-clear);
+  color: var(--on-ink);
+}
+.landing[data-ring="2"] .lg[data-lv="2"] .chip {
+  background: var(--state-caution);
+  color: var(--on-signal);
+}
+.landing[data-ring="3"] .lg[data-lv="3"] .chip {
+  background: var(--state-warning);
+  color: var(--on-signal);
+}
+.landing[data-ring="4"] .lg[data-lv="4"] .chip {
+  background: var(--state-critical);
+  color: var(--on-ink);
 }
 
 @media (max-width: 767px) {
-  .l-legend {
-    top: 92px;
-    left: var(--gutter);
-    right: var(--gutter);
-    flex-direction: row;
-    flex-wrap: wrap;
-    translate: none;
+  .lg .chip {
+    min-width: 0;
+    flex: 1 1 calc(50% - var(--s-2));
+  }
+  .l-caption {
+    font-size: 11.5px;
   }
 }
 
@@ -547,15 +578,15 @@
   position: absolute;
   inset: 0;
   z-index: -2;
-  display: none;
+  display: block;
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.landing[data-gl="off"] .l-poster-img,
-.landing[data-motion="reduced"] .l-poster-img {
-  display: block;
+/* The poster is the state without script and before three.js arrives; the canvas replaces it. */
+.landing[data-gl="on"] .l-poster-img {
+  display: none;
 }
 
 /* 6 · Ledger: a light, paper stage. */
@@ -852,7 +883,7 @@
   }
   .l-cta,
   .l-arrow,
-  .lg,
+  .lg .chip,
   .lrow + .lrow::before {
     transition: none;
   }
@@ -882,9 +913,6 @@
   }
   .lrow + .lrow::before {
     transform: none;
-  }
-  .lg {
-    opacity: 1;
   }
   .l-canvas {
     display: none;

@@ -34,11 +34,11 @@ const smoothstep = (t: number) => t * t * (3 - 2 * t);
 const win = (p: number, a: number, b: number) => clamp01((p - a) / (b - a));
 
 /** `sx`/`sy`: frame the subject off-centre (fraction of the viewport) to leave room for copy. */
-type Key = { pos: [number, number, number]; tgt: [number, number, number]; fov: number; sx: number; sy: number };
+type Key = { pos: [number, number, number]; tgt: [number, number, number]; fov: number; sx: number; sy: number; m?: { sx: number; sy: number } };
 
 /* Camera waypoints W0..W5: stage i flies W[i] to W[i+1] (dossier: FOV 35 wide, 26 hero framing). */
 const W: Key[] = [
-  { pos: [-30, 3.5, 30], tgt: [14, 9, -38], fov: 35, sx: 0, sy: 0 },
+  { pos: [-26, 3.2, 26], tgt: [12, 8, -32], fov: 30, sx: 0, sy: 0, m: { sx: -0.28, sy: -0.2 } },
   { pos: [-16, 22, 48], tgt: [2, 3, 0], fov: 35, sx: 0, sy: 0 },
   { pos: [26, 7.5, 30], tgt: [3.5, 3.2, 0], fov: 26, sx: 0, sy: -0.1 },
   { pos: [0, 72, 46], tgt: [0, 0, 0], fov: 35, sx: 0, sy: 0 },
@@ -105,8 +105,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   softbox(40, 24, new THREE.Color(0.7, 0.82, 1.0).multiplyScalar(3.5), -50, 14, 12); // fill, cool
   softbox(70, 10, new THREE.Color(1, 1, 1).multiplyScalar(7), 0, 52, -34); // rim strip
   const pmrem = new THREE.PMREMGenerator(renderer);
-  const envTex = pmrem.fromScene(envScene, 0.04).texture;
-  scene.environment = envTex;
+  const envRT = pmrem.fromScene(envScene, 0.04);
+  scene.environment = envRT.texture;
   pmrem.dispose();
 
   /* Sky dome: blue hour to first light, driven by one uniform. */
@@ -138,7 +138,8 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     }),
   );
   scene.add(sky);
-  scene.fog = new THREE.Fog(0x8a87a6, 160, 900);
+  const fog = new THREE.Fog(0x8a87a6, 160, 900);
+  scene.fog = fog;
 
   const terrain = buildTerrain();
   scene.add(terrain);
@@ -176,30 +177,31 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   const curve = new THREE.CatmullRomCurve3(pts, false, "centripetal");
   const TUBE_SEG = 520;
   const RADIAL = 5;
-  const trailGeo = new THREE.TubeGeometry(curve, TUBE_SEG, 0.24, RADIAL, false);
-  const trailMat = new THREE.MeshBasicMaterial({ color: 0xfff6e4, toneMapped: false });
+  const trailGeo = new THREE.TubeGeometry(curve, TUBE_SEG, 0.09, RADIAL, false);
+  const trailMat = new THREE.MeshBasicMaterial({ color: 0xfff6e4, transparent: true, opacity: 0.55 });
   const trail = new THREE.Mesh(trailGeo, trailMat);
   trail.frustumCulled = false;
   scene.add(trail);
-  const head = new THREE.Mesh(new THREE.SphereGeometry(0.7, 12, 8), new THREE.MeshBasicMaterial({ color: 0xfff6e4, toneMapped: false }));
+  const head = new THREE.Mesh(new THREE.SphereGeometry(0.35, 12, 8), new THREE.MeshBasicMaterial({ color: 0xfff6e4, toneMapped: false }));
   scene.add(head);
 
   /* Guardian rings and the walker. */
   const ringGroup = new THREE.Group();
-  const ringMats: THREE.MeshBasicMaterial[] = [];
+  const thinMats: THREE.MeshBasicMaterial[] = [];
+  const thickMats: THREE.MeshBasicMaterial[] = [];
   const discMats: THREE.MeshBasicMaterial[] = [];
+  const flat = (geo: THREE.BufferGeometry, color: number, y: number) => {
+    const mat = new THREE.MeshBasicMaterial({ color, transparent: true, depthWrite: false, toneMapped: false });
+    const m = new THREE.Mesh(geo, mat);
+    m.rotation.x = -Math.PI / 2;
+    m.position.y = y;
+    ringGroup.add(m);
+    return mat;
+  };
   RINGS.forEach((rg) => {
-    const m = new THREE.MeshBasicMaterial({ color: rg.color, transparent: true, depthWrite: false, toneMapped: false });
-    const ring = new THREE.Mesh(new THREE.RingGeometry(rg.r - 0.55, rg.r, 128), m);
-    ring.rotation.x = -Math.PI / 2;
-    ring.position.y = 0.1;
-    const dm = new THREE.MeshBasicMaterial({ color: rg.color, transparent: true, depthWrite: false, toneMapped: false });
-    const disc = new THREE.Mesh(new THREE.CircleGeometry(rg.r, 64), dm);
-    disc.rotation.x = -Math.PI / 2;
-    disc.position.y = 0.06;
-    ringGroup.add(disc, ring);
-    ringMats.push(m);
-    discMats.push(dm);
+    discMats.push(flat(new THREE.CircleGeometry(rg.r, 64), rg.color, 0.06));
+    thinMats.push(flat(new THREE.RingGeometry(rg.r - 0.18, rg.r, 128), rg.color, 0.1));
+    thickMats.push(flat(new THREE.RingGeometry(rg.r - 0.9, rg.r, 128), rg.color, 0.11));
   });
   ringGroup.visible = false;
   scene.add(ringGroup);
@@ -255,11 +257,14 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
   let aspect = 1;
   const tmp = new THREE.Vector3();
   const tan = new THREE.Vector3();
+  const startTan = curve.getTangentAt(0, new THREE.Vector3());
+  const sunWarm = new THREE.Color(0xffd2a6);
+  const sunCool = new THREE.Color(0x8fa4e8);
   const faultAmber = new THREE.Color(0xffc700);
   const faultRed = new THREE.Color(0xb3102a);
 
   function dawnValue(): number {
-    return inout(win(ps[0], 0, 0.85));
+    return lerp(0.3, 1, inout(win(ps[0], 0, 0.85)));
   }
 
   /** Where the trail head is, 0..1: forward while stage 3 runs, rewinding in stage 5. */
@@ -278,8 +283,9 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     wantPos.set(lerp(a.pos[0], b.pos[0], e), lerp(a.pos[1], b.pos[1], e), lerp(a.pos[2], b.pos[2], e));
     wantTgt.set(lerp(a.tgt[0], b.tgt[0], e), lerp(a.tgt[1], b.tgt[1], e), lerp(a.tgt[2], b.tgt[2], e));
     wantFov = lerp(a.fov, b.fov, e);
-    wantSx = lerp(a.sx, b.sx, e);
-    wantSy = lerp(a.sy, b.sy, e);
+    const portrait = aspect < 0.9;
+    wantSx = lerp(a.sx + (portrait ? a.m?.sx ?? 0 : 0), b.sx + (portrait ? b.m?.sx ?? 0 : 0), e);
+    wantSy = lerp(a.sy + (portrait ? a.m?.sy ?? 0 : 0), b.sy + (portrait ? b.m?.sy ?? 0 : 0), e);
     const orbit = (Math.max(0, p - TRAVEL[s]) * ORBIT[s]) / (1 - TRAVEL[s] + 1e-6);
     if (orbit !== 0) {
       tmp.subVectors(wantPos, wantTgt);
@@ -295,15 +301,17 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     const dawn = dawnValue();
     skyU.uDawn.value = dawn;
     sun.intensity = lerp(0.12, 2.0, dawn);
-    sun.color.setHex(0xffd2a6).lerp(new THREE.Color(0x8fa4e8), 1 - dawn);
+    sun.color.copy(sunWarm).lerp(sunCool, 1 - dawn);
     const elev = lerp(0.04, 0.3, dawn);
     skyU.uSun.value.set(0.5, elev, -0.85).normalize();
-    sun.position.set(skyU.uSun.value.x * 90, Math.max(18, skyU.uSun.value.y * 140), skyU.uSun.value.z * 90);
-    // The sun shines from the horizon but the light comes from a slightly higher key so faces read.
+    // The sky sun sits on the horizon; the light comes from a higher key so faces read.
     sun.position.set(40, 38, 34);
     scene.environmentIntensity = lerp(0.3, 0.75, dawn);
     renderer.toneMappingExposure = lerp(0.85, 1.05, dawn);
-    (scene.fog as THREE.Fog).color.setRGB(lerp(0.1, 0.62, dawn), lerp(0.13, 0.52, dawn), lerp(0.28, 0.6, dawn));
+    const fogIn = win(ps[3], 0, 0.2) * (1 - win(ps[4], 0, 0.3));
+    fog.near = lerp(160, 60, fogIn);
+    fog.far = lerp(900, 260, fogIn);
+    fog.color.setRGB(lerp(0.1, 0.62, dawn), lerp(0.13, 0.52, dawn), lerp(0.28, 0.6, dawn));
     dustMat.opacity = 0.55 * dawn * (1 - win(ps[1] + ps[2], 0.3, 1));
     if (!opts.reducedMotion) {
       const arr = dustGeo.attributes.position as THREE.BufferAttribute;
@@ -333,8 +341,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     const pt = curve.getPointAt(Math.min(0.9999, Math.max(0, t)));
     curve.getTangentAt(Math.min(0.9999, Math.max(0, t)), tan);
     let heading = Math.atan2(-tan.z, tan.x);
-    const start = curve.getTangentAt(0, new THREE.Vector3());
-    const h0 = Math.atan2(-start.z, start.x);
+    const h0 = Math.atan2(-startTan.z, startTan.x);
     const pre = t < 0.02 ? 1 : 0;
     const post = win(t, 0.9, 1);
     heading = lerp(heading, h0, Math.max(pre, post));
@@ -343,8 +350,9 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     head.position.copy(pt);
     head.position.y += 0.4;
     // Trail draw. In stage 5 the trail rewinds with the machine.
-    const drawT = ps[4] > 0 ? t : t;
-    const count = Math.floor(drawT * TUBE_SEG) * RADIAL * 6;
+    const fade = win(ps[3], 0, 0.2) * (1 - win(ps[4], 0, 0.2));
+    trailMat.opacity = lerp(0.55, 0.15, fade);
+    const count = Math.floor(t * TUBE_SEG) * RADIAL * 6;
     trailGeo.setDrawRange(0, count);
     trail.visible = count > 0;
     head.visible = ps[2] > 0 || ps[4] > 0;
@@ -368,14 +376,13 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
       walker.rotation.y = away > 0.02 ? 0 : Math.PI;
       level = ringLevel(Math.hypot(x, 3.2));
       const pulse = opts.reducedMotion ? 0.8 : 0.78 + Math.sin(time * 4.2) * 0.22;
-      ringMats.forEach((m, i) => {
+      // One loud ring: the active state is a 0.9 m band at full strength; the rest are hairlines.
+      for (let i = 0; i < RINGS.length; i++) {
         const active = level >= 1 && level - 1 === i;
-        const reached = level - 1 >= i;
-        m.opacity = (active ? pulse : reached ? 0.55 : 0.32) * out;
-      });
-      discMats.forEach((m, i) => {
-        m.opacity = (level >= 1 && level - 1 === i ? 0.2 * (opts.reducedMotion ? 1 : 0.7 + 0.3 * Math.sin(time * 4.2)) : 0.03) * out;
-      });
+        thickMats[i].opacity = active ? pulse * out : 0;
+        thinMats[i].opacity = active ? 0 : 0.28 * out;
+        discMats[i].opacity = active ? 0.12 * out : 0;
+      }
     }
     if (level !== lastRing) {
       lastRing = level;
@@ -400,7 +407,7 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     camera.fov = THREE.MathUtils.radToDeg(2 * Math.atan(Math.tan(THREE.MathUtils.degToRad(camFov) / 2) * boost));
     camSx += (wantSx - camSx) * f;
     camSy += (wantSy - camSy) * f;
-    const sx = aspect > 1.1 ? camSx : 0;
+    const sx = aspect > 1.1 || aspect < 0.9 ? camSx : 0;
     camera.setViewOffset(vw, vh, -sx * vw, -camSy * vh, vw, vh);
     camera.updateProjectionMatrix();
   }
@@ -432,7 +439,6 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
     const dt = Math.min(0.05, (now - last) / 1000 || 0.016);
     last = now;
     time += dt;
-    const t0 = performance.now();
     updateWorld(dt);
     updateCamera(dt, false);
     renderer.render(scene, camera);
@@ -448,7 +454,6 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
         resize();
       }
     }
-    void t0;
   }
 
   resize();
@@ -481,8 +486,15 @@ export function createScene(canvas: HTMLCanvasElement, opts: SceneOptions = {}):
         if (Array.isArray(mat)) mat.forEach((x) => x.dispose());
         else mat?.dispose?.();
       });
-      envTex.dispose();
+      envScene.traverse((o) => {
+        const m = o as THREE.Mesh;
+        m.geometry?.dispose?.();
+        (m.material as THREE.Material | undefined)?.dispose?.();
+      });
+      envRT.dispose();
+      sun.shadow.dispose();
       renderer.dispose();
+      renderer.forceContextLoss();
     },
   };
 }
