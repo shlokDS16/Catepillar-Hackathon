@@ -91,3 +91,16 @@ One line per significant decision, newest last. Full reasoning lives in the ADR.
 
 ## 2026-11-12 - D-near-miss: the near-miss list is trainer-only and unattributed
 - 003e-003g, after three reviews. `ledger_export` seals near-miss rows for the FM; `private.event_visible` keeps near-miss events off the FM, site and trainer routes (RLS, `my_snapshot`, broadcast); the trainer has no direct `incidents` read. `near_miss_list()` is trainer-only and returns (day, severity, incident_type) for sealed rows only: the stable pseudonym is withdrawn because one punitive row (visible to the FM with identity) ties it to a name, and seq/incident_id line up with the ledger export. NearMissListOut changes: breaking change to an RPC with no consumer, CONTRACTS_VERSION 1.0.0 to 2.0.0. Residual: the browser cannot recompute a sealed row's content hash (server `ledger_verify` does).
+
+## 2026-11-12 — D14: Portal redesign direction (Shlok, AskUserQuestion)
+- Inside portal (/op, /fm) moves to direction **B "Ink Frame"** (docs/design/portal-redesign-study.md §3): the landing's ink becomes the portal frame (status band + dock); the work surface stays dark-on-paper for sunlight; the Debrief plays on an ink "theatre". Plus from C: plain-word labels, [Listen] on every Debrief section, FM Inbox triage layout on mobile.
+- Operator nav: 4 destinations (Map moves inside Safety) + SOS in a fixed dock slot (no floating SOS).
+- Replay Decide: no right/wrong feedback per step; feedback only in the Debrief (training-guidelines §5, Solve-style measurement).
+- Overturns/amends the six items in the study §5 (ink frame surface; mono for provenance captions and section labels; −0.03em tracking on Latin display; nav 5→4 + SOS dock; split Inbox on desktop; Debrief wording "Ideal"→"Safest", "Efficiency"→"Speed" for operators, contract field names unchanged). Supersedes D6's "Site Signage everywhere outside landing/Replay" for the portal frame; safety colours stay reserved for live danger.
+- Build order (study §5): 1 chrome, 2 Debrief payoff, 3 learning loop (assignment list, lesson route), 4 FM, 5 QA.
+
+## 2026-11-12 — D15: No calls (Shlok)
+- No Twilio call, SMS, Telegram or SOS trigger by anyone (a friend's number is among the demo phones). DEMO_SUPERVISOR_PHONE removed from Vercel production.
+
+## 2026-11-12 — D16: Near-miss privacy hardening (lead, after 3 Opus reviews)
+- Migrations 003d-003g: sealed ledger rows export only {v, seq, prev_hash, non_punitive, sealed}+entry_hash; private.event_visible() governs events_read, my_snapshot and broadcasts; near_miss_list is trainer-only and returns (day, severity, type) for sealed rows; contracts 2.0.0. Accepted residual: a holder of both trainer and FM roles can align days with sealed ledger rows (no person revealed).
