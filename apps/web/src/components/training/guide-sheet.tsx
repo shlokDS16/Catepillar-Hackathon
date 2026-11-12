@@ -124,7 +124,7 @@ export function GuideSheet({ open, onClose, persistNote }: GuideSheetProps) {
         >
           <GuideFigure figure={step.figure} />
           {/* The count shares the heading row: on a 375 px phone every row costs the sentence
-              below room it cannot afford under the floating SOS plate. */}
+              below room it cannot afford. */}
           <div className="guide-step-head">
             <Icon className="guide-step-icon" strokeWidth={2} aria-hidden="true" />
             <h3 id={titleId} className="t-title">

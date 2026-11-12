@@ -1,5 +1,6 @@
 "use client";
 
+import type { ReactNode } from "react";
 import { useFormatter, useTranslations } from "next-intl";
 import { KIND_PICTO } from "@/alerts/kinds";
 import { safetyTone } from "@/alerts/selectors";
@@ -12,12 +13,13 @@ import { useMotionLock } from "@/hero/use-motion-lock";
 const FALLBACK_PICTO: Record<"clear" | "nosignal", PictogramName> = { clear: "seatbelt", nosignal: "sos" };
 
 /**
- * The 80 px status strip: [Safety chip][Connectivity chip], both from the store.
+ * The ink status band: [state plate][connectivity caption][Language][Ask] (operator) or
+ * [page title][caption][Language] (fleet manager), all from the store.
  * Colour + pictogram + word, always; NO SIGNAL after 10 s without a frame.
  * While the motion lock shows, the strip stays visible above it but goes inert: its safety chip
  * is a Link, so it must not stay tab-reachable or tappable during the lock (interaction-map §6).
  */
-export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
+export function StatusStrip({ showSafety = true, title, actions }: { showSafety?: boolean; title?: ReactNode; actions?: ReactNode }) {
   const t = useTranslations();
   const format = useFormatter();
   const { safety, topAlert } = useSafetyState();
@@ -58,10 +60,11 @@ export function StatusStrip({ showSafety = true }: { showSafety?: boolean }) {
           {safetyWord}
         </Chip>
       ) : null}
-      {showSafety ? null : <span className="strip-name t-caption">{t("chrome.appName")}</span>}
+      {title}
       <span className="strip-cap t-caption" data-conn={connectivity.kind}>
         {connText}
       </span>
+      <div className="strip-actions">{actions}</div>
     </header>
   );
 }
