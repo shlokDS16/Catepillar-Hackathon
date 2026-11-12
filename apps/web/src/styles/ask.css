@@ -1,0 +1,66 @@
+/* S6 Ask Spotter sheet: working content, ink on paper, mono caption for provenance (visual-language Direction B). */
+.ask {
+  max-width: 40rem;
+  /* the dock and SOS rail sit above the sheet; keep the last line clear of them */
+  padding-bottom: var(--dock-total);
+}
+.ask-reading {
+  color: var(--ink-2);
+}
+.ask-steps {
+  margin: 0;
+  padding-left: var(--s-6);
+  list-style: decimal;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-3);
+}
+.ask-steps > li::marker {
+  font-family: var(--ff-mono);
+  font-weight: 700;
+}
+.ask-mark {
+  font-family: var(--ff-mono);
+  font-size: var(--t-caption);
+  white-space: nowrap;
+}
+.ask-cites {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+}
+.ask-rule-label {
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+}
+.ask-photo {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-2);
+}
+.ask-suggest {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-2);
+}
+.ask-caption {
+  color: var(--ink-2);
+}
+.ask-sim {
+  display: inline-block;
+  padding: 0 var(--s-2);
+  border: var(--bw) solid var(--ink);
+  color: var(--ink);
+  font-weight: 700;
+}
+.ask-footer {
+  border-top: var(--bw-hair) solid var(--rule-soft);
+  padding-top: var(--s-3);
+}

@@ -1,0 +1,516 @@
+[
+ {
+  "tag": "landing-perf",
+  "loadMs": 935,
+  "lcpMs": 876
+ },
+ {
+  "tag": "landing-375",
+  "url": "/",
+  "lang": "en",
+  "scrollW": 375,
+  "vw": 375,
+  "heads": [
+   "Choose your language",
+   "A whole shift, kept safe.",
+   "The machine",
+   "The operator's trail",
+   "Guardian rings",
+   "Replay hand-off",
+   "A record nobody can quietly edit",
+   "Start the shift."
+  ],
+  "unlabelled": 0,
+  "smallTargets": [
+   "Fleet view",
+   "Open the operator co",
+   "Fleet view"
+  ],
+  "axe": []
+ },
+ {
+  "tag": "v02-op-home-375",
+  "url": "/op",
+  "lang": "en",
+  "scrollW": 375,
+  "vw": 375,
+  "heads": [
+   "Home",
+   "Choose your language",
+   "Ask",
+   "SOS",
+   "Today's tasks"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [],
+  "axe": []
+ },
+ {
+  "tag": "v03-op-task-375",
+  "url": "/op/task",
+  "lang": "en",
+  "scrollW": 375,
+  "vw": 375,
+  "heads": [
+   "Task",
+   "Choose your language",
+   "Ask",
+   "SOS",
+   "Excavation",
+   "Why this estimate",
+   "Complete Excavation?"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [],
+  "axe": []
+ },
+ {
+  "tag": "v04-op-safety-375",
+  "url": "/op/safety",
+  "lang": "en",
+  "scrollW": 375,
+  "vw": 375,
+  "heads": [
+   "Safety",
+   "Choose your language",
+   "Ask",
+   "SOS",
+   "Checks",
+   "Earlier",
+   "Report something"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [],
+  "axe": []
+ },
+ {
+  "tag": "v05-op-training-375",
+  "url": "/op/training",
+  "lang": "en",
+  "scrollW": 375,
+  "vw": 375,
+  "heads": [
+   "Practice",
+   "Choose your language",
+   "Ask",
+   "SOS",
+   "Nothing assigned. Well done.",
+   "02 — OPEN ANY TIME",
+   "New to practice?",
+   "How practice works",
+   "Brief"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [],
+  "axe": []
+ },
+ {
+  "tag": "ask-sheet",
+  "text": ""
+ },
+ {
+  "tag": "replay-link",
+  "rhref": null
+ },
+ {
+  "tag": "replay-brief",
+  "url": "/op/training/replay/qa-validator",
+  "lang": "en",
+  "scrollW": 375,
+  "vw": 375,
+  "heads": [
+   "Practice",
+   "Choose your language",
+   "SOS",
+   "What happened",
+   "Leave practice?"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [],
+  "axe": []
+ },
+ {
+  "tag": "replay-walk",
+  "steps": [
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": "Start"
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   },
+   {
+    "phase": "Practice",
+    "opened": null,
+    "radio": false,
+    "clicked": null
+   }
+  ]
+ },
+ {
+  "tag": "replay-end",
+  "url": "/op/training/replay/qa-validator",
+  "lang": "en",
+  "scrollW": 375,
+  "vw": 375,
+  "heads": [
+   "Practice",
+   "Choose your language",
+   "SOS",
+   "Evidence",
+   "Leave practice?"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [],
+  "axe": []
+ },
+ {
+  "tag": "lesson",
+  "url": "/op/training/lesson/seatbelt_slopes",
+  "lang": "en",
+  "scrollW": 375,
+  "vw": 375,
+  "heads": [
+   "Practice",
+   "Choose your language",
+   "Ask",
+   "SOS",
+   "The rule"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [],
+  "axe": []
+ },
+ {
+  "tag": "hindi-op",
+  "lang": "hi",
+  "devanagariChars": 157,
+  "latinWordSample": [
+   "WBGT"
+  ]
+ },
+ {
+  "tag": "op-console-errors",
+  "errs": [],
+  "hosts": [
+   "spotter-five-brown.vercel.app"
+  ]
+ },
+ {
+  "tag": "fm-inbox",
+  "url": "/fm",
+  "lang": "en",
+  "scrollW": 1440,
+  "vw": 1440,
+  "heads": [
+   "Inbox",
+   "Choose your language",
+   "Ledger changed",
+   "What happened",
+   "Let this operator start without:"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [
+   "Skip to content"
+  ],
+  "axe": []
+ },
+ {
+  "tag": "ledger-verify",
+  "clicked": null,
+  "text": "Skip to content LEDGER FIXTURE 09:40 ×10 En Inbox Fleet map Analytics Ledger Incident ledger · tamper-evident, human-verifiable Internal check The database agrees with itself 213 verified · 1 sealed, chain checked Check again Telegram witness The database matches what you received outside it Not checked yet Compare with Telegram Open the SPOTTER-LEDGER message in your Telegram. Telegram line From To Compare Paste the Telegram line to compare Entries Latest 25 entries # Time Type Operator Machine Hash 190 2026-09-23 11:10 PPE missing 22222220 33333330 e2bd39ce 191 2026-09-23 11:11 Proximity 222"
+ },
+ {
+  "tag": "fm-ledger",
+  "url": "/fm/ledger",
+  "lang": "en",
+  "scrollW": 1440,
+  "vw": 1440,
+  "heads": [
+   "Ledger",
+   "Choose your language",
+   "Incident ledger · tamper-evident, human-verifiable",
+   "Internal check",
+   "Telegram witness",
+   "Compare with Telegram",
+   "Entries"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [
+   "Skip to content"
+  ],
+  "axe": []
+ },
+ {
+  "tag": "fm-analytics",
+  "url": "/fm/analytics",
+  "lang": "en",
+  "scrollW": 1440,
+  "vw": 1440,
+  "heads": [
+   "Analytics",
+   "Choose your language",
+   "Task time: estimate vs actual",
+   "Excavation",
+   "Trenching",
+   "Material loading",
+   "Grading",
+   "Demolition",
+   "Evidence · simulated data · synthetic cohort",
+   "Detection",
+   "ETA",
+   "Impact"
+  ],
+  "unlabelled": 0,
+  "smallTargets": [
+   "Skip to content"
+  ],
+  "axe": [
+   "serious:color-contrast(3)"
+  ]
+ },
+ {
+  "tag": "fm-console-errors",
+  "errs": []
+ },
+ {
+  "tag": "headers",
+  "csp": false,
+  "xfo": null,
+  "hsts": "max-age=63072000; includeSubDomains; preload",
+  "xcto": null,
+  "refpol": null
+ },
+ {
+  "tag": "guarded-routes",
+  "devkit": 404,
+  "director": 200
+ }
+]

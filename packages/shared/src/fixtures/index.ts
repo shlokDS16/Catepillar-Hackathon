@@ -22,6 +22,7 @@ import { IDS, T0, T1, i18n } from "./ids";
 
 export { EVENT_PAYLOADS, alertRaisedPayload, seatbeltBreachEvent } from "./events";
 export { IDS, T0, T1 } from "./ids";
+export * from "./ask";
 
 const HASH0 = "0".repeat(64);
 const HASH1 = "b04bf3cbe21a368128e2f5eb4d7d0d8a3b3a8491f84998aa2869e3cb88b51181";

@@ -1,5 +1,10 @@
 # STATE (source of truth; only the integrator/orchestrator edits this file)
 
+> **2026-11-12 session 2 (lead L0, Opus): Shlok chose D17 Machine Bay revamp (3D on desktop), D18 thin live path;
+> he is unavailable (exam), build autonomously to 92 % weekly.** QA3 12/12 PASS; judge 6.75/10; phase-validator
+> P4 FAIL (fixtures-only UI, typed analytics numbers, F19, stale demo script) / P5 PASS-WITH-FIXES. Branches
+> lane/l2-f19-ask and lane/l2-judge-content in review. Queue and paste-prompt: docs/sessions/lead-handoff.md.
+
 > **FINAL BUILD WINDOW 2026-11-12: lead L0 session ended at main 3bf6519 (63 % weekly, Fable 8 %).**
 > Live: https://spotter-five-brown.vercel.app (SOS dry-run; no calls: D15). NEXT SESSION: paste the prompt in
 > docs/sessions/lead-handoff.md into a fresh Opus session in the main folder; its Queue lists what is left

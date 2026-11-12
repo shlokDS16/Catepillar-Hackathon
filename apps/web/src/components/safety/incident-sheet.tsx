@@ -54,10 +54,12 @@ type Props = {
   restored: boolean;
   /** Ledger sequence once `incident.logged` arrived for the sent report. */
   ledgerSeq: number | null;
+  /** Distinguishes element ids when a second instance is mounted (the Ask sheet's A18 copy). */
+  idPrefix?: string;
 };
 
 /** A13 (interaction-map §4.4): one sheet, no steps. The draft is kept on failure and on reload. */
-export function IncidentSheet({ open, onClose, state, dispatch, onSubmit, offline, restored, ledgerSeq }: Props) {
+export function IncidentSheet({ open, onClose, state, dispatch, onSubmit, offline, restored, ledgerSeq, idPrefix = "incident" }: Props) {
   const t = useTranslations("incident");
   const tc = useTranslations("chrome");
   const missing = state.showMissing ? missingFields(state) : [];
@@ -74,8 +76,8 @@ export function IncidentSheet({ open, onClose, state, dispatch, onSubmit, offlin
             <Mark kind="check" />
             {ledgerSeq !== null ? t("recorded", { seq: ledgerSeq }) : t("recording")}
           </p>
-          <section className="flex flex-col gap-2" aria-labelledby="incident-next">
-            <h3 id="incident-next" className="t-label">
+          <section className="flex flex-col gap-2" aria-labelledby={`${idPrefix}-next`}>
+            <h3 id={`${idPrefix}-next`} className="t-label">
               {t("nextTitle")}
             </h3>
             <ol className="incident-next">
@@ -176,11 +178,11 @@ export function IncidentSheet({ open, onClose, state, dispatch, onSubmit, offlin
         </fieldset>
 
         <div className="flex flex-col gap-2">
-          <label htmlFor="incident-note" className="t-label">
+          <label htmlFor={`${idPrefix}-note`} className="t-label">
             {t("noteLabel")}
           </label>
           <textarea
-            id="incident-note"
+            id={`${idPrefix}-note`}
             className="incident-note"
             rows={3}
             maxLength={NOTE_MAX}
