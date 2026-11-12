@@ -59,6 +59,8 @@ export type Database = {
           ack_at: string | null
           ack_by: string | null
           ack_via: Database["public"]["Enums"]["ack_via"] | null
+          dispatched_tier: Database["public"]["Enums"]["alert_tier"] | null
+          epoch: number
           escalate_at: string | null
           escalation_level: number
           first_seen: string
@@ -72,6 +74,7 @@ export type Database = {
           operator_id: string | null
           origin_event_id: string | null
           protocol_card_id: string | null
+          resolved_at: string | null
           run_id: string | null
           site_id: string
           status: Database["public"]["Enums"]["alert_status"]
@@ -86,6 +89,8 @@ export type Database = {
           ack_at?: string | null
           ack_by?: string | null
           ack_via?: Database["public"]["Enums"]["ack_via"] | null
+          dispatched_tier?: Database["public"]["Enums"]["alert_tier"] | null
+          epoch?: number
           escalate_at?: string | null
           escalation_level?: number
           first_seen?: string
@@ -99,6 +104,7 @@ export type Database = {
           operator_id?: string | null
           origin_event_id?: string | null
           protocol_card_id?: string | null
+          resolved_at?: string | null
           run_id?: string | null
           site_id: string
           status?: Database["public"]["Enums"]["alert_status"]
@@ -115,6 +121,8 @@ export type Database = {
           ack_at?: string | null
           ack_by?: string | null
           ack_via?: Database["public"]["Enums"]["ack_via"] | null
+          dispatched_tier?: Database["public"]["Enums"]["alert_tier"] | null
+          epoch?: number
           escalate_at?: string | null
           escalation_level?: number
           first_seen?: string
@@ -128,6 +136,7 @@ export type Database = {
           operator_id?: string | null
           origin_event_id?: string | null
           protocol_card_id?: string | null
+          resolved_at?: string | null
           run_id?: string | null
           site_id?: string
           status?: Database["public"]["Enums"]["alert_status"]
