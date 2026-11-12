@@ -1,4 +1,4 @@
-import { ZERO_HASH, entryHash, merkleRoot, verifyLedger } from "@cat/shared/ledger";
+import { ZERO_HASH, entryHash, merkleRoot, npHash, verifyLedger } from "@cat/shared/ledger";
 import type { ExportRow } from "@/ledger/witness";
 
 /**
@@ -8,8 +8,7 @@ import type { ExportRow } from "@/ledger/witness";
  *  - rewrite:     the same ledger with row 120 rewritten and every later hash recomputed (self-consistent,
  *                 so Internal check passes, but the Telegram comparison does not match)
  *  - chain_break: row 187's stored hash was altered, so the chain breaks at #187
- * The sealed row keeps full canonical fields here so today's verifier can hash it; the UI never
- * reads them (rowView). The backend will send sealed rows with the content withheld.
+ * The sealed row (#7) has the backend's 5-key shape; its content is not in the export at all.
  */
 export type LedgerScenario = "intact" | "rewrite" | "chain_break";
 
@@ -54,7 +53,10 @@ async function build(scenario: LedgerScenario): Promise<ExportRow[]> {
   for (let seq = 1; seq <= LEDGER_ROWS; seq++) {
     const f = fieldsFor(seq, prev, scenario === "rewrite" && seq === REWRITE_SEQ);
     const hash = await entryHash(f);
-    rows.push({ seq: String(seq), prev_hash: prev, entry_hash: hash, v: "1", canonical_fields: f, ...(seq === SEALED_SEQ ? { sealed: true } : {}) });
+    // A sealed near-miss goes out as exactly {v, seq, prev_hash, non_punitive, sealed} + entry_hash; the
+    // hash is still the hash of the full row, so the chain and the Merkle root keep their meaning.
+    const shown = seq === SEALED_SEQ ? { v: "1", seq: String(seq), prev_hash: prev, non_punitive: true, sealed: true } : f;
+    rows.push({ seq: String(seq), prev_hash: prev, entry_hash: hash, v: "1", canonical_fields: shown });
     prev = hash;
   }
   if (scenario === "chain_break") {
@@ -80,7 +82,8 @@ export async function witnessLineFor(first = 1, last = LEDGER_ROWS): Promise<str
   const rows = (await ledgerRows("intact")).slice(first - 1, last);
   const root = await merkleRoot(rows.map((r) => r.entry_hash));
   const head = rows[rows.length - 1]!.entry_hash;
-  return `SPOTTER-LEDGER v1 seq=${first}..${last} n=${rows.length} root=${root} head=${head}`;
+  const sealed = rows.filter((r) => r.canonical_fields.sealed === true).map((r) => Number(r.seq));
+  return `SPOTTER-LEDGER v1 seq=${first}..${last} n=${rows.length} root=${root} head=${head} np=${await npHash(sealed)}`;
 }
 
 export async function ledgerVerdict(scenario: LedgerScenario) {
@@ -89,15 +92,15 @@ export async function ledgerVerdict(scenario: LedgerScenario) {
   const intact = await ledgerRows("intact");
   const bad = r.first_bad_seq;
   return {
-    ok: r.ok,
-    checked: r.ok ? r.checked : (bad ?? r.checked),
+    ok: r.status !== "failed",
+    checked: r.status !== "failed" ? r.checked : (bad ?? r.checked),
     first_bad_seq: bad,
     reason: r.reason === "hash_mismatch" || r.reason === "link_broken" || r.reason === "seq_gap" ? r.reason : null,
     expected: bad ? intact[bad - 1]!.entry_hash : null,
     stored: bad ? rows[bad - 1]!.entry_hash : null,
     head_seq: LEDGER_ROWS,
     head_hash: rows[rows.length - 1]!.entry_hash,
-    chain_ok: r.ok,
+    chain_ok: r.status !== "failed",
     queue: { errored: 0, pending: 0, oldest_pending_age_s: null, oldest_errored_age_s: null, stale_after_s: 5, stuck: false },
   };
 }

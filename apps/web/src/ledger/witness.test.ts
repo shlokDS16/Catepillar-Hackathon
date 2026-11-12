@@ -1,9 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
 import { WITNESS_LINE } from "@cat/shared";
+import { verifyLedger } from "@cat/shared/ledger";
 import { RpcError } from "@/data/port";
 import { BREAK_SEQ, LEDGER_ROWS, SEALED_SEQ, ledgerRows, ledgerVerdict, witnessLineFor, type LedgerScenario } from "@/ledger/fixtures";
 import {
-  BUSY_RETRY_MS, LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, isCleanMatch, isSealed, parsePaste, rowView,
+  BUSY_RETRY_MS, LedgerBusyError, checkRange, countSealed, diffAt, groupsOf4, exportAll, isCleanMatch, isPartialMatch, isSealed, judgeInternal, parsePaste, rowView,
   runCompare, tableWindow, verifiedCount, withBusyRetry,
 } from "@/ledger/witness";
 
@@ -113,7 +114,7 @@ describe("runCompare on the fixtures", () => {
     const line = await witnessLineFor();
     const out = await runCompare(portFor("rewrite"), { from: "1", to: "214", paste: parsePaste(line) }, sleep);
     if (out.kind !== "done") throw new Error("expected done");
-    expect(out.local.ok).toBe(true);
+    expect(out.local.status).not.toBe("failed");
     expect(out.comparison?.match).toBe(false);
     expect(out.comparison?.root_diff_at).toBeGreaterThanOrEqual(0);
   });
@@ -166,6 +167,44 @@ describe("rowView privacy", () => {
   });
 });
 
+describe("judgeInternal and paging (short review)", () => {
+  it("a tick needs a full local recompute covering exactly 1..head with the same head hash", async () => {
+    const rows = await ledgerRows("intact");
+    const nonSealed = rows.filter((r) => r.canonical_fields.sealed !== true);
+    const full = await verifyLedger(rows);
+    const head = { ok: true, head_seq: LEDGER_ROWS, head_hash: rows[rows.length - 1]!.entry_hash };
+    expect(judgeInternal(head, full)).toBe("partial"); // sealed row present: never a tick
+    expect(judgeInternal(head, null)).toBe("unchecked");
+    expect(judgeInternal({ ...head, ok: false }, full)).toBe("failed");
+    // empty export
+    expect(judgeInternal(head, await verifyLedger([]))).toBe("failed");
+    // truncated export (1..100 of 214)
+    expect(judgeInternal(head, await verifyLedger(rows.slice(0, 100)))).toBe("failed");
+    // export starting at seq > 1
+    expect(judgeInternal(head, await verifyLedger(rows.slice(10)))).toBe("failed");
+    // mismatched head hash
+    expect(judgeInternal({ ...head, head_hash: "f".repeat(64) }, full)).toBe("failed");
+    // a clean ledger (no sealed row): first 6 rows
+    const six = rows.slice(0, 6);
+    const r6 = await verifyLedger(six);
+    expect(r6.status).toBe("verified");
+    expect(judgeInternal({ ok: true, head_seq: 6, head_hash: six[5]!.entry_hash }, r6)).toBe("clean");
+    expect(nonSealed.length).toBe(LEDGER_ROWS - 1);
+  });
+  it("exports in pages of at most 5000 and joins them", async () => {
+    const calls: Array<[number, number]> = [];
+    const port = {
+      ledgerExport: async (i: { p_first_seq: number; p_last_seq: number }) => {
+        calls.push([i.p_first_seq, i.p_last_seq]);
+        return Array.from({ length: i.p_last_seq - i.p_first_seq + 1 }, (_, k) => ({ seq: String(i.p_first_seq + k) })) as never;
+      },
+    };
+    const all = await exportAll(port, 12000);
+    expect(calls).toEqual([[1, 5000], [5001, 10000], [10001, 12000]]);
+    expect(all).toHaveLength(12000);
+  });
+});
+
 describe("review fixes", () => {
   it("tableWindow shows the broken row, else the newest rows", () => {
     expect(tableWindow(214, null)).toEqual({ first: 190, last: 214 });
@@ -194,6 +233,26 @@ describe("review fixes", () => {
     const bad = await runCompare(portFor("rewrite"), { from: "1", to: "214", paste: parsePaste(line) }, async () => {});
     const broken = await runCompare(portFor("chain_break"), { from: "1", to: "214", paste: parsePaste(line) }, async () => {});
     if (good.kind !== "done" || bad.kind !== "done" || broken.kind !== "done") throw new Error("expected done");
-    expect([isCleanMatch(good), isCleanMatch(bad), isCleanMatch(broken)]).toEqual([true, false, false]);
+    // Range 1..214 holds the sealed row #7: chain and witness agree, but that is never a tick.
+    expect([isCleanMatch(good), isCleanMatch(bad), isCleanMatch(broken)]).toEqual([false, false, false]);
+    expect(good.local.status).toBe("verified_with_sealed");
+    expect(good.comparison?.partial).toBe(true);
+    expect(isPartialMatch(good)).toBe(true);
+    expect([isPartialMatch(bad), isPartialMatch(broken)]).toEqual([false, false]);
+    // A range with no sealed row is the one clean match.
+    const clean = await runCompare(portFor("intact"), { from: "8", to: "214", paste: parsePaste(await witnessLineFor(8, 214)) }, async () => {});
+    if (clean.kind !== "done") throw new Error("expected done");
+    expect(clean.local.status).toBe("verified");
+    expect(isCleanMatch(clean)).toBe(true);
+  });
+  it("a line without np= cannot confirm sealed rows, and sealed fixture rows have exactly 5 keys", async () => {
+    const line = (await witnessLineFor()).replace(/ np=[0-9a-f]{64}$/, "");
+    const out = await runCompare(portFor("intact"), { from: "1", to: "214", paste: parsePaste(line) }, async () => {});
+    if (out.kind !== "done") throw new Error("expected done");
+    expect(out.comparison?.match).toBe(false);
+    const sealedRow = (await ledgerRows("intact"))[SEALED_SEQ - 1]!;
+    expect(Object.keys(sealedRow.canonical_fields).sort()).toEqual(["non_punitive", "prev_hash", "sealed", "seq", "v"]);
+    const p = parsePaste(await witnessLineFor());
+    expect(p.state === "ok" && p.witness.np_hash).toMatch(/^[0-9a-f]{64}$/);
   });
 });
