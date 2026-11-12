@@ -11,14 +11,22 @@
 > **NO CALLS (Shlok, 2026-11-12):** no Twilio call, SMS, Telegram or SOS trigger by anyone, ever (a friend's
 > number is among the demo phones). DEMO_SUPERVISOR_PHONE removed from Vercel production; SOS_LIVE unset
 > everywhere; Supabase functions DRY_RUN=true.
-> Progress: R3 Decide merged (ebedff0), F14 Inbox merged (69f6141), both after Opus review fixes; web
-> 194 tests, build green, deployed. Running: L3 landing, L2 R4 Debrief (stateAt(t) design), L2 F10 Task,
-> F15 Ledger in review, L1 privacy rework. PRIVACY FINDING (Opus backend review, proven live then rolled
-> back): near-miss operator ids reach the FM via (1) ledger_export field brute force, (2) a PRE-EXISTING
-> leak in events_read RLS + sup: broadcast + incident.logged, (3) browser verify says ok on edited sealed
-> rows. Fix in progress as migration 003e on lane/l1-ledger-privacy; nothing of it on main yet (003d is
-> applied to the DB). Realtime partitions created through 2026-11-15 (re-run scripts/b0/realtime-wake.ts
-> after that).
+> Progress (55 % weekly at daad7ea): MERGED + deployed after Opus review fixes: R3 Decide, F14 Inbox, F15
+> Ledger, R4 Debrief (stateAt(t) re-enactment; seatbelt shows "No reading" without data), F10 Task. Web 259
+> tests green. Lead merge gate script: scratchpad gate.sh (pushes only when typecheck, lint, tests, build pass).
+> In flight: L1 privacy branch lane/l1-ledger-privacy (003d, 003e, 003f applied to the DB; 003g in progress:
+> near_miss_list trainer-only, sealed rows = day/severity/type only). Three Opus reviews found and proved
+> near-miss de-anonymisation paths (export brute force; events_read/broadcast; my_snapshot definer bypass;
+> trainer join via pairings; linkable pseudonym in near_miss_list). NOT merged to main until a PASS.
+> L3 landing on lane/l3-landing: review CHANGES REQUIRED (CTA blocked at 1440, 5.5 s ink veil after CTA,
+> ledger demo hashes 7 not 20 fields, WebGL context leak), fixes in progress. Browser QA running.
+> NEW REQUEST (Shlok): redesign the inside portal too; first study the simulation + learning guide. Opus
+> ui-ux-lead study running on branch design/portal-study -> docs/design/portal-redesign-study.md with 2-3
+> directions + mockups; Shlok picks before any build. New L2 screens paused until then.
+> Queue after that: L1 B10 detectors (after privacy merges), F15 adapt to verified_with_sealed + np=,
+> contract fields reenactment.event_ms + machine_track[].seatbelt_fastened (L1), F11, F17, F20, F19.
+> Realtime partitions exist through 2026-11-15; run scripts/b0/realtime-wake.ts after that.
+> Lead context passed 450k: hand over to a fresh lead session at the design-direction decision.
 
 > **RESUMED 2026-10-11 (Shlok: "continue building").** Single-folder mode per AGENTS.md (work on
 > branch tracks in this repo; old ../spotter-track-* worktrees are read-only history). Supabase
