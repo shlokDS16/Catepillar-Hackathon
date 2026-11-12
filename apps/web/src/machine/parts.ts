@@ -37,11 +37,11 @@ export function machineParts(snapshot: Pick<Snapshot, "machine"> | null | undefi
   const given = new Map((machine.parts ?? []).map((p) => [p.id, p]));
   return PART_IDS.map((id, i): MachinePartView => {
     const p = given.get(id);
-    const given: { state: PartState; noteKey: string } = { state: p?.state ?? "ok", noteKey: p?.note_key ?? "bay.note.ok" };
-    if (id !== "cab") return { id, n: i + 1, ...given };
+    const base: { state: PartState; noteKey: string } = { state: p?.state ?? "ok", noteKey: p?.note_key ?? "bay.note.ok" };
+    if (id !== "cab") return { id, n: i + 1, ...base };
     // The cab takes whichever of the given and the derived state is worse, with that side's note.
     const d = cabState(machine);
-    return { id, n: i + 1, ...(d.state !== "ok" && PART_STATE_ORDER[d.state] >= PART_STATE_ORDER[given.state] ? d : given) };
+    return { id, n: i + 1, ...(d.state !== "ok" && PART_STATE_ORDER[d.state] >= PART_STATE_ORDER[base.state] ? d : base) };
   });
 }
 
