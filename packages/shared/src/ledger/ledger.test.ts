@@ -7,7 +7,7 @@ import { describe, expect, it } from "vitest";
 import {
   CANONICAL_V1_FIELDS, CanonicalError, GOLDEN_VECTOR_1, GOLDEN_VECTOR_1_BYTES, GOLDEN_VECTOR_1_HASH,
   GOLDEN_VECTOR_2, GOLDEN_VECTOR_2_HASH, GOLDEN_VECTOR_3_ROOT, ZERO_HASH, canonicalize, canonicalBytes,
-  compareWitness, entryHash, firstDifference, merkleRoot, parseWitnessLine, sha256, verifyLedger,
+  compareWitness, entryHash, firstDifference, merkleRoot, npHash, parseWitnessLine, sha256, verifyLedger,
   type LedgerExportRow,
 } from "./index";
 
@@ -88,6 +88,96 @@ describe("verifyLedger on exported rows (R2-2)", () => {
     expect(result.root_hex).toBe(GOLDEN_VECTOR_3_ROOT);
     expect(result.head_hash).toBe(GOLDEN_VECTOR_2_HASH);
   });
+
+  describe("sealed near-miss rows (003e)", () => {
+    const sealOf = (r: LedgerExportRow): LedgerExportRow => ({
+      ...r,
+      canonical_fields: { v: r.v, seq: r.seq, prev_hash: r.prev_hash, non_punitive: true, sealed: true },
+    });
+    async function chain() {
+      const first = await exportRow({ ...GOLDEN_VECTOR_1, non_punitive: true });
+      const second = await exportRow({ ...GOLDEN_VECTOR_2, prev_hash: first.entry_hash });
+      return { first, second, sealed: sealOf(first) };
+    }
+
+    it("keeps chain and root intact, but is never a full verification", async () => {
+      const { first, second, sealed } = await chain();
+      const full = await verifyLedger([first, second]);
+      const result = await verifyLedger([sealed, second]);
+      expect(full.status).toBe("verified");
+      expect(result.status).toBe("verified_with_sealed");
+      expect(result.ok).toBe(false);
+      expect(result.sealed).toBe(1);
+      expect(result.sealed_seqs).toEqual([1]);
+      expect(result.verified_in_full).toBe(1);
+      expect(result.root_hex).toBe(full.root_hex);
+      expect(result.head_hash).toBe(full.head_hash);
+      expect(result.np_hash).toBe(full.np_hash);
+      expect(result.np_hash).toBe(await npHash([1]));
+    });
+
+    it("accepts only the exact 5-key shape", async () => {
+      const { second, sealed } = await chain();
+      for (const extra of [{ description: "x" }, { operator_id: null }, { source_event_id: null }]) {
+        const r = await verifyLedger([{ ...sealed, canonical_fields: { ...sealed.canonical_fields, ...extra } }, second]);
+        expect(r.status).toBe("failed");
+      }
+      const missing = { ...sealed.canonical_fields } as Record<string, unknown>;
+      delete missing.prev_hash;
+      expect((await verifyLedger([{ ...sealed, canonical_fields: missing }, second])).status).toBe("failed");
+      expect((await verifyLedger([{ ...sealed, canonical_fields: { ...sealed.canonical_fields, sealed: false } }, second])).status).toBe("failed");
+    });
+
+    it("a broken link after a sealed row is still caught", async () => {
+      const { second, sealed } = await chain();
+      const bad = await verifyLedger([sealed, { ...second, prev_hash: ZERO_HASH, canonical_fields: { ...second.canonical_fields, prev_hash: ZERO_HASH } }]);
+      expect(bad.reason).toBe("link_broken");
+    });
+
+    it("a relabelled row (punitive row sent sealed) is caught by the witness np=", async () => {
+      const rows = [await exportRow({ ...GOLDEN_VECTOR_1 }), await exportRow({ ...GOLDEN_VECTOR_2 })];
+      const honest = await verifyLedger(rows);
+      const witness = { first_seq: 1, last_seq: 2, leaf_count: 2, root_hex: honest.root_hex, head_hash: honest.head_hash, np_hash: await npHash([]) };
+      expect(compareWitness(honest, witness).match).toBe(true);
+      const hostile = await verifyLedger([sealOf(rows[0]!), rows[1]!]);
+      expect(hostile.status).toBe("verified_with_sealed");
+      const cmp = compareWitness(hostile, witness);
+      expect(cmp.match).toBe(false);
+      expect(cmp.reason).toBe("witness_mismatch");
+      // an old witness line without np= cannot confirm sealed rows either
+      const { np_hash: _np, ...oldWitness } = witness;
+      expect(compareWitness(hostile, oldWitness).match).toBe(false);
+      expect(compareWitness(honest, oldWitness).match).toBe(true);
+    });
+
+    it("a genuine sealed range matches a witness that carries the right np=", async () => {
+      const { first, second, sealed } = await chain();
+      const full = await verifyLedger([first, second]);
+      const line = `SPOTTER-LEDGER v1 seq=1..2 n=2 root=${full.root_hex} head=${full.head_hash} at=14:02 IST np=${await npHash([1])}`;
+      const witness = parseWitnessLine(line)!;
+      expect(witness.np_hash).toBe(await npHash([1]));
+      const cmp = compareWitness(await verifyLedger([sealed, second]), witness);
+      expect(cmp.match).toBe(true);
+      expect(cmp.partial).toBe(true);
+      expect(compareWitness(full, { ...witness, np_hash: undefined }).partial).toBe(false);
+    });
+  });
+
+  it("verifies 2,000 rows in linear time", async () => {
+    const rows: LedgerExportRow[] = [];
+    let prev = ZERO_HASH;
+    for (let n = 1; n <= 2000; n++) {
+      const row = await exportRow({ ...GOLDEN_VECTOR_1, seq: String(n), prev_hash: prev });
+      rows.push(row);
+      prev = row.entry_hash;
+    }
+    const t0 = performance.now();
+    const result = await verifyLedger(rows);
+    const ms = performance.now() - t0;
+    expect(result.status).toBe("verified");
+    expect(result.checked).toBe(2000);
+    expect(ms).toBeLessThan(5000);   // the quadratic version needed minutes at this size
+  }, 30000);
 
   it("an edited row gives hash_mismatch at its seq", async () => {
     const rows = [await exportRow({ ...GOLDEN_VECTOR_1 }), await exportRow({ ...GOLDEN_VECTOR_2 })];

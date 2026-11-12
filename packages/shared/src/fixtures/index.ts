@@ -34,7 +34,7 @@ export const etaEstimate = estimateEta(etaInput);
 
 // ── Bootstrap ───────────────────────────────────────────────────────────────────────────────────────
 export const mySnapshot = {
-  contracts_version: "1.0.0",
+  contracts_version: "2.0.0",
   profile: { user_id: IDS.user, role: "operator" as const, operator_id: IDS.operator, site_id: IDS.site, language: "hi" as const },
   server_now: T1,
   run: { id: IDS.run, status: "playing" as const, speed: 10 as const, sim_now: T0 },
@@ -99,8 +99,7 @@ export const rpc = {
   ledgerExportRow: { seq: "1", prev_hash: HASH0, entry_hash: HASH1, v: "1",
     canonical_fields: { seq: "1", v: "1", prev_hash: HASH0, incident_type: "seatbelt_breach", severity: "4", lat: "21.146300", lon: "79.088200" } },
   ledgerRecomputeOut: { first_seq: 1, last_seq: 214, leaf_count: 214, root_hex: HASH1, head_hash: HASH1 },
-  nearMissListOut: [{ incident_id: IDS.incident, seq: 12, occurred_at: T0, operator_pseudonym: "Operator-7F2",
-    description: "Reversing truck came within 5 m.", severity: 3 }],
+  nearMissListOut: [{ day: "2026-09-23", severity: 3, incident_type: "near_miss" }],
   lessonCompleteIn: { p_assignment_id: IDS.assignment, p_quiz_score: 100, p_request_id: IDS.request },
   replayGetIn: { p_replay_id: IDS.replay },
   replaySubmitIn: { p_replay_id: IDS.replay, p_request_id: IDS.request, p_open_order: ["c_trend", "c_card"],

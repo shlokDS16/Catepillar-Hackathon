@@ -1,0 +1,931 @@
+/*
+ * Landing (docs/design/landing-dossier.md). Pinned stages inside tall wrappers; pacing comes from
+ * the wrapper height. JS only writes `--p` (0..1) on each .stage; everything else is CSS math.
+ * Colour reads tokens only (scenery tokens are at the end of tokens.css).
+ */
+
+.landing {
+  --k: 1;
+  background: var(--rock-front);
+  color: var(--on-ink);
+  font-family: var(--ff-body);
+}
+
+@media (max-width: 767px) {
+  .landing {
+    --k: 0.8;
+  }
+}
+
+/* Navbar: a fixed centred pill. One variant (paper); both dark and light stages read it clearly. */
+.l-nav {
+  position: fixed;
+  top: 18px;
+  left: 50%;
+  z-index: var(--z-chrome);
+  display: flex;
+  align-items: center;
+  gap: var(--s-4);
+  max-width: calc(100vw - 2 * var(--gutter));
+  min-height: 52px;
+  padding: var(--s-1) var(--s-1) var(--s-1) var(--s-5);
+  transform: translateX(-50%);
+  border-radius: 16px;
+  background: color-mix(in srgb, var(--surface) 92%, transparent);
+  box-shadow: 0 0 0 1px color-mix(in srgb, var(--ink) 14%, transparent);
+  color: var(--ink);
+}
+
+.l-brand {
+  font-family: var(--ff-display);
+  font-size: 22px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+/* Stages */
+.stage {
+  --p: 0;
+  position: relative;
+  height: calc(var(--h) * 1svh * var(--k));
+}
+
+.pin {
+  position: sticky;
+  top: 0;
+  height: 100svh;
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.l-poster {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  width: 100%;
+  height: 100%;
+  transition: opacity 0.7s var(--ease-quint);
+}
+
+[data-gl="on"] .l-poster {
+  opacity: 0;
+}
+
+.l-shade {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background: linear-gradient(to top, color-mix(in srgb, var(--rock-front) 82%, transparent), transparent 62%);
+}
+
+.l-copy {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: calc(var(--s-8) + var(--s-5));
+  max-width: 920px;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.l-kicker,
+.l-caption,
+.l-hint {
+  margin: 0;
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
+  line-height: 19.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+}
+
+.l-kicker::before {
+  content: "";
+  display: inline-block;
+  width: 24px;
+  height: 1px;
+  margin-right: 10px;
+  vertical-align: middle;
+  background: currentColor;
+}
+
+.l-kicker {
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--on-ink) 78%, transparent);
+}
+
+.l-h1 {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: clamp(46px, 9.2vw, 118px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+:lang(hi) .l-h1,
+:lang(ta) .l-h1 {
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.l-sub {
+  margin: 0;
+  max-width: 52ch;
+  font-size: 17px;
+  line-height: 25px;
+  color: color-mix(in srgb, var(--on-ink) 82%, transparent);
+}
+
+.l-b {
+  pointer-events: none;
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  margin: 0;
+  max-width: 28ch;
+  font-family: var(--ff-display);
+  font-weight: 600;
+  font-size: clamp(30px, 5vw, 56px);
+  line-height: 1.05;
+  letter-spacing: -0.03em;
+}
+
+.l-actions {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--s-5);
+  margin-top: var(--s-2);
+}
+
+.l-cta {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--s-3);
+  min-height: var(--hit-dense);
+  padding: 0 var(--s-5);
+  border-radius: 14px;
+  background: var(--paper);
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 17px;
+  text-decoration: none;
+  transition:
+    transform var(--dur-lhover) var(--ease-quint),
+    box-shadow var(--dur-lhover) var(--ease-quint);
+}
+
+.l-arrow {
+  transition: transform var(--dur-lhover) var(--ease-quint);
+}
+
+@media (hover: hover) {
+  .l-cta:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 3px 12px color-mix(in srgb, var(--ink) 40%, transparent);
+  }
+  .l-cta:hover .l-arrow {
+    transform: translateX(3px);
+  }
+}
+
+.l-cta:active {
+  transform: scale(0.98);
+  transition-duration: 130ms;
+}
+
+.l-cta:focus-visible,
+.l-link:focus-visible {
+  outline-color: var(--on-ink);
+}
+
+.l-link {
+  color: var(--on-ink);
+  font-weight: 500;
+  text-underline-offset: 4px;
+}
+
+.l-caption {
+  position: absolute;
+  left: var(--gutter);
+  right: var(--gutter);
+  bottom: var(--s-5);
+  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+}
+
+.l-hint {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--s-5);
+  display: none;
+  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+}
+
+@media (min-width: 900px) {
+  .l-hint {
+    display: block;
+  }
+}
+
+/*
+ * Scroll-linked reveals. Per element: --a..--b is the p window; defaults suit "in" at .5-.65.
+ * smoothstep(t) = t*t*(3-2t) so the scroll position eases without any script.
+ */
+.rv {
+  --a: 0.5;
+  --b: 0.65;
+  --c: 0.86;
+  --d: 0.97;
+  --t: clamp(0, calc((var(--p) - var(--a)) / (var(--b) - var(--a))), 1);
+  --e: calc(var(--t) * var(--t) * (3 - 2 * var(--t)));
+  --to: clamp(0, calc((var(--p) - var(--c)) / (var(--d) - var(--c))), 1);
+  --eo: calc(var(--to) * var(--to) * (3 - 2 * var(--to)));
+}
+
+.rv-in {
+  opacity: var(--e);
+  transform: translateY(calc((1 - var(--e)) * 28px));
+}
+
+.rv-out {
+  --a: 0.22;
+  --b: 0.44;
+  opacity: calc(1 - var(--e));
+  transform: translateY(calc(var(--e) * -28px));
+}
+
+/* In at --a..--b, out at --c..--d. */
+.rv-io {
+  opacity: calc(var(--e) * (1 - var(--eo)));
+  transform: translateY(calc((1 - var(--e)) * 28px - var(--eo) * 28px));
+}
+
+.stage[data-stage="1"] .l-b {
+  --a: 0.62;
+  --b: 0.74;
+}
+
+/* The language chip inside the pill: a compact 48 px target, rounded to match. */
+.l-nav .chip {
+  min-height: var(--hit-dense);
+  border-width: 0;
+  background: color-mix(in srgb, var(--ink) 6%, transparent);
+  border-radius: 12px;
+  padding: 0 var(--s-4);
+  font-size: 15px;
+}
+
+/* Scene wrapper: one sticky canvas behind five pinned stages (stages 1-5). */
+.l-scene {
+  position: relative;
+  isolation: isolate;
+  background: var(--rock-front);
+}
+
+.stage {
+  z-index: 2;
+}
+
+.l-canvas {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: block;
+  width: 100%;
+  height: 100svh;
+  margin-bottom: -100svh;
+  opacity: 0;
+  pointer-events: none;
+  transform-origin: var(--gutter) 50%;
+  transform: scale(calc(1 - 0.5 * var(--f, 0)));
+  border-radius: calc(var(--f, 0) * 20px);
+  transition: opacity 0.7s var(--ease-quint);
+}
+
+[data-gl="on"] .l-canvas {
+  opacity: 1;
+}
+
+@media (max-width: 767px) {
+  .l-canvas {
+    transform-origin: 50% 92px;
+  }
+}
+
+/* Left text blocks for stages 2-5. A soft shade keeps white type legible over the bright sky. */
+.l-copy-left {
+  max-width: 440px;
+  bottom: calc(var(--s-8) + var(--s-5));
+}
+
+.l-copy-left .l-sub {
+  max-width: 38ch;
+}
+
+/* One full-frame grade over the canvas replaces per-block shading. */
+.l-grade {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  display: block;
+  height: 100svh;
+  margin-bottom: -100svh;
+  pointer-events: none;
+  background:
+    linear-gradient(to right, color-mix(in srgb, var(--rock-front) 48%, transparent), transparent 58%),
+    radial-gradient(120% 90% at 60% 45%, transparent 55%, color-mix(in srgb, var(--rock-front) 55%, transparent));
+}
+
+.l-h2 {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: clamp(44px, 5.3vw, 76.8px);
+  line-height: 0.98;
+  letter-spacing: -0.045em;
+  text-wrap: balance;
+  overflow-wrap: anywhere;
+}
+
+:lang(hi) .l-h2,
+:lang(ta) .l-h2 {
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.l-callouts {
+  position: absolute;
+  right: var(--gutter);
+  top: 50%;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-6);
+  width: min(300px, 44vw);
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  transform: translateY(-50%);
+}
+
+.callout {
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: var(--s-3);
+  padding-top: var(--s-3);
+}
+
+.callout::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: color-mix(in srgb, var(--on-ink) 70%, transparent);
+  transform: scaleX(var(--e));
+  transform-origin: left;
+}
+
+.callout-n {
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
+  line-height: 24px;
+  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+  opacity: var(--e);
+}
+
+.callout-t {
+  font-family: var(--ff-display);
+  font-weight: 600;
+  font-size: 22px;
+  line-height: 1.15;
+  opacity: var(--e);
+  transform: translateY(calc((1 - var(--e)) * 18px));
+}
+
+@media (max-width: 767px) {
+  .l-callouts {
+    top: 92px;
+    left: var(--gutter);
+    width: auto;
+    gap: var(--s-4);
+    transform: none;
+  }
+  .callout-t {
+    font-size: 18px;
+  }
+}
+
+.l-stats {
+  display: flex;
+  gap: var(--s-7);
+  margin: var(--s-2) 0 0;
+}
+
+.l-stats > div {
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 2px;
+}
+
+.l-stats dt {
+  margin: 0;
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: color-mix(in srgb, var(--on-ink) 70%, transparent);
+}
+
+.l-stats dd {
+  margin: 0;
+}
+
+.l-num {
+  font-family: var(--ff-display);
+  font-weight: 700;
+  font-size: clamp(44px, 6vw, 72px);
+  line-height: 1;
+  letter-spacing: -0.03em;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Guardian legend: one row under the body copy; the active state is the only filled plate. */
+.l-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-2);
+  margin: var(--s-2) 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lg .chip {
+  min-width: 148px;
+  justify-content: center;
+  border: 1.5px solid color-mix(in srgb, var(--on-ink) 65%, transparent);
+  background: transparent;
+  color: var(--on-ink);
+  transition:
+    background var(--dur-lhover) var(--ease-quint),
+    color var(--dur-lhover) var(--ease-quint);
+}
+
+.landing[data-ring="1"] .lg[data-lv="1"] .chip {
+  background: var(--state-clear);
+  color: var(--on-ink);
+}
+.landing[data-ring="2"] .lg[data-lv="2"] .chip {
+  background: var(--state-caution);
+  color: var(--on-signal);
+}
+.landing[data-ring="3"] .lg[data-lv="3"] .chip {
+  background: var(--state-warning);
+  color: var(--on-signal);
+}
+.landing[data-ring="4"] .lg[data-lv="4"] .chip {
+  background: var(--state-critical);
+  color: var(--on-ink);
+}
+
+@media (max-width: 767px) {
+  .lg .chip {
+    min-width: 0;
+    flex: 1 1 calc(50% - var(--s-2));
+  }
+  .l-caption {
+    font-size: 11.5px;
+  }
+}
+
+/* Stage 5: the canvas shrinks to a card on the left; the hand-off card sits on the right. */
+.l-card {
+  position: absolute;
+  right: var(--gutter);
+  bottom: var(--s-8);
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--s-4);
+  width: min(440px, calc(100% - 2 * var(--gutter)));
+}
+
+@media (max-width: 767px) {
+  .l-card {
+    left: var(--gutter);
+    width: auto;
+  }
+}
+
+.scrub {
+  width: 100%;
+}
+
+.scrub-top {
+  display: flex;
+  justify-content: space-between;
+  font-family: var(--ff-mono);
+  font-size: 12.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  color: color-mix(in srgb, var(--on-ink) 78%, transparent);
+}
+
+.scrub-track {
+  position: relative;
+  height: 4px;
+  margin-top: var(--s-3);
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--on-ink) 28%, transparent);
+}
+
+.scrub-track::before {
+  content: "";
+  position: absolute;
+  inset: 0 auto 0 0;
+  width: calc((1 - var(--e)) * 100%);
+  border-radius: 2px;
+  background: var(--line-glow);
+}
+
+.scrub-head {
+  position: absolute;
+  top: 50%;
+  left: calc((1 - var(--e)) * 100%);
+  width: 16px;
+  height: 16px;
+  margin: -8px 0 0 -8px;
+  border-radius: 50%;
+  background: var(--line-glow);
+}
+
+/* Body wrapper: everything above the footer curtain. */
+.l-body {
+  position: relative;
+  z-index: 2;
+  background: var(--rock-front);
+}
+
+/* Per-stage poster images: the WebGL-off and reduced-motion picture (hidden while the canvas runs). */
+.l-poster-img {
+  position: absolute;
+  inset: 0;
+  z-index: -2;
+  display: block;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+/* The poster is the state without script and before three.js arrives; the canvas replaces it. */
+.landing[data-gl="on"] .l-poster-img {
+  display: none;
+}
+
+/* 6 · Ledger: a light, paper stage. */
+.stage-light {
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.stage-light .l-kicker,
+.stage-light .l-caption {
+  color: var(--ink-2);
+}
+
+.stage-light .l-sub {
+  color: var(--ink-2);
+}
+
+.l-ledger-wrap {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  grid-template-columns: minmax(0, 0.9fr) minmax(0, 1.1fr);
+  align-items: center;
+  gap: var(--s-7);
+  padding: calc(var(--s-8) + var(--s-5)) var(--gutter) var(--s-8);
+  max-width: var(--content-max);
+  margin: 0 auto;
+}
+
+.l-copy-light {
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-4);
+}
+
+.l-status {
+  display: grid;
+  margin-top: var(--s-4);
+}
+
+.l-status > span {
+  grid-area: 1 / 1;
+  justify-self: start;
+}
+
+.st-ok {
+  opacity: calc(1 - var(--e));
+}
+
+.st-bad {
+  opacity: var(--e);
+}
+
+.l-ledger {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-family: var(--ff-mono);
+}
+
+.lrow {
+  --tt: clamp(0, calc((var(--p) - var(--k, 0.6)) / (var(--m, 0.72) - var(--k, 0.6))), 1);
+  --et: calc(var(--tt) * var(--tt) * (3 - 2 * var(--tt)));
+  position: relative;
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  column-gap: var(--s-3);
+  row-gap: 2px;
+  padding: var(--s-3) var(--s-4);
+  border: var(--bw) solid var(--ink);
+  background: var(--surface);
+  font-size: 12.5px;
+  line-height: 19.5px;
+  letter-spacing: 0.04em;
+  font-variant-numeric: tabular-nums;
+  opacity: var(--e);
+  transform: translateY(calc((1 - var(--e)) * 28px));
+}
+
+.lrow + .lrow {
+  margin-top: var(--s-4);
+}
+
+/* The hash link to the row above: a 1 px rule that draws as the row arrives. */
+.lrow + .lrow::before {
+  content: "";
+  position: absolute;
+  left: var(--s-5);
+  bottom: 100%;
+  width: var(--bw-hair);
+  height: var(--s-4);
+  background: var(--ink-3);
+  transform: scaleY(var(--e));
+  transform-origin: top;
+  transition: background var(--dur-lhover) var(--ease-quint);
+}
+
+.lrow-n {
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.lrow-type {
+  overflow-wrap: anywhere;
+}
+
+.lrow-sev {
+  color: var(--ink-2);
+}
+
+.lrow-hash {
+  grid-column: 1 / 3;
+  font-weight: 700;
+}
+
+.lrow-prev {
+  grid-column: 3;
+  color: var(--ink-3);
+  text-align: right;
+}
+
+.lrow-flag {
+  grid-column: 1 / -1;
+  margin-top: var(--s-1);
+  padding-top: var(--s-1);
+  border-top: var(--bw-hair) solid currentColor;
+  font-weight: 700;
+  text-transform: uppercase;
+  opacity: var(--et);
+  max-height: calc(var(--et) * 28px);
+  overflow: hidden;
+}
+
+.lrow-tamper,
+.lrow-after {
+  border-color: color-mix(in srgb, var(--ink) calc((1 - var(--et)) * 100%), var(--state-critical));
+}
+
+.lrow-tamper {
+  background: color-mix(in srgb, var(--surface) calc((1 - var(--et)) * 100%), var(--state-critical));
+  color: color-mix(in srgb, var(--ink) calc((1 - var(--et)) * 100%), var(--on-ink));
+}
+
+.lrow-tamper .lrow-sev,
+.lrow-tamper .lrow-prev {
+  color: inherit;
+}
+
+.lrow-after + .lrow-after::before,
+.lrow-tamper + .lrow-after::before {
+  background: color-mix(in srgb, var(--ink-3) calc((1 - var(--et)) * 100%), var(--state-critical));
+}
+
+@media (hover: hover) {
+  .lrow:hover + .lrow::before,
+  .lrow + .lrow:hover::before {
+    background: var(--ink);
+  }
+}
+
+@media (max-width: 899px) {
+  .l-ledger-wrap {
+    grid-template-columns: minmax(0, 1fr);
+    align-content: start;
+    gap: var(--s-5);
+    padding-top: calc(var(--s-8) + var(--s-2));
+    overflow: hidden;
+  }
+  .lrow {
+    padding: var(--s-2) var(--s-3);
+  }
+  .lrow + .lrow {
+    margin-top: var(--s-3);
+  }
+  .lrow + .lrow::before {
+    height: var(--s-3);
+  }
+  .l-copy-light .l-sub {
+    display: none;
+  }
+}
+
+/* 7 · Close: ink stage, then the footer curtain. */
+.stage-close {
+  --p: 0;
+  height: 100svh;
+}
+
+.close-pin {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  justify-content: center;
+  gap: var(--s-5);
+  padding: 0 var(--gutter);
+  max-width: var(--content-max);
+  margin: 0 auto;
+  background: transparent;
+}
+
+.stage-close {
+  background: var(--ink);
+}
+
+.close-h {
+  max-width: 14ch;
+}
+
+/* Sticky curtain footer: the body (z 2) scrolls off a sticky footer (z 1). */
+.l-foot {
+  position: sticky;
+  bottom: 0;
+  z-index: 1;
+  display: flex;
+  min-height: 60svh;
+  flex-direction: column;
+  justify-content: flex-end;
+  gap: var(--s-5);
+  padding: var(--s-8) var(--gutter) var(--s-6);
+  background: var(--paper);
+  color: var(--ink);
+}
+
+.l-foot-brand {
+  margin: 0;
+  font-family: var(--ff-display);
+  font-weight: 800;
+  font-size: clamp(72px, 20vw, 260px);
+  line-height: 0.85;
+  letter-spacing: -0.045em;
+  text-transform: uppercase;
+}
+
+:lang(hi) .l-foot-brand,
+:lang(ta) .l-foot-brand {
+  letter-spacing: 0;
+  line-height: 1.2;
+}
+
+.l-foot-nav {
+  display: flex;
+  flex-wrap: wrap;
+  gap: var(--s-5);
+}
+
+.l-foot-nav a {
+  color: var(--ink);
+  font-weight: 600;
+  text-underline-offset: 4px;
+}
+
+.l-foot-note {
+  margin: 0;
+  max-width: 60ch;
+  font-size: 13px;
+  line-height: 19.5px;
+  color: var(--ink-2);
+}
+
+/* Still mode (posters): the scene alone, no copy. */
+.landing[data-still] .l-copy,
+.landing[data-still] .l-callouts,
+.landing[data-still] .l-legend,
+.landing[data-still] .l-card,
+.landing[data-still] .l-nav,
+.landing[data-still] .l-hint,
+.landing[data-still] .l-caption {
+  visibility: hidden;
+}
+
+/* Reduced motion: still stages, no pinning, everything visible, nothing loops. */
+@media (prefers-reduced-motion: reduce) {
+  .stage {
+    height: auto;
+    min-height: 100svh;
+  }
+  .pin {
+    position: relative;
+    min-height: 100svh;
+  }
+  .rv,
+  .lrow {
+    opacity: 1 !important;
+    transform: none !important;
+  }
+  .l-b {
+    position: static;
+    margin-top: var(--s-4);
+  }
+  .l-cta,
+  .l-arrow,
+  .lg .chip,
+  .lrow + .lrow::before {
+    transition: none;
+  }
+  .l-poster-img {
+    display: block;
+  }
+  .l-poster {
+    transition: none;
+  }
+  /* The trail and rings read as fully drawn, the ledger shows the broken chain, callouts show. */
+  .callout::before {
+    transform: none;
+  }
+  .callout-n,
+  .callout-t {
+    opacity: 1;
+    transform: none;
+  }
+  .stage[data-stage="6"] {
+    --p: 1;
+  }
+  .st-ok {
+    opacity: 0;
+  }
+  .st-bad {
+    opacity: 1;
+  }
+  .lrow + .lrow::before {
+    transform: none;
+  }
+  .l-canvas {
+    display: none;
+  }
+  .l-ledger-wrap {
+    position: relative;
+    min-height: 100svh;
+  }
+  .stage-close {
+    height: auto;
+    min-height: 100svh;
+  }
+  .l-foot {
+    position: static;
+  }
+}

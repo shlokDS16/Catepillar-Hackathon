@@ -363,9 +363,13 @@ org-wide breaker (≤ 20 asks/min across all users).
 ### 2.10 Privacy
 
 **consents** (OP own via `consent_set`; FM select). Near-miss mode (PA-8): FM's policy on `incidents`
-excludes `non_punitive = true` rows; FM reads them through RPC `near_miss_list()` which returns
-`operators.pseudonym` instead of the operator id. `ledger_verify` (security definer) still covers every
-row.
+excludes `non_punitive = true` rows and so does the trainer's (003f: no direct `incidents` read for the
+trainer); `events` carrying a near miss never reach the FM, site or trainer routes (`private.event_visible`).
+`near_miss_list()` is trainer-only and returns sealed rows as (day, severity, incident_type) only: no
+pseudonym, id, seq, time of day or free text (003g; the earlier pseudonym was withdrawn because one punitive
+row links it to a name). `ledger_export` seals near-miss rows to {v, seq, prev_hash, non_punitive, sealed} for
+the FM (003e), and the witness line carries `np=` (hash of the non-punitive seqs). `ledger_verify` (security
+definer) still covers every row.
 
 ## 3. Events, alerts and dispatches
 

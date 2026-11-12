@@ -33,8 +33,8 @@ describe("fixtures", () => {
 });
 
 describe("registry", () => {
-  it("is frozen at v1.0.0 with 47 event types", () => {
-    expect(CONTRACTS_VERSION).toBe("1.0.0");
+  it("is frozen at v2.0.0 with 47 event types", () => {
+    expect(CONTRACTS_VERSION).toBe("2.0.0");
     expect(EVENT_TYPES.length).toBe(47);
   });
   it("every alert_kind in the registry has a policy, and the policies cover exactly AlertKind", () => {
