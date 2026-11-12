@@ -15,7 +15,7 @@
     "sosActive": "SOS active",
     "live": "Live",
     "reconnecting": "Reconnecting…",
-    "fixture": "Simulated shift",
+    "fixture": "Demo data",
     "openSync": "Connection",
     "comingSoon": "Coming in a later task.",
     "languageNamed": "Language: {name}",
@@ -25,7 +25,9 @@
     "skipToContent": "Skip to content",
     "sosHold": "SOS: hold for 1.5 seconds to send",
     "sosOpen": "Tap to open",
-    "fixtureStatus": "Simulated shift · {time} · {speed}× speed"
+    "fixtureStatus": "Demo data · {time} · {speed}× speed",
+    "syncOffline": "{n, plural, =0 {Offline} other {Offline, {n} queued}}",
+    "syncLabel": "Sync"
   },
   "start": {
     "chooseLanguage": "Choose your language",
@@ -189,6 +191,20 @@
     }
   },
   "home": {
+    "tape": {
+      "title": "Your shift",
+      "now": "Now {time}",
+      "working": "Working",
+      "waiting": "Waiting",
+      "break": "Break",
+      "planned": "Planned",
+      "heat": "Heat peak {time} (scenario forecast)",
+      "event": "Safety event",
+      "openReplay": "Open the replay.",
+      "marksTitle": "Marks on your shift",
+      "pinHeat": "Heat peak {time}",
+      "range": "{from} to {to}"
+    },
     "conditions": "Conditions",
     "wbgt": "WBGT {c} °C",
     "temp": "{c} °C",

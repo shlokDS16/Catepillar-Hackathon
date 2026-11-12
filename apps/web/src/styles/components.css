@@ -455,8 +455,19 @@
   text-transform: uppercase;
   color: var(--on-frame);
 }
-.strip-cap {
+.strip-cells {
   flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: var(--s-1);
+}
+/* Sync cell: shown only when offline (no outbox exists yet, so no "Saved" claim). */
+.strip-sync {
+  color: var(--on-frame);
+  overflow-wrap: anywhere;
+}
+.strip-cap {
   min-width: 0;
   color: var(--on-frame-2);
   overflow-wrap: anywhere;

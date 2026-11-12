@@ -15,7 +15,7 @@
     "sosActive": "SOS चालू",
     "live": "लाइव",
     "reconnecting": "जोड़ रहे हैं…",
-    "fixture": "सिम्युलेटेड शिफ़्ट",
+    "fixture": "डेमो डेटा",
     "openSync": "कनेक्शन",
     "comingSoon": "आगे के काम में आएगा।",
     "languageNamed": "भाषा: {name}",
@@ -25,7 +25,9 @@
     "skipToContent": "सीधे सामग्री पर जाएँ",
     "sosHold": "SOS: भेजने के लिए 1.5 सेकंड दबाए रखें",
     "sosOpen": "खोलने के लिए छुएँ",
-    "fixtureStatus": "सिम्युलेटेड शिफ़्ट · {time} · {speed}× गति"
+    "fixtureStatus": "डेमो डेटा · {time} · {speed}× गति",
+    "syncOffline": "{n, plural, =0 {ऑफ़लाइन} other {ऑफ़लाइन, {n} कतार में}}",
+    "syncLabel": "सिंक"
   },
   "start": {
     "chooseLanguage": "अपनी भाषा चुनें",
@@ -189,6 +191,20 @@
     }
   },
   "home": {
+    "tape": {
+      "title": "आपकी शिफ़्ट",
+      "now": "अभी {time}",
+      "working": "काम",
+      "waiting": "इंतज़ार",
+      "break": "ब्रेक",
+      "planned": "योजना",
+      "heat": "गर्मी का शिखर {time} (परिदृश्य पूर्वानुमान)",
+      "event": "सुरक्षा घटना",
+      "openReplay": "रीप्ले खोलें।",
+      "marksTitle": "आपकी शिफ़्ट के निशान",
+      "pinHeat": "गर्मी शिखर {time}",
+      "range": "{from} से {to}"
+    },
     "conditions": "हालात",
     "wbgt": "WBGT {c} °C",
     "temp": "{c} °C",
